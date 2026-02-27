@@ -9,6 +9,8 @@ export class UIInput extends LitElement {
   @property({ type: String }) placeholder = '';
   @property({ type: String }) type = 'text';
 
+  private _localize = new LocalizeController(this);
+
   static styles = css`
     :host {
       display: block;
@@ -57,6 +59,8 @@ export class UISelect extends LitElement {
   @property({ type: String }) label = '';
   @property({ type: Array }) options: { value: string, label: string }[] = [];
   @property({ type: String }) value = '';
+
+  private _localize = new LocalizeController(this);
 
   static styles = css`
     :host {
@@ -108,6 +112,8 @@ export class UISelect extends LitElement {
 export class UIToggle extends LitElement {
   @property({ type: String }) label = '';
   @property({ type: Boolean }) checked = false;
+
+  private _localize = new LocalizeController(this);
 
   static styles = css`
     :host {
@@ -163,6 +169,8 @@ export class UIToggle extends LitElement {
 export class UIColorPicker extends LitElement {
   @property({ type: String }) label = '';
   @property({ type: String }) value = '#ffffff';
+
+  private _localize = new LocalizeController(this);
 
   static styles = css`
     :host {
@@ -224,6 +232,8 @@ export class UIRange extends LitElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
+
+  private _localize = new LocalizeController(this);
 
   static styles = css`
     :host {
