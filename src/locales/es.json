@@ -1,0 +1,52 @@
+{
+  "@@locale": "es",
+  "app.title": "Overlay Framework",
+  "app.dashboard": "Panel de Control",
+  "app.editor": "Editor de Alertas",
+  "app.back": "Regresar",
+  "app.save": "Guardar",
+  "app.cancel": "Cancelar",
+  "app.delete": "Eliminar",
+  "app.create": "Crear",
+  
+  "sidebar.variants": "VARIANTES",
+  "sidebar.settings": "CONFIGURACIÓN",
+  "sidebar.design": "DISEÑO",
+  "sidebar.media": "IMÁGENES Y SONIDO",
+  "sidebar.general": "Configuración general",
+  
+  "variant.new": "Nueva variante",
+  "variant.name": "Nombre",
+  "variant.duration": "Duración",
+  "variant.layout": "Diseño",
+  "variant.layout.textBelow": "Texto abajo",
+  "variant.layout.textRight": "Texto derecha",
+  "variant.bgColor": "Color de fondo",
+  "variant.bgOpacity": "Opacidad",
+  "variant.rounded": "Redondeado",
+  "variant.random": "Aleatorio",
+  
+  "event.seguimientos": "Seguimientos",
+  "event.seguimientos.condition": "Cualquier nuevo seguimiento",
+  "event.suscripciones": "Suscripciones",
+  "event.suscripciones.condition": "Cualquier nueva suscripción",
+  "event.bits": "Bits",
+  "event.bits.condition": "Cualquier donación de bits",
+  
+  "media.changeImage": "Cambiar imagen",
+  "media.volume": "Volumen",
+  
+  "preview.select": "Selecciona una variante para previsualizar",
+  
+  "errors.loadFailed": "Error al cargar los datos",
+  "errors.saveFailed": "Error al guardar los datos",
+  "errors.validation": "Error de validación",
+  
+  "labels.username": "Nombre del usuario",
+  "labels.months": "Meses suscrito",
+  "labels.amount": "Cantidad de bits",
+  "labels.message": "Mensaje",
+  "labels.tier": "Nivel de suscripción",
+  "labels.isNew": "Nuevo seguidor",
+  "labels.isGift": "Suscripción regalada"
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Platform Event Schemas",
+  "description": "Explicit schemas for platform event variants (SEGUIMIENTOS, SUSCRIPCIONES, BITS)",
+  "definitions": {
+    "baseEvent": {
+      "type": "object",
+      "required": ["username"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      }
+    },
+    "seguimientosEvent": {
+      "$id": "#seguimientos",
+      "type": "object",
+      "required": ["eventType", "username"],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "seguimientos"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1
+        },
+        "followerName": {
+          "type": "string"
+        },
+        "isNewFollower": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      }
+    },
+    "suscripcionesEvent": {
+      "$id": "#suscripciones",
+      "type": "object",
+      "required": ["eventType", "username", "months"],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "suscripciones"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1
+        },
+        "months": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["1", "2", "3", "prime"],
+          "default": "1"
+        },
+        "isGift": {
+          "type": "boolean",
+          "default": false
+        },
+        "gifterName": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      }
+    },
+    "bitsEvent": {
+      "$id": "#bits",
+      "type": "object",
+      "required": ["eventType", "username", "amount"],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "bits"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "totalAmount": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "isAnonymous": {
+          "type": "boolean",
+          "default": false
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#seguimientos" },
+    { "$ref": "#suscripciones" },
+    { "$ref": "#bits" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "sourceLocale": "es",
+  "targetLocales": ["en"],
+  "tsOut": "./src/locales",
+  "format": {
+    "interchange": {
+      "format": "xliff",
+      "xliffDir": "./xliff/"
+    }
+  }
+}

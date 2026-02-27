@@ -1,0 +1,52 @@
+{
+  "@@locale": "en",
+  "app.title": "Overlay Framework",
+  "app.dashboard": "Dashboard",
+  "app.editor": "Alert Editor",
+  "app.back": "Back",
+  "app.save": "Save",
+  "app.cancel": "Cancel",
+  "app.delete": "Delete",
+  "app.create": "Create",
+  
+  "sidebar.variants": "VARIANTS",
+  "sidebar.settings": "SETTINGS",
+  "sidebar.design": "DESIGN",
+  "sidebar.media": "IMAGES AND SOUND",
+  "sidebar.general": "General settings",
+  
+  "variant.new": "New variant",
+  "variant.name": "Name",
+  "variant.duration": "Duration",
+  "variant.layout": "Layout",
+  "variant.layout.textBelow": "Text below",
+  "variant.layout.textRight": "Text right",
+  "variant.bgColor": "Background color",
+  "variant.bgOpacity": "Opacity",
+  "variant.rounded": "Rounded",
+  "variant.random": "Random",
+  
+  "event.seguimientos": "Follows",
+  "event.seguimientos.condition": "Any new follow",
+  "event.suscripciones": "Subscriptions",
+  "event.suscripciones.condition": "Any new subscription",
+  "event.bits": "Bits",
+  "event.bits.condition": "Any bit donation",
+  
+  "media.changeImage": "Change image",
+  "media.volume": "Volume",
+  
+  "preview.select": "Select a variant to preview",
+  
+  "errors.loadFailed": "Failed to load data",
+  "errors.saveFailed": "Failed to save data",
+  "errors.validation": "Validation error",
+  
+  "labels.username": "Username",
+  "labels.months": "Months subscribed",
+  "labels.amount": "Amount of bits",
+  "labels.message": "Message",
+  "labels.tier": "Subscription tier",
+  "labels.isNew": "New follower",
+  "labels.isGift": "Gifted subscription"
+}
