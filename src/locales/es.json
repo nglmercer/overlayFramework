@@ -40,6 +40,16 @@
   "variant.shadow": "Sombra de caja",
   "variant.random": "Aleatorio",
   
+  "variant.duplicate": "Crear alerta aleatoria duplicada",
+  "variant.probability": "Probabilidad",
+  "variant.prob.always": "Siempre (100%)",
+  "variant.prob.common": "Común (50%)",
+  "variant.prob.rare": "Rara (10%)",
+  "variant.prob.epic": "Épica (5%)",
+  "variant.customHtml": "Personalizar HTML/CSS",
+  "variant.delete": "Eliminar variante",
+  "variant.confirmDelete": "¿Estás seguro de que deseas eliminar esta variante?",
+  
   "variant.message": "Mensaje de la alerta",
   "variant.fontFamily": "Tipografía",
   "variant.fontWeight": "Grosor",

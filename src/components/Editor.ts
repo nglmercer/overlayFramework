@@ -340,6 +340,26 @@ export class AppEditor extends LitElement {
     this._variantsTask.run();
   }
 
+  async handleDuplicateVariant(variant: AlertVariant) {
+    if (!this.boxId) return;
+    const duplicated: AlertVariant = {
+      ...variant,
+      id: crypto.randomUUID(),
+      name: `${variant.name} (Copy)`
+    };
+    await dbManager.saveVariant(duplicated);
+    this.selectedVariantId = duplicated.id;
+    this._variantsTask.run();
+  }
+
+  async handleDeleteVariant(id: string) {
+    if (confirm(this._localize.t('variant.confirmDelete'))) {
+      await dbManager.deleteVariant(id);
+      this.selectedVariantId = null;
+      this._variantsTask.run();
+    }
+  }
+
   getSelectedVariant(variants: AlertVariant[]) {
     return variants.find(v => v.id === this.selectedVariantId);
   }
@@ -478,12 +498,41 @@ export class AppEditor extends LitElement {
                     .value="${variant.name}" 
                     @change="${(e: any) => this.handleUpdateVariant({ name: e.detail }, variants)}"
                   ></ui-input>
+                  
+                  ${this.randomize ? html`
+                    <button 
+                      @click="${() => this.handleDuplicateVariant(variant)}"
+                      style="width: 100%; padding: 0.5rem; background: #3a3a3d; border: none; color: white; border-radius: 0.375rem; cursor: pointer; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                    >
+                      <svg style="width: 1.25rem; height: 1.25rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                      ${this._localize.t('variant.duplicate')}
+                    </button>
+                    
+                    <ui-select 
+                      label="${this._localize.t('variant.probability')}" 
+                      .value="${variant.probability || 'always'}"
+                      .options="${[
+                        { value: 'always', label: this._localize.t('variant.prob.always') }, 
+                        { value: 'common', label: this._localize.t('variant.prob.common') }, 
+                        { value: 'rare', label: this._localize.t('variant.prob.rare') }, 
+                        { value: 'epic', label: this._localize.t('variant.prob.epic') }
+                      ]}"
+                      @change="${(e: any) => this.handleUpdateVariant({ probability: e.detail }, variants)}"
+                    ></ui-select>
+                  ` : ''}
+
                   <ui-input 
                     label="${this._localize.t('variant.duration')}" 
                     type="number" 
                     .value="${variant.duration.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ duration: Number(e.detail) }, variants)}"
                   ></ui-input>
+
+                  <ui-toggle 
+                    label="${this._localize.t('variant.customHtml')}" 
+                    .checked="${!!variant.customHtmlEnabled}"
+                    @change="${(e: any) => this.handleUpdateVariant({ customHtmlEnabled: e.detail }, variants)}"
+                  ></ui-toggle>
                 </div>
               ` : ''}
             </div>

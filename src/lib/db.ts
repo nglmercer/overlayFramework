@@ -36,6 +36,10 @@ export interface AlertVariant {
   soundVolume: number;
   
   active: boolean;
+  probability?: string;
+  customHtmlEnabled?: boolean;
+  customHtml?: string;
+  customCss?: string;
   
   // Specific fields
   level?: string;
