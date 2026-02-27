@@ -38,14 +38,16 @@ class MediaRegistry {
   }
 }
 
+import { appConfig } from '../lib/config';
+
 export const mediaRegistry = new MediaRegistry();
 
 // Default handlers
 mediaRegistry.registerBaseUrlHandler('asset:', 'https://cdn.example.com/assets');
-mediaRegistry.registerBaseUrlHandler('media:', import.meta.env.VITE_MEDIA_URL || 'http://localhost:3000/media');
+mediaRegistry.registerBaseUrlHandler('media:', appConfig.mediaUrl);
 
 mediaRegistry.registerHandler('id:', (url) => {
   const id = url.replace('id:', '');
-  const baseUrl = import.meta.env.VITE_BASE_MEDIA_URL || 'https://cdn.example.com';
+  const baseUrl = appConfig.baseMediaUrl;
   return `${baseUrl}/media/${id}`;
 });

@@ -1,15 +1,23 @@
 import { html, css, LitElement, render } from 'lit';
 import { Component, property, state, query } from '../litcomponents';
 import { dbManager, AlertVariant } from '../lib/db';
+import { platformEventsSchema, PlatformEventDefinition } from '../lib/alertEvents';
+import { consume } from '@lit/context';
+import { platformSchemaContext } from '../context/schemaContext';
 import './FormControls';
 import './MediaLibrary';
+import './AlertView';
 
 @Component('app-editor')
 export class AppEditor extends LitElement {
   @property({ type: String }) boxId = '';
   @property({ type: Function }) onBack: () => void = () => {};
 
-  @state() private expandedSection: string | null = 'seguimientos';
+  @consume({ context: platformSchemaContext })
+  @property({ attribute: false })
+  public schema!: PlatformEventDefinition[];
+
+  @state() private expandedSection: string | null = null;
   @state() private rightExpandedSection: string | null = 'general';
   @state() private randomize = false;
   @state() private showMediaLibrary: 'image' | 'sound' | null = null;
@@ -156,6 +164,10 @@ export class AppEditor extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
     await this.loadVariants();
+    
+    if (this.schema && this.schema.length > 0 && !this.expandedSection) {
+        this.expandedSection = this.schema[0].id;
+    }
   }
 
   async loadVariants() {
@@ -167,13 +179,17 @@ export class AppEditor extends LitElement {
   }
 
   async handleCreateVariant() {
-    const type = this.expandedSection || 'seguimientos';
+    const type = this.expandedSection || (this.schema && this.schema.length > 0 ? this.schema[0].id : '');
+    const schemaDef = this.schema?.find(s => s.id === type) || this.schema?.[0];
+    
+    if (!schemaDef) return;
+    
     const newVariant: AlertVariant = {
       id: crypto.randomUUID(),
       boxId: this.boxId,
       type,
       name: 'Nueva variante',
-      condition: 'Cualquier nuevo seguimiento',
+      condition: schemaDef.conditionLabel,
       duration: 10,
       animationIn: 'fade-in',
       animationOut: 'fade-out',
@@ -186,7 +202,7 @@ export class AppEditor extends LitElement {
       spacing: 16,
       rounded: true,
       shadow: false,
-      message: '¡{username} acaba de seguir!',
+      message: schemaDef.defaultMessage,
       fontFamily: 'Roboto',
       fontWeight: 'Normal',
       fontSize: 24,
@@ -220,12 +236,6 @@ export class AppEditor extends LitElement {
   }
 
   render() {
-    const sidebarItems = [
-      { id: 'seguimientos', label: 'Seguimientos' },
-      { id: 'suscripciones', label: 'Suscripciones' },
-      { id: 'bits', label: 'Bits' },
-    ];
-
     const variant = this.selectedVariant;
 
     return html`
@@ -247,7 +257,7 @@ export class AppEditor extends LitElement {
             <button @click="${this.handleCreateVariant}" style="background: transparent; border: none; color: #a970ff; cursor: pointer;">+</button>
           </div>
           
-          ${sidebarItems.map(item => html`
+          ${this.schema?.map(item => html`
             <div class="section">
               <button 
                 class="section-btn" 
@@ -259,15 +269,17 @@ export class AppEditor extends LitElement {
               
               ${this.expandedSection === item.id ? html`
                 <div class="section-content">
-                  <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <div 
-                      class="toggle ${this.randomize ? 'on' : 'off'}" 
-                      @click="${() => this.randomize = !this.randomize}"
-                    >
-                      <div class="toggle-knob"></div>
+                  ${this.variants.filter(v => v.type === item.id).length >= 2 ? html`
+                    <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                      <div 
+                        class="toggle ${this.randomize ? 'on' : 'off'}" 
+                        @click="${() => this.randomize = !this.randomize}"
+                      >
+                        <div class="toggle-knob"></div>
+                      </div>
+                      <span style="font-size: 0.75rem;">Aleatorio</span>
                     </div>
-                    <span style="font-size: 0.75rem;">Aleatorio</span>
-                  </div>
+                  ` : ''}
                   
                   ${this.variants.filter(v => v.type === item.id).map(v => html`
                     <div 
@@ -290,33 +302,10 @@ export class AppEditor extends LitElement {
         <div class="preview-area">
           <div class="preview-canvas">
             ${variant ? html`
-              <div 
-                style="
-                  background-color: ${variant.bgColor}${Math.round((variant.bgOpacity || 0) * 2.55).toString(16).padStart(2, '0')};
-                  padding: ${variant.padding}px;
-                  border-radius: ${variant.rounded ? '1rem' : '0'};
-                  text-align: ${variant.textAlign};
-                  display: flex;
-                  flex-direction: ${variant.layout === 'text-below' ? 'column' : 'row'};
-                  align-items: center;
-                  gap: ${variant.spacing}px;
-                "
-              >
-                ${variant.imageUrl ? html`<img src="${variant.imageUrl}" style="width: 200px; height: 200px; object-fit: contain;" />` : html`
-                  <div style="width: 200px; height: 200px; background: #26262c; border-radius: 1rem; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 4rem;">❤</span>
-                  </div>
-                `}
-                <div style="
-                  color: ${variant.textColor};
-                  font-family: ${variant.fontFamily};
-                  font-weight: ${variant.fontWeight};
-                  font-size: ${variant.fontSize}px;
-                  text-shadow: ${variant.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none'};
-                ">
-                  ${variant.message.replace('{username}', 'FlavioliRavioli')}
-                </div>
-              </div>
+              <app-alert-view 
+                .variant="${variant}" 
+                .eventData="${{ username: 'FlavioliRavioli', amount: '1000', months: '6' }}"
+              ></app-alert-view>
             ` : 'Selecciona una variante para previsualizar'}
           </div>
         </div>

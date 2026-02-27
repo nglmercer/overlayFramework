@@ -11,6 +11,11 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@lit/context": "^1.1.6",
+    "@lit/localize": "^0.12.2",
+    "@lit/localize-tools": "^0.8.1",
+    "@lit/react": "^1.0.8",
+    "@lit/task": "^1.0.3",
     "@tailwindcss/vite": "^4.1.14",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
