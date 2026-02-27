@@ -241,10 +241,10 @@ export class AppDashboard extends LitElement {
                 
                 ${this.openMenuId === box.id ? html`
                   <div class="dropdown">
-                    <button @click="${() => {}}">Copiar fuente de navegador</button>
-                    <button @click="${() => {}}">Renombrar</button>
-                    <button @click="${() => {}}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">Duplicado</button>
-                    <button class="delete" @click="${() => this.handleDeleteBox(box.id)}">Eliminar</button>
+                    <button @click="${() => {}}">${this._localize.t('dashboard.copySource')}</button>
+                    <button @click="${() => {}}">${this._localize.t('dashboard.rename')}</button>
+                    <button @click="${() => {}}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">${this._localize.t('dashboard.duplicate')}</button>
+                    <button class="delete" @click="${() => this.handleDeleteBox(box.id)}">${this._localize.t('dashboard.delete')}</button>
                   </div>
                 ` : ''}
               </div>
@@ -253,7 +253,7 @@ export class AppDashboard extends LitElement {
                   class="btn-edit"
                   @click="${() => this.onEdit(box.id)}"
                 >
-                  Editar alertas
+                  ${this._localize.t('dashboard.editAlerts')}
                 </button>
               </div>
             </div>

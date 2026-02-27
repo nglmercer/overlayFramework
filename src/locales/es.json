@@ -9,6 +9,15 @@
   "app.delete": "Eliminar",
   "app.create": "Crear",
   
+  "dashboard.title": "Tus alertas",
+  "dashboard.alertGroups": "Grupos de alertas",
+  "dashboard.createAlertBox": "Crear recuadro de alerta",
+  "dashboard.editAlerts": "Editar alertas",
+  "dashboard.copySource": "Copiar fuente de navegador",
+  "dashboard.rename": "Renombrar",
+  "dashboard.duplicate": "Duplicado",
+  "dashboard.delete": "Eliminar",
+  
   "sidebar.variants": "VARIANTES",
   "sidebar.settings": "CONFIGURACIÓN",
   "sidebar.design": "DISEÑO",
@@ -35,6 +44,14 @@
   
   "media.changeImage": "Cambiar imagen",
   "media.volume": "Volumen",
+  "media.resourceLibrary": "Librería de recursos",
+  "media.storage": "Almacenamiento",
+  "media.uploadFile": "Cargar archivo",
+  "media.sortBy": "Ordenar por",
+  "media.dateAdded": "Fecha de incorporación",
+  "media.name": "Nombre",
+  "media.size": "Tamaño",
+  "media.addToAlerts": "Añadir a alertas",
   
   "preview.select": "Selecciona una variante para previsualizar",
   

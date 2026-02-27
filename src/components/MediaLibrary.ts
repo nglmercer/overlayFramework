@@ -1,6 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property, state } from '../litcomponents';
-import { getLocale, setLocale, LocalizeController } from '../locales/localization';
+import { getLocale, setLocale, LocalizeController, t } from '../locales/localization';
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {
@@ -12,6 +12,8 @@ export class MediaLibrary extends LitElement {
   @state() private currentPage = 1;
   @state() private sortBy = 'date';
   private itemsPerPage = 6;
+
+  private _localize = new LocalizeController(this);
 
   private images = [
     { id: '1', name: 'RewardRedemption.webm', date: '2023-07-24', size: 1.29, url: 'https://picsum.photos/seed/1/200/200' },
@@ -141,7 +143,7 @@ export class MediaLibrary extends LitElement {
     return html`
       <div class="modal">
         <div class="header">
-          <h2>Librería de recursos</h2>
+          <h2>${this._localize.t('media.resourceLibrary')}</h2>
           <button @click="${this.onClose}">
             <svg style="width: 1.5rem; height: 1.5rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -152,17 +154,17 @@ export class MediaLibrary extends LitElement {
         <div class="content">
           <div class="stats-bar">
             <div class="storage-info">
-              <span class="label">Almacenamiento</span>
+              <span class="label">${this._localize.t('media.storage')}</span>
               <span class="text">13.76 MB / 100 MB</span>
             </div>
             <div class="actions">
-              <button class="btn-upload">Cargar archivo</button>
+              <button class="btn-upload">${this._localize.t('media.uploadFile')}</button>
               <div class="sort-container">
-                <label>Ordenar por</label>
+                <label>${this._localize.t('media.sortBy')}</label>
                 <select @change="${(e: any) => this.sortBy = e.target.value}" .value="${this.sortBy}">
-                  <option value="date">Fecha de incorporación</option>
-                  <option value="name">Nombre</option>
-                  <option value="size">Tamaño</option>
+                  <option value="date">${this._localize.t('media.dateAdded')}</option>
+                  <option value="name">${this._localize.t('media.name')}</option>
+                  <option value="size">${this._localize.t('media.size')}</option>
                 </select>
               </div>
             </div>
@@ -210,7 +212,7 @@ export class MediaLibrary extends LitElement {
             >&gt;</button>
           </div>
           <div class="footer-actions">
-            <button class="btn-cancel" @click="${this.onClose}">Cancelar</button>
+            <button class="btn-cancel" @click="${this.onClose}">${this._localize.t('app.cancel')}</button>
             <button 
               class="btn-add" 
               ?disabled="${!this.selectedItem}"
@@ -218,7 +220,7 @@ export class MediaLibrary extends LitElement {
                 const selected = this.allItems.find(i => i.id === this.selectedItem);
                 if (selected) this.onSelect('url' in selected ? (selected as any).url : '', selected.name);
               }}"
-            >Añadir a alertas</button>
+            >${this._localize.t('media.addToAlerts')}</button>
           </div>
         </div>
       </div>

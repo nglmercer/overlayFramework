@@ -1,0 +1,68 @@
+
+    // Do not modify this file by hand!
+    // Re-generate this file by running lit-localize
+
+    
+    import {str} from '@lit/localize';
+
+    /* eslint-disable no-irregular-whitespace */
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+
+    export const templates = {
+      'sa256e624959a0b65': `Cargando variantes...`,
+      'sd48bba9686e3d87e': `Error al cargar`,
+      's5dac428d54dd8dbe': `Regresar`,
+      's58077c56308874f8': `Alerts Box Editor`,
+      's01c0e16496dd6d7e': `VARIANTES`,
+      'saf63d34c8601dd41': str`${0}`,
+      's021fc28e9bc04d4f': `Aleatorio`,
+      'sc6697266d60d6b19': `Vista previa de alerta`,
+      's5e1c33eafef1bd85': `Enviar alerta de prueba`,
+      'sec875fb81fa3aea6': `Opciones de vista previa`,
+      's0a5512e185b55722': `Ancho px`,
+      's1a9a5faa5479bf02': `Altura px`,
+      's87fc3519b90df934': `Selecciona una variante para previsualizar`,
+      's009b455e8d7d6ea2': `Configuración general`,
+      's2b9fde9a5739d2a0': `Nombre`,
+      's9b7feec670d16642': `Duración`,
+      's768d5234e6c9652f': `Textos y Mensajes`,
+      's056dc440fa7bb469': `Mensaje de la alerta`,
+      's3cb74218ece3a79f': `Tipografía`,
+      's8d041b327d3afc33': `Grosor`,
+      's75de563d83352ee0': `Alineación`,
+      's8c21fa53653fbe43': `Izquierda`,
+      'sb3ce2e7d99621db8': `Centro`,
+      'sc3f31b077769f9df': `Derecha`,
+      's23acdbfd1fed9727': `Tamaño (px)`,
+      's952d13574a2ad55f': `Color de texto`,
+      's6f1d0463da6823aa': `Color de resaltado`,
+      's039f0bc868516840': `Sombra de texto`,
+      's3121f26120a8160c': `Leer mensaje (TTS)`,
+      's1a76976af60f98be': `Animaciones`,
+      's3085bfe802756b64': `Entrada`,
+      's8e03a1b0026d3a6f': `Desvanecer`,
+      's43b1a536b2d76e7a': `Deslizar hacia arriba`,
+      's34c72672f9474958': `Aumentar`,
+      's732043b7d75e8ae8': `Rebote`,
+      's95798541abb1ebf1': `Duración entrada (s)`,
+      's64209b185955ce59': `Salida`,
+      'sf5450fdbae91127e': `Deslizar hacia abajo`,
+      's616808fc153498a7': `Disminuir`,
+      'sfe496818e434ea2e': `Duración salida (s)`,
+      's418a455f23d9f2ce': `Diseño`,
+      's66036ad197f6c95e': `Texto abajo`,
+      's46f46ffc9b72ee53': `Texto derecha`,
+      'sb8adff151d46f751': `Color de fondo`,
+      'sd8979f625e11c134': `Opacidad de fondo %`,
+      'sb4c410c17bbcc6af': `Relleno (px)`,
+      's57eefa1ae5335dbb': `Espaciado (px)`,
+      'sdc0c034d58ea7738': `Redondeado`,
+      's0c5d02b56d19529d': `Sombra de caja`,
+      's3dbfa476d18956ef': `Imágenes y sonido`,
+      's64f89d58559d3fe3': `Cambiar imagen`,
+      'seaaef2d58640514e': `Escala de imagen`,
+      'sb9b8db234e8c13d9': `Volumen de imagen (WebM)`,
+      'secf3fcbc109940ec': `Cambiar sonido`,
+      'sf7d802ba1790634c': `Volumen del sonido`,
+    };
+  
