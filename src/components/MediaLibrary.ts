@@ -1,6 +1,10 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property, state } from '../litcomponents';
-import { getLocale, setLocale, LocalizeController, t } from '../locales/localization';
+import { LocalizeController } from '../locales/localization';
+import { createBrowserClient } from '../api/client';
+import type { FileItem } from '../api/client';
+
+const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {
@@ -13,29 +17,14 @@ export class MediaLibrary extends LitElement {
   @state() private sortBy = 'date';
   private itemsPerPage = 6;
 
+  @state() private items: FileItem[] = [];
+  @state() private loading = true;
+  @state() private uploading = false;
+  @state() private error: string | null = null;
+  @state() private quotaUsed: string = '0.00 MB';
+  @state() private quotaMax: string = '100.00 MB';
+
   private _localize = new LocalizeController(this);
-
-  private images = [
-    { id: '1', name: 'RewardRedemption.webm', date: '2023-07-24', size: 1.29, url: 'https://picsum.photos/seed/1/200/200' },
-    { id: '2', name: 'GoalStarted.webm', date: '2022-08-10', size: 1.48, url: 'https://picsum.photos/seed/2/200/200' },
-    { id: '3', name: 'GoalCompleted.webm', date: '2022-08-10', size: 1.53, url: 'https://picsum.photos/seed/3/200/200' },
-    { id: '4', name: 'HypeTrainStarted.webm', date: '2022-08-10', size: 1.55, url: 'https://picsum.photos/seed/4/200/200' },
-    { id: '5', name: 'HypeTrainLevelAchieved.webm', date: '2022-08-10', size: 1.68, url: 'https://picsum.photos/seed/5/200/200' },
-    { id: '6', name: 'HypeTrainAll-time-high.webm', date: '2022-08-10', size: 1.69, url: 'https://picsum.photos/seed/6/200/200' },
-    { id: '7', name: 'Follow.webm', date: '2022-08-11', size: 2.10, url: 'https://picsum.photos/seed/7/200/200' },
-    { id: '8', name: 'Subscribe.webm', date: '2022-08-12', size: 3.50, url: 'https://picsum.photos/seed/8/200/200' },
-  ];
-
-  private sounds = [
-    { id: 's1', name: 'Magic Chime', date: '2022-08-09', size: 1.24, url: 'https://actions.google.com/sounds/v1/magic/magic_chime.ogg' },
-    { id: 's2', name: 'Cartoon Boing', date: '2022-08-09', size: 0.92, url: 'https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg' },
-    { id: 's3', name: 'Short Beep', date: '2022-08-09', size: 0.84, url: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' },
-    { id: 's4', name: 'Retro Laser', date: '2022-08-09', size: 1.06, url: 'https://actions.google.com/sounds/v1/weapons/retro_laser_gun.ogg' },
-    { id: 's5', name: 'Water Drop', date: '2022-08-09', size: 0.97, url: 'https://actions.google.com/sounds/v1/water/water_drop.ogg' },
-    { id: 's6', name: 'Fast Typing', date: '2022-08-09', size: 0.83, url: 'https://actions.google.com/sounds/v1/office/typing_fast.ogg' },
-    { id: 's7', name: 'Baby Cry', date: '2022-08-10', size: 0.50, url: 'https://actions.google.com/sounds/v1/human_voices/human_baby_cry.ogg' },
-    { id: 's8', name: 'Glass Crash', date: '2022-08-11', size: 0.30, url: 'https://actions.google.com/sounds/v1/impacts/crash.ogg' },
-  ];
 
   static styles = css`
     :host {
@@ -77,8 +66,9 @@ export class MediaLibrary extends LitElement {
     .storage-info .text { font-size: 0.875rem; color: #9ca3af; }
     
     .actions { display: flex; align-items: center; gap: 1rem; }
-    .btn-upload { background-color: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+    .btn-upload { background-color: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; display: inline-block; }
     .btn-upload:hover { background-color: rgba(255, 255, 255, 0.2); }
+    .btn-upload.disabled { opacity: 0.5; cursor: not-allowed; }
     
     .sort-container { display: flex; align-items: center; gap: 0.5rem; }
     .sort-container label { font-size: 0.875rem; font-weight: 600; color: #d1d5db; }
@@ -86,14 +76,18 @@ export class MediaLibrary extends LitElement {
     .sort-container select:focus { border-color: #a970ff; }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .item { background-color: #26262c; border-radius: 0.5rem; padding: 1rem; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+    .item { background-color: #26262c; border-radius: 0.5rem; padding: 1rem; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; position: relative; }
     .item.selected { border-color: #a970ff; }
     .item:hover:not(.selected) { border-color: rgba(255, 255, 255, 0.2); }
     
     .preview-box { aspect-ratio: 16/9; background-color: #0e0e10; border-radius: 0.375rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-    .preview-box img { width: 100%; height: 100%; object-cover: cover; }
+    .preview-box img { width: 100%; height: 100%; object-fit: cover; }
     .preview-box svg { width: 2rem; height: 2rem; color: rgba(255, 255, 255, 0.5); }
     
+    .delete-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.25rem; width: 1.5rem; height: 1.5rem; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0; }
+    .delete-btn:hover { background: rgba(239, 68, 68, 1); }
+    .item:hover .delete-btn { display: flex; }
+
     .item-name { font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-meta { font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem; }
 
@@ -110,33 +104,112 @@ export class MediaLibrary extends LitElement {
     .btn-add { background-color: #9146FF; border: none; color: white; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; }
     .btn-add:hover { background-color: #a970ff; }
     .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .loader { display: flex; justify-content: center; padding: 3rem; color: #9ca3af; }
+    .empty-state { display: flex; justify-content: center; padding: 3rem; color: #9ca3af; flex-direction: column; align-items: center; gap: 1rem; }
   `;
 
-  private get allItems() {
-    return this.type === 'image' ? this.images : this.sounds;
+  connectedCallback() {
+    super.connectedCallback();
+    this.fetchFiles();
+    this.fetchQuota();
+  }
+
+  async fetchFiles() {
+    this.loading = true;
+    try {
+      const result = await apiClient.files.list({ pageSize: 100 });
+      // filter locally if API didn't strictly filter
+      this.items = result.files.filter(f => {
+        if (!f.mimeType) return false;
+        if (this.type === 'image') {
+          return f.mimeType.startsWith('image/') || f.mimeType === 'video/webm' || f.mimeType.startsWith('video/');
+        } else {
+          return f.mimeType.startsWith('audio/') || f.mimeType === 'video/webm' || f.mimeType.includes('ogg') || f.mimeType.includes('wav');
+        }
+      });
+      this.error = null;
+    } catch(err: any) {
+      console.error(err);
+      this.error = err.message || 'Error fetching files';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async fetchQuota() {
+    try {
+      const q = await apiClient.quota.get();
+      this.quotaUsed = (q.usedStorage / 1024 / 1024).toFixed(2) + ' MB';
+      this.quotaMax = (q.maxStorage / 1024 / 1024).toFixed(2) + ' MB';
+    } catch {
+      // safe fallback if quota endpoint is not accessible
+    }
+  }
+
+  async handleUpload(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    
+    const file = input.files[0];
+    this.uploading = true;
+    try {
+      let category = 'other';
+      if (file.type.startsWith('image/')) category = 'image';
+      else if (file.type.startsWith('audio/') || file.type.startsWith('video/')) category = 'audio';
+      
+      await apiClient.files.upload(file, { category });
+      await this.fetchFiles();
+      await this.fetchQuota();
+    } catch (err: any) {
+      alert("Error uploading: " + err.message);
+    } finally {
+      this.uploading = false;
+      input.value = ''; 
+    }
+  }
+
+  async handleDelete(e: Event, id: string) {
+    e.stopPropagation(); // don't select the item
+    if (confirm("Are you sure you want to delete this file?")) {
+      try {
+        await apiClient.files.delete(id);
+        if (this.selectedItem === id) this.selectedItem = null;
+        await this.fetchFiles();
+        await this.fetchQuota();
+      } catch (err: any) {
+        alert("Error deleting file: " + err.message);
+      }
+    }
   }
 
   private get sortedItems() {
-    return [...this.allItems].sort((a, b) => {
+    return [...this.items].sort((a, b) => {
       if (this.sortBy === 'date') {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return b.uploadedAt - a.uploadedAt;
       } else if (this.sortBy === 'name') {
-        return a.name.localeCompare(b.name);
+        return a.originalName.localeCompare(b.originalName);
       } else if (this.sortBy === 'size') {
-        return (b as any).size - (a as any).size;
+        return b.size - a.size;
       }
       return 0;
     });
   }
 
-  private formatDate(dateString: string) {
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+  private formatDate(ts: number) {
+    const date = new Date(ts);
+    return date.toLocaleDateString();
   }
 
   render() {
     const items = this.sortedItems;
-    const totalPages = Math.ceil(items.length / this.itemsPerPage);
+    const totalPages = Math.ceil(items.length / this.itemsPerPage) || 1;
+    
+    // ensure current page is valid
+    if (this.currentPage > totalPages) {
+      this.currentPage = totalPages;
+    }
+    
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const currentItems = items.slice(startIndex, startIndex + this.itemsPerPage);
 
@@ -155,10 +228,14 @@ export class MediaLibrary extends LitElement {
           <div class="stats-bar">
             <div class="storage-info">
               <span class="label">${this._localize.t('media.storage')}</span>
-              <span class="text">13.76 MB / 100 MB</span>
+              <span class="text">${this.quotaUsed} / ${this.quotaMax}</span>
             </div>
             <div class="actions">
-              <button class="btn-upload">${this._localize.t('media.uploadFile')}</button>
+              <label for="media-upload-input" class="btn-upload ${this.uploading ? 'disabled' : ''}">
+                ${this.uploading ? '...' : this._localize.t('media.uploadFile')}
+              </label>
+              <input id="media-upload-input" type="file" style="display:none" @change="${this.handleUpload}" accept="${this.type === 'image' ? 'image/*,video/webm,.gif' : 'audio/*,video/webm,.ogg,.wav,.mp3'}" ?disabled="${this.uploading}">
+              
               <div class="sort-container">
                 <label>${this._localize.t('media.sortBy')}</label>
                 <select @change="${(e: any) => this.sortBy = e.target.value}" .value="${this.sortBy}">
@@ -170,31 +247,50 @@ export class MediaLibrary extends LitElement {
             </div>
           </div>
 
-          <div class="grid">
-            ${currentItems.map(item => html`
-              <div 
-                class="item ${this.selectedItem === item.id ? 'selected' : ''}" 
-                @click="${() => {
-                  this.selectedItem = item.id;
-                  if (this.type === 'sound' && 'url' in item) {
-                    new Audio((item as any).url).play().catch(e => console.warn('Could not play list audio:', e));
-                  }
-                }}"
-              >
-                <div class="preview-box">
-                  ${this.type === 'image' && 'url' in item ? html`
-                    <img src="${(item as any).url}" alt="${item.name}" />
-                  ` : html`
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          ${this.error ? html`<div style="color:red; padding:1rem;">${this.error}</div>` : ''}
+
+          ${this.loading ? html`
+            <div class="loader">${this._localize.t('preview.loading')}</div>
+          ` : items.length === 0 ? html`
+            <div class="empty-state">
+              <svg style="width: 3rem; height: 3rem; opacity: 0.5;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>No files uploaded yet.</span>
+            </div>
+          ` : html`
+            <div class="grid">
+              ${currentItems.map(item => html`
+                <div 
+                  class="item ${this.selectedItem === item.id ? 'selected' : ''}" 
+                  @click="${() => {
+                    this.selectedItem = item.id;
+                    if (this.type === 'sound') {
+                      new Audio(apiClient.files.getUrl(item.id)).play().catch(e => console.warn('Could not play list audio:', e));
+                    }
+                  }}"
+                >
+                  <button class="delete-btn" @click="${(e: Event) => this.handleDelete(e, item.id)}" title="Delete file">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                  `}
+                  </button>
+                
+                  <div class="preview-box">
+                    ${this.type === 'image' && item.mimeType?.startsWith('image/') ? html`
+                      <img src="${apiClient.files.getUrl(item.id)}" alt="${item.originalName}" />
+                    ` : html`
+                      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      </svg>
+                    `}
+                  </div>
+                  <div class="item-name" title="${item.originalName}">${item.originalName}</div>
+                  <div class="item-meta">${this.formatDate(item.uploadedAt)} - ${item.sizeFormatted}</div>
                 </div>
-                <div class="item-name">${item.name}</div>
-                <div class="item-meta">${this.formatDate(item.date)} - ${item.size} MB</div>
-              </div>
-            `)}
-          </div>
+              `)}
+            </div>
+          `}
         </div>
 
         <div class="footer">
@@ -222,8 +318,10 @@ export class MediaLibrary extends LitElement {
               class="btn-add" 
               ?disabled="${!this.selectedItem}"
               @click="${() => {
-                const selected = this.allItems.find(i => i.id === this.selectedItem);
-                if (selected) this.onSelect('url' in selected ? (selected as any).url : '', selected.name);
+                const selected = this.items.find(i => i.id === this.selectedItem);
+                if (selected) {
+                  this.onSelect(apiClient.files.getUrl(selected.id), selected.originalName);
+                }
               }}"
             >${this._localize.t('media.addToAlerts')}</button>
           </div>

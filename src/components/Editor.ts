@@ -5,7 +5,7 @@ import { platformEventsSchema, PlatformEventDefinition } from '../lib/alertEvent
 import { consume } from '@lit/context';
 import { platformSchemaContext } from '../context/schemaContext';
 import { Task } from '@lit/task';
-import { msg, str } from '@lit/localize';
+import { confirm } from '../lib/dialog';
 import { getLocale, setLocale, LocalizeController } from '../locales/localization';
 import './FormControls';
 import './MediaLibrary';
@@ -353,7 +353,8 @@ export class AppEditor extends LitElement {
   }
 
   async handleDeleteVariant(id: string) {
-    if (confirm(this._localize.t('variant.confirmDelete'))) {
+    const confirmResult = await confirm(this._localize.t('variant.confirmDelete'))
+    if (confirmResult) {
       await dbManager.deleteVariant(id);
       this.selectedVariantId = null;
       this._variantsTask.run();
@@ -664,7 +665,7 @@ export class AppEditor extends LitElement {
                     .value="${variant.spacing.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ spacing: Number(e.detail) }, variants)}"
                   ></ui-input>
-                  <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                  <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem;">
                     <ui-toggle 
                       label="${this._localize.t('variant.rounded')}" 
                       .checked="${variant.rounded}"

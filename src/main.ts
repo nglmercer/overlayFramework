@@ -6,6 +6,7 @@ import { platformSchemaContext } from './context/schemaContext';
 import { twitchEventsSchema } from './lib/twitchEvents';
 import { loadSchemas, schemaLoader, SchemaMap, LifecycleHooks } from './lib/schema-loader';
 import { initializeFramework, cleanupFramework } from './lib/index';
+import { patchAllGlobals } from './lib/dialog';
 import './components/index';
 import { getLocale, setLocale, LocalizeController } from './locales/localization';
 
@@ -87,6 +88,9 @@ export class MainApp extends LitElement {
     // Initialize framework and load schemas
     await initializeFramework();
     await loadSchemas(customSchemas, lifecycleHooks);
+    
+    // Patch global alert/confirm/prompt to use custom dialog
+    patchAllGlobals();
     
     console.log('Framework initialized');
     console.log('Schema loader ready:', schemaLoader.isReady());

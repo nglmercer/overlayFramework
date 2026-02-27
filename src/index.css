@@ -13,6 +13,50 @@
   --accent: #6366f1;
   --bg-dark: #09090b;
   --sidebar-bg: #111114;
+  
+  /* Light theme colors */
+  --light-bg: #ffffff;
+  --light-bg-secondary: #f9fafb;
+  --light-text: #111827;
+  --light-text-secondary: #4b5563;
+  --light-border: #e5e7eb;
+  
+  /* Dark theme colors */
+  --dark-bg: #09090b;
+  --dark-bg-secondary: #18181b;
+  --dark-text: #fafafa;
+  --dark-text-secondary: #a1a1aa;
+  --dark-border: #27272a;
+  
+  /* Dialog theme */
+  --dialog-overlay-light: rgba(0, 0, 0, 0.4);
+  --dialog-overlay-dark: rgba(0, 0, 0, 0.7);
+}
+
+/* Theme attributes for manual control */
+html[data-theme="light"] {
+  --bg-primary: var(--light-bg);
+  --bg-secondary: var(--light-bg-secondary);
+  --text-primary: var(--light-text);
+  --text-secondary: var(--light-text-secondary);
+  --border-color: var(--light-border);
+}
+
+html[data-theme="dark"] {
+  --bg-primary: var(--dark-bg);
+  --bg-secondary: var(--dark-bg-secondary);
+  --text-primary: var(--dark-text);
+  --text-secondary: var(--dark-text-secondary);
+  --border-color: var(--dark-border);
+}
+
+/* Default to dark */
+:root, html[data-theme="dark"] {
+  --bg-primary: var(--dark-bg);
+  --bg-secondary: var(--dark-bg-secondary);
+  --text-primary: var(--dark-text);
+  --text-secondary: var(--dark-text-secondary);
+  --border-color: var(--dark-border);
 }
 
 body {
@@ -81,4 +125,21 @@ select {
 
 button {
   @apply active:scale-95 transition-all;
+}
+
+/* Dialog backdrop prevention when dialog is open */
+body:has(.dialog-overlay.open) {
+  overflow: hidden;
+}
+
+/* Smooth transitions for theme switching */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Override transitions for animations */
+.dialog-overlay, .dialog-container, .dialog-overlay.open .dialog-container {
+  transition-property: opacity, visibility, transform;
 }

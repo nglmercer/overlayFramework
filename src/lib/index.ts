@@ -26,6 +26,9 @@ export * from './config';
 // Alert events exports
 export * from './alertEvents';
 
+// Dialog exports
+export * from './dialog';
+
 // Media registry exports
 export * from '../core/mediaRegistry';
 
