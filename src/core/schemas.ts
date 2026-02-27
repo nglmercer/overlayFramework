@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const UnitSchema = z.union([
   z.number(), // defaults to px
   z.string().regex(/^-?\d+(\.\d+)?(px|%|vh|vw|em|rem|deg)?$/),
+  z.literal('auto'),
 ]);
 
 export type UnitValue = z.infer<typeof UnitSchema>;
@@ -23,7 +24,7 @@ export const BaseElementSchema = z.object({
   zIndex: z.number().default(0),
   visible: z.boolean().default(true),
   className: z.string().optional(),
-  style: z.record(z.string()).optional(),
+  style: z.record(z.string(), z.string()).optional(),
 });
 
 export const TextElementSchema = BaseElementSchema.extend({
@@ -80,16 +81,10 @@ export type GroupElement = z.infer<typeof BaseElementSchema> & {
 
 export const GroupElementSchema: z.ZodType<GroupElement> = BaseElementSchema.extend({
   type: z.literal('group'),
-  elements: z.lazy(() => z.array(z.union([
-    TextElementSchema,
-    MediaElementSchema,
-    BoxElementSchema,
-    MultimediaElementSchema,
-    GroupElementSchema
-  ]))),
-}) as any;
+  elements: z.lazy(() => z.array(TemplateElementSchema)).default([]),
+});
 
-export const TemplateElementSchema = z.union([
+export const TemplateElementSchema: z.ZodType<TemplateElement> = z.union([
   TextElementSchema,
   MediaElementSchema,
   BoxElementSchema,
