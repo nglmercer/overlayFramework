@@ -289,6 +289,8 @@ export class AppDialog extends LitElement {
     }
 
     .dialog-body {
+      display: flex;
+      gap: 10px;
       padding: 8px 24px 20px;
     }
 

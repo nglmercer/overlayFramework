@@ -55,10 +55,10 @@ export async function confirm(
   const result = await dialog.open({
     message,
     type: 'confirm',
-    title: options?.title || 'Confirm',
+    title: options?.title,
     theme: options?.theme || 'dark',
-    confirmText: options?.confirmText || 'Confirm',
-    cancelText: options?.cancelText || 'Cancel',
+    confirmText: options?.confirmText,
+    cancelText: options?.cancelText,
     showClose: options?.showClose ?? true,
     closeOnOverlayClick: options?.closeOnOverlayClick ?? true,
     closeOnEscape: options?.closeOnEscape ?? true,
