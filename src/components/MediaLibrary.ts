@@ -27,14 +27,14 @@ export class MediaLibrary extends LitElement {
   ];
 
   private sounds = [
-    { id: '1', name: 'victory.wav', date: '2022-08-09', size: 1.24 },
-    { id: '2', name: 'tense.wav', date: '2022-08-09', size: 0.92 },
-    { id: '3', name: 'riff.wav', date: '2022-08-09', size: 0.84 },
-    { id: '4', name: 'levelUp.wav', date: '2022-08-09', size: 1.06 },
-    { id: '5', name: 'glimmer.wav', date: '2022-08-09', size: 0.97 },
-    { id: '6', name: 'chirp.wav', date: '2022-08-09', size: 0.83 },
-    { id: '7', name: 'alert.wav', date: '2022-08-10', size: 0.50 },
-    { id: '8', name: 'notification.wav', date: '2022-08-11', size: 0.30 },
+    { id: 's1', name: 'Magic Chime', date: '2022-08-09', size: 1.24, url: 'https://actions.google.com/sounds/v1/magic/magic_chime.ogg' },
+    { id: 's2', name: 'Cartoon Boing', date: '2022-08-09', size: 0.92, url: 'https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg' },
+    { id: 's3', name: 'Short Beep', date: '2022-08-09', size: 0.84, url: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' },
+    { id: 's4', name: 'Retro Laser', date: '2022-08-09', size: 1.06, url: 'https://actions.google.com/sounds/v1/weapons/retro_laser_gun.ogg' },
+    { id: 's5', name: 'Water Drop', date: '2022-08-09', size: 0.97, url: 'https://actions.google.com/sounds/v1/water/water_drop.ogg' },
+    { id: 's6', name: 'Fast Typing', date: '2022-08-09', size: 0.83, url: 'https://actions.google.com/sounds/v1/office/typing_fast.ogg' },
+    { id: 's7', name: 'Baby Cry', date: '2022-08-10', size: 0.50, url: 'https://actions.google.com/sounds/v1/human_voices/human_baby_cry.ogg' },
+    { id: 's8', name: 'Glass Crash', date: '2022-08-11', size: 0.30, url: 'https://actions.google.com/sounds/v1/impacts/crash.ogg' },
   ];
 
   static styles = css`
@@ -174,7 +174,12 @@ export class MediaLibrary extends LitElement {
             ${currentItems.map(item => html`
               <div 
                 class="item ${this.selectedItem === item.id ? 'selected' : ''}" 
-                @click="${() => this.selectedItem = item.id}"
+                @click="${() => {
+                  this.selectedItem = item.id;
+                  if (this.type === 'sound' && 'url' in item) {
+                    new Audio((item as any).url).play().catch(e => console.warn('Could not play list audio:', e));
+                  }
+                }}"
               >
                 <div class="preview-box">
                   ${this.type === 'image' && 'url' in item ? html`

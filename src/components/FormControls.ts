@@ -1,6 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property } from '../litcomponents';
-import { getLocale, setLocale, LocalizeController } from '../locales/localization';
+import { LocalizeController } from '../locales/localization';
 
 @Component('ui-input')
 export class UIInput extends LitElement {

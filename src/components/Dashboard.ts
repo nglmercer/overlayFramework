@@ -2,7 +2,6 @@ import { html, css, LitElement } from 'lit';
 import { Component, state, property } from '../litcomponents';
 import { dbManager, AlertBox } from '../lib/db';
 import { getLocale, setLocale, LocalizeController } from '../locales/localization';
-import { msg } from '@lit/localize';
 
 @Component('app-dashboard')
 export class AppDashboard extends LitElement {
@@ -197,8 +196,8 @@ export class AppDashboard extends LitElement {
   render() {
     return html`
       <div class="max-w-3xl">
-        <h1>${msg('Tus alertas')}</h1>
-        <p class="stats">${msg('Grupos de alertas')}: ${this.alertBoxes.length}/10</p>
+        <h1>${this._localize.t('dashboard.title')}</h1>
+        <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/10</p>
 
         <button 
           class="btn-create"
@@ -208,7 +207,7 @@ export class AppDashboard extends LitElement {
           <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          ${msg('Crear recuadro de alerta')}
+          ${this._localize.t('dashboard.createAlertBox')}
         </button>
 
         <div class="box-grid">
@@ -242,10 +241,10 @@ export class AppDashboard extends LitElement {
                 
                 ${this.openMenuId === box.id ? html`
                   <div class="dropdown">
-                    <button @click="${() => {}}">${msg('Copiar fuente de navegador')}</button>
-                    <button @click="${() => {}}">${msg('Renombrar')}</button>
-                    <button @click="${() => {}}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">${msg('Duplicado')}</button>
-                    <button class="delete" @click="${() => this.handleDeleteBox(box.id)}">${msg('Eliminar')}</button>
+                    <button @click="${() => {}}">${this._localize.t('dashboard.copySource')}</button>
+                    <button @click="${() => {}}">${this._localize.t('dashboard.rename')}</button>
+                    <button @click="${() => {}}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">${this._localize.t('dashboard.duplicate')}</button>
+                    <button class="delete" @click="${() => this.handleDeleteBox(box.id)}">${this._localize.t('dashboard.delete')}</button>
                   </div>
                 ` : ''}
               </div>
@@ -254,7 +253,7 @@ export class AppDashboard extends LitElement {
                   class="btn-edit"
                   @click="${() => this.onEdit(box.id)}"
                 >
-                  ${msg('Editar alertas')}
+                  ${this._localize.t('dashboard.editAlerts')}
                 </button>
               </div>
             </div>

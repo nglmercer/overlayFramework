@@ -346,9 +346,9 @@ export class AppEditor extends LitElement {
 
   render() {
     return this._variantsTask.render({
-      pending: () => html`<div class="preview-canvas">${msg('Cargando variantes...')}</div>`,
+      pending: () => html`<div class="preview-canvas">${this._localize.t('preview.loading')}</div>`,
       complete: (variants) => this.renderEditor(variants),
-      error: (e) => html`<div>${msg('Error al cargar')}</div>`
+      error: (e) => html`<div>${this._localize.t('errors.loadFailed')}</div>`
     });
   }
 
@@ -358,10 +358,10 @@ export class AppEditor extends LitElement {
     return html`
       <div class="topbar">
         <button class="btn-back" @click="${this.onBack}">
-          <span>&larr; ${msg('Regresar')}</span>
+          <span>&larr; ${this._localize.t('app.back')}</span>
         </button>
         <div class="flex-center">
-          <span style="font-weight: 700;">${msg('Alerts Box Editor')}</span>
+          <span style="font-weight: 700;">${this._localize.t('app.editor')}</span>
         </div>
         <div style="width: auto; display: flex; align-items: center; gap: 1rem;">
           <select 
@@ -379,7 +379,7 @@ export class AppEditor extends LitElement {
         <!-- Sidebar Left -->
         <div class="sidebar-left custom-scrollbar">
           <div class="sidebar-header">
-            <span>${msg('VARIANTES')}</span>
+            <span>${this._localize.t('sidebar.variants')}</span>
             <button @click="${this.handleCreateVariant}" style="background: transparent; border: none; color: #a970ff; cursor: pointer;">+</button>
           </div>
           
@@ -389,7 +389,7 @@ export class AppEditor extends LitElement {
                 class="section-btn" 
                 @click="${() => this.expandedSection = this.expandedSection === item.id ? null : item.id}"
               >
-                <span style="font-weight: 600; font-size: 0.875rem;">${msg(str`${item.label}`)}</span>
+                <span style="font-weight: 600; font-size: 0.875rem;">${this._localize.t('event.' + item.id)}</span>
                 <span>${this.expandedSection === item.id ? '▲' : '▼'}</span>
               </button>
               
@@ -403,7 +403,7 @@ export class AppEditor extends LitElement {
                       >
                         <div class="toggle-knob"></div>
                       </div>
-                      <span style="font-size: 0.75rem;">${msg('Aleatorio')}</span>
+                      <span style="font-size: 0.75rem;">${this._localize.t('variant.random')}</span>
                     </div>
                   ` : ''}
                   
@@ -428,8 +428,8 @@ export class AppEditor extends LitElement {
         <div class="preview-area">
           ${variant ? html`
           <div class="preview-header">
-            <button class="btn-preview" @click="${this.handlePlayPreview}">${msg('Vista previa de alerta')}</button>
-            <button class="btn-preview" @click="${this.handleSendTestAlert}">${msg('Enviar alerta de prueba')}</button>
+            <button class="btn-preview" @click="${this.handlePlayPreview}">${this._localize.t('preview.alert')}</button>
+            <button class="btn-preview" @click="${this.handleSendTestAlert}">${this._localize.t('preview.sendTest')}</button>
           </div>
           <div class="preview-content">
             <div 
@@ -443,14 +443,14 @@ export class AppEditor extends LitElement {
             </div>
           </div>
           <div class="preview-footer">
-            <div style="font-size: 0.875rem; font-weight: 600;">${msg('Opciones de vista previa')}</div>
+            <div style="font-size: 0.875rem; font-weight: 600;">${this._localize.t('preview.options')}</div>
             <div class="preview-options">
               <div class="size-input">
-                <label>${msg('Ancho px')}</label>
+                <label>${this._localize.t('preview.width')}</label>
                 <input type="number" .value="${this.previewWidth.toString()}" @change="${(e: any) => this.previewWidth = Number(e.target.value)}">
               </div>
               <div class="size-input">
-                <label>${msg('Altura px')}</label>
+                <label>${this._localize.t('preview.height')}</label>
                 <input type="number" .value="${this.previewHeight.toString()}" @change="${(e: any) => this.previewHeight = Number(e.target.value)}">
               </div>
               <div class="bg-toggles">
@@ -461,7 +461,7 @@ export class AppEditor extends LitElement {
               </div>
             </div>
           </div>
-          ` : html`<div class="preview-content"><div class="preview-canvas bg-checker">${msg('Selecciona una variante para previsualizar')}</div></div>`}
+          ` : html`<div class="preview-content"><div class="preview-canvas bg-checker">${this._localize.t('preview.select')}</div></div>`}
         </div>
 
         <!-- Sidebar Right -->
@@ -469,17 +469,17 @@ export class AppEditor extends LitElement {
           ${variant ? html`
             <div class="section">
               <button class="section-btn" @click="${() => this.rightExpandedSection = 'general'}">
-                <span style="font-weight: 600;">${msg('Configuración general')}</span>
+                <span style="font-weight: 600;">${this._localize.t('sidebar.general')}</span>
               </button>
               ${this.rightExpandedSection === 'general' ? html`
                 <div class="section-content">
                   <ui-input 
-                    label="${msg('Nombre')}" 
+                    label="${this._localize.t('variant.name')}" 
                     .value="${variant.name}" 
                     @change="${(e: any) => this.handleUpdateVariant({ name: e.detail }, variants)}"
                   ></ui-input>
                   <ui-input 
-                    label="${msg('Duración')}" 
+                    label="${this._localize.t('variant.duration')}" 
                     type="number" 
                     .value="${variant.duration.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ duration: Number(e.detail) }, variants)}"
@@ -490,56 +490,56 @@ export class AppEditor extends LitElement {
 
             <div class="section">
               <button class="section-btn" @click="${() => this.rightExpandedSection = 'typography'}">
-                <span style="font-weight: 600;">${msg('Textos y Mensajes')}</span>
+                <span style="font-weight: 600;">${this._localize.t('sidebar.typography')}</span>
               </button>
               ${this.rightExpandedSection === 'typography' ? html`
                 <div class="section-content">
                   <ui-input 
-                    label="${msg('Mensaje de la alerta')}" 
+                    label="${this._localize.t('variant.message')}" 
                     .value="${variant.message}" 
                     @change="${(e: any) => this.handleUpdateVariant({ message: e.detail }, variants)}"
                   ></ui-input>
                   <ui-select 
-                    label="${msg('Tipografía')}" 
+                    label="${this._localize.t('variant.fontFamily')}" 
                     .value="${variant.fontFamily}"
                     .options="${[{ value: 'Roboto', label: 'Roboto' }, { value: 'Inter', label: 'Inter' }, { value: 'Arial', label: 'Arial' }, { value: 'impact', label: 'Impact' }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ fontFamily: e.detail }, variants)}"
                   ></ui-select>
                   <ui-select 
-                    label="${msg('Grosor')}" 
+                    label="${this._localize.t('variant.fontWeight')}" 
                     .value="${variant.fontWeight}"
                     .options="${[{ value: 'Normal', label: 'Normal' }, { value: 'Bold', label: 'Bold' }, { value: 'Lighter', label: 'Lighter' }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ fontWeight: e.detail }, variants)}"
                   ></ui-select>
                   <ui-select 
-                    label="${msg('Alineación')}" 
+                    label="${this._localize.t('variant.textAlign')}" 
                     .value="${variant.textAlign}"
-                    .options="${[{ value: 'left', label: msg('Izquierda') }, { value: 'center', label: msg('Centro') }, { value: 'right', label: msg('Derecha') }]}"
+                    .options="${[{ value: 'left', label: this._localize.t('variant.alignLeft') }, { value: 'center', label: this._localize.t('variant.alignCenter') }, { value: 'right', label: this._localize.t('variant.alignRight') }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ textAlign: e.detail }, variants)}"
                   ></ui-select>
                   <ui-input 
-                    label="${msg('Tamaño (px)')}" 
+                    label="${this._localize.t('variant.fontSize')}" 
                     type="number" 
                     .value="${variant.fontSize.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ fontSize: Number(e.detail) }, variants)}"
                   ></ui-input>
                   <ui-color-picker 
-                    label="${msg('Color de texto')}" 
+                    label="${this._localize.t('variant.textColor')}" 
                     .value="${variant.textColor}"
                     @change="${(e: any) => this.handleUpdateVariant({ textColor: e.detail }, variants)}"
                   ></ui-color-picker>
                   <ui-color-picker 
-                    label="${msg('Color de resaltado')}" 
+                    label="${this._localize.t('variant.highlightColor')}" 
                     .value="${variant.highlightColor}"
                     @change="${(e: any) => this.handleUpdateVariant({ highlightColor: e.detail }, variants)}"
                   ></ui-color-picker>
                   <ui-toggle 
-                    label="${msg('Sombra de texto')}" 
+                    label="${this._localize.t('variant.textShadow')}" 
                     .checked="${variant.textShadow}"
                     @change="${(e: any) => this.handleUpdateVariant({ textShadow: e.detail }, variants)}"
                   ></ui-toggle>
                   <ui-toggle 
-                    label="${msg('Leer mensaje (TTS)')}" 
+                    label="${this._localize.t('variant.ttsEnabled')}" 
                     .checked="${variant.ttsEnabled}"
                     @change="${(e: any) => this.handleUpdateVariant({ ttsEnabled: e.detail }, variants)}"
                   ></ui-toggle>
@@ -549,30 +549,30 @@ export class AppEditor extends LitElement {
 
             <div class="section">
               <button class="section-btn" @click="${() => this.rightExpandedSection = 'animations'}">
-                <span style="font-weight: 600;">${msg('Animaciones')}</span>
+                <span style="font-weight: 600;">${this._localize.t('sidebar.animations')}</span>
               </button>
               ${this.rightExpandedSection === 'animations' ? html`
                 <div class="section-content">
                   <ui-select 
-                    label="${msg('Entrada')}" 
+                    label="${this._localize.t('variant.animIn')}" 
                     .value="${variant.animationIn}"
-                    .options="${[{ value: 'fade-in', label: msg('Desvanecer') }, { value: 'slide-in-up', label: msg('Deslizar hacia arriba') }, { value: 'zoom-in', label: msg('Aumentar') }, { value: 'bounce-in', label: msg('Rebote') }]}"
+                    .options="${[{ value: 'fade-in', label: this._localize.t('variant.anim.fadeIn') }, { value: 'slide-in-up', label: this._localize.t('variant.anim.slideInUp') }, { value: 'zoom-in', label: this._localize.t('variant.anim.zoomIn') }, { value: 'bounce-in', label: this._localize.t('variant.anim.bounceIn') }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ animationIn: e.detail }, variants)}"
                   ></ui-select>
                   <ui-input 
-                    label="${msg('Duración entrada (s)')}" 
+                    label="${this._localize.t('variant.animInDuration')}" 
                     type="number" 
                     .value="${variant.animationInDuration.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ animationInDuration: Number(e.detail) }, variants)}"
                   ></ui-input>
                   <ui-select 
-                    label="${msg('Salida')}" 
+                    label="${this._localize.t('variant.animOut')}" 
                     .value="${variant.animationOut}"
-                    .options="${[{ value: 'fade-out', label: msg('Desvanecer') }, { value: 'slide-out-down', label: msg('Deslizar hacia abajo') }, { value: 'zoom-out', label: msg('Disminuir') }]}"
+                    .options="${[{ value: 'fade-out', label: this._localize.t('variant.anim.fadeOut') }, { value: 'slide-out-down', label: this._localize.t('variant.anim.slideOutDown') }, { value: 'zoom-out', label: this._localize.t('variant.anim.zoomOut') }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ animationOut: e.detail }, variants)}"
                   ></ui-select>
                   <ui-input 
-                    label="${msg('Duración salida (s)')}" 
+                    label="${this._localize.t('variant.animOutDuration')}" 
                     type="number" 
                     .value="${variant.animationOutDuration.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ animationOutDuration: Number(e.detail) }, variants)}"
@@ -583,46 +583,46 @@ export class AppEditor extends LitElement {
 
             <div class="section">
               <button class="section-btn" @click="${() => this.rightExpandedSection = 'design'}">
-                <span style="font-weight: 600;">${msg('Diseño')}</span>
+                <span style="font-weight: 600;">${this._localize.t('sidebar.design')}</span>
               </button>
               ${this.rightExpandedSection === 'design' ? html`
                 <div class="section-content">
                   <ui-select 
-                    label="${msg('Diseño')}" 
+                    label="${this._localize.t('variant.layout')}" 
                     .value="${variant.layout}"
-                    .options="${[{ value: 'text-below', label: msg('Texto abajo') }, { value: 'text-right', label: msg('Texto derecha') }]}"
+                    .options="${[{ value: 'text-below', label: this._localize.t('variant.layout.textBelow') }, { value: 'text-right', label: this._localize.t('variant.layout.textRight') }]}"
                     @change="${(e: any) => this.handleUpdateVariant({ layout: e.detail }, variants)}"
                   ></ui-select>
                   <ui-color-picker 
-                    label="${msg('Color de fondo')}" 
+                    label="${this._localize.t('variant.bgColor')}" 
                     .value="${variant.bgColor}"
                     @change="${(e: any) => this.handleUpdateVariant({ bgColor: e.detail }, variants)}"
                   ></ui-color-picker>
                   <ui-range 
-                    label="${msg('Opacidad de fondo %')}" 
+                    label="${this._localize.t('variant.bgOpacity')}" 
                     .value="${variant.bgOpacity}"
                     @change="${(e: any) => this.handleUpdateVariant({ bgOpacity: e.detail }, variants)}"
                   ></ui-range>
                   <ui-input 
-                    label="${msg('Relleno (px)')}" 
+                    label="${this._localize.t('variant.padding')}" 
                     type="number" 
                     .value="${variant.padding.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ padding: Number(e.detail) }, variants)}"
                   ></ui-input>
                   <ui-input 
-                    label="${msg('Espaciado (px)')}" 
+                    label="${this._localize.t('variant.spacing')}" 
                     type="number" 
                     .value="${variant.spacing.toString()}" 
                     @change="${(e: any) => this.handleUpdateVariant({ spacing: Number(e.detail) }, variants)}"
                   ></ui-input>
                   <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
                     <ui-toggle 
-                      label="${msg('Redondeado')}" 
+                      label="${this._localize.t('variant.rounded')}" 
                       .checked="${variant.rounded}"
                       @change="${(e: any) => this.handleUpdateVariant({ rounded: e.detail }, variants)}"
                     ></ui-toggle>
                     <ui-toggle 
-                      label="${msg('Sombra de caja')}" 
+                      label="${this._localize.t('variant.shadow')}" 
                       .checked="${variant.shadow}"
                       @change="${(e: any) => this.handleUpdateVariant({ shadow: e.detail }, variants)}"
                     ></ui-toggle>
@@ -633,20 +633,20 @@ export class AppEditor extends LitElement {
 
             <div class="section">
               <button class="section-btn" @click="${() => this.rightExpandedSection = 'media'}">
-                <span style="font-weight: 600;">${msg('Imágenes y sonido')}</span>
+                <span style="font-weight: 600;">${this._localize.t('sidebar.media')}</span>
               </button>
               ${this.rightExpandedSection === 'media' ? html`
                 <div class="section-content">
                   <button @click="${() => this.showMediaLibrary = 'image'}" style="width: 100%; padding: 0.5rem; background: #3a3a3d; border: none; color: white; border-radius: 0.375rem; cursor: pointer; margin-bottom: 0.5rem;">
-                    ${msg('Cambiar imagen')}
+                    ${this._localize.t('media.changeImage')}
                   </button>
-                  <ui-range label="${msg('Escala de imagen')}" .value="${variant.imageScale}" @change="${(e: any) => this.handleUpdateVariant({ imageScale: e.detail }, variants)}"></ui-range>
-                  <ui-range label="${msg('Volumen de imagen (WebM)')}" .value="${variant.imageVolume}" @change="${(e: any) => this.handleUpdateVariant({ imageVolume: e.detail }, variants)}"></ui-range>
+                  <ui-range label="${this._localize.t('media.imageScale')}" .value="${variant.imageScale}" @change="${(e: any) => this.handleUpdateVariant({ imageScale: e.detail }, variants)}"></ui-range>
+                  <ui-range label="${this._localize.t('media.imageVolume')}" .value="${variant.imageVolume}" @change="${(e: any) => this.handleUpdateVariant({ imageVolume: e.detail }, variants)}"></ui-range>
                   <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
                   <button @click="${() => this.showMediaLibrary = 'sound'}" style="width: 100%; padding: 0.5rem; background: #3a3a3d; border: none; color: white; border-radius: 0.375rem; cursor: pointer; margin-bottom: 0.5rem;">
-                    ${msg('Cambiar sonido')}
+                    ${this._localize.t('media.changeSound')}
                   </button>
-                  <ui-range label="${msg('Volumen del sonido')}" .value="${variant.soundVolume}" @change="${(e: any) => this.handleUpdateVariant({ soundVolume: e.detail }, variants)}"></ui-range>
+                  <ui-range label="${this._localize.t('media.soundVolume')}" .value="${variant.soundVolume}" @change="${(e: any) => this.handleUpdateVariant({ soundVolume: e.detail }, variants)}"></ui-range>
                 </div>
               ` : ''}
             </div>
