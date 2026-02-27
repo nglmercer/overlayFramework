@@ -77,12 +77,14 @@ export class MediaLibrary extends LitElement {
     .sort-container select:focus { border-color: #a970ff; }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .item { background-color: #26262c; border-radius: 0.5rem; padding: 1rem; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; position: relative; }
-    .item.selected { border-color: #a970ff; }
+    .item { background-color: #26262c; border-radius: 0.5rem; padding: 1rem; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; position: relative; }
+    .item.selected { border-color: #a970ff; background-color: rgba(169, 112, 255, 0.1); box-shadow: 0 0 0 2px rgba(169, 112, 255, 0.4); }
     .item:hover:not(.selected) { border-color: rgba(255, 255, 255, 0.2); }
     
     .preview-box { aspect-ratio: 16/9; background-color: #0e0e10; border-radius: 0.375rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
     .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-box video { width: 100%; height: 100%; object-fit: cover; }
+    .preview-box audio { width: 100%; position: absolute; bottom: 0; left: 0; }
     .preview-box svg { width: 2rem; height: 2rem; color: rgba(255, 255, 255, 0.5); }
     
     .delete-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(239, 68, 68, 0.8); color: white; border: none; border-radius: 0.25rem; width: 1.5rem; height: 1.5rem; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10; padding: 0; }
@@ -268,7 +270,7 @@ export class MediaLibrary extends LitElement {
                   @click="${() => {
                     this.selectedItem = item.id;
                     if (this.type === 'sound') {
-                      new Audio(apiClient.files.getUrl(item.id)).play().catch(e => console.warn('Could not play list audio:', e));
+                      new Audio(apiClient.files.getUrl(item)).play().catch(e => console.warn('Could not play list audio:', e));
                     }
                   }}"
                 >
@@ -279,11 +281,18 @@ export class MediaLibrary extends LitElement {
                   </button>
                 
                   <div class="preview-box">
-                    ${this.type === 'image' && item.mimeType?.startsWith('image/') ? html`
-                      <img src="${apiClient.files.getUrl(item.id)}" alt="${item.originalName}" />
-                    ` : html`
+                    ${item.mimeType?.startsWith('image/') ? html`
+                      <img src="${apiClient.files.getUrl(item)}" alt="${item.originalName}" />
+                    ` : item.mimeType?.startsWith('video/') ? html`
+                      <video src="${apiClient.files.getUrl(item)}" autoplay loop muted playsinline></video>
+                    ` : item.mimeType?.startsWith('audio/') ? html`
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      </svg>
+                      <audio src="${apiClient.files.getUrl(item)}" controls @click="${(e: Event) => e.stopPropagation()}"></audio>
+                    ` : html`
+                      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     `}
                   </div>
@@ -322,7 +331,7 @@ export class MediaLibrary extends LitElement {
               @click="${() => {
                 const selected = this.items.find(i => i.id === this.selectedItem);
                 if (selected) {
-                  this.onSelect(apiClient.files.getUrl(selected.id), selected.originalName);
+                  this.onSelect(apiClient.files.getUrl(selected), selected.originalName);
                 }
               }}"
             >${this._localize.t('media.addToAlerts')}</button>
