@@ -3,6 +3,7 @@ import { Component, property, state } from '../litcomponents';
 import { LocalizeController } from '../locales/localization';
 import { createBrowserClient } from '../api/client';
 import type { FileItem } from '../api/client';
+import { confirm } from '../lib/dialog';
 
 const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 
@@ -171,7 +172,8 @@ export class MediaLibrary extends LitElement {
 
   async handleDelete(e: Event, id: string) {
     e.stopPropagation(); // don't select the item
-    if (confirm("Are you sure you want to delete this file?")) {
+    const confirmResult = await confirm("Are you sure you want to delete this file?")
+    if (confirmResult) {
       try {
         await apiClient.files.delete(id);
         if (this.selectedItem === id) this.selectedItem = null;

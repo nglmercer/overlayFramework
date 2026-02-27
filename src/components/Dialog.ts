@@ -1,5 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property, state, query } from '../litcomponents';
+import { LocalizeController } from '../locales/localization';
 
 export type DialogTheme = 'light' | 'dark' | 'system';
 export type DialogType = 'alert' | 'confirm' | 'prompt' | 'modal';
@@ -39,8 +40,8 @@ export class AppDialog extends LitElement {
   @property({ type: String }) message = '';
   @property({ type: String }) type: DialogType = 'alert';
   @property({ type: String }) theme: DialogTheme = 'dark';
-  @property({ type: String }) confirmText = 'Confirm';
-  @property({ type: String }) cancelText = 'Cancel';
+  @property({ type: String }) confirmText = '';
+  @property({ type: String }) cancelText = '';
   @property({ type: String }) placeholder = '';
   @property({ type: String }) defaultValue = '';
   @property({ type: Boolean }) showClose = true;
@@ -51,6 +52,9 @@ export class AppDialog extends LitElement {
   @state() private _isOpen = false;
   @state() private _inputValue = '';
   @state() private _theme: 'light' | 'dark' = 'dark';
+
+  // Localization controller
+  localizer = new LocalizeController(this);
 
   @query('#dialog-input') private _inputElement!: HTMLInputElement;
   @query('#dialog-overlay') private _overlayElement!: HTMLDivElement;
@@ -477,9 +481,25 @@ export class AppDialog extends LitElement {
     this.message = options.message;
     this.type = options.type || 'alert';
     this.theme = options.theme || 'dark';
-    this.confirmText = options.confirmText || 'Confirm';
-    this.cancelText = options.cancelText || 'Cancel';
-    this.placeholder = options.placeholder || '';
+    
+    // Use localized default texts if not provided
+    if (!options.confirmText) {
+      this.confirmText = this.localizer.t(`dialog.${this.type === 'alert' ? 'ok' : 'confirm'}`);
+    } else {
+      this.confirmText = options.confirmText;
+    }
+    
+    if (!options.cancelText) {
+      this.cancelText = this.localizer.t('dialog.cancel');
+    } else {
+      this.cancelText = options.cancelText;
+    }
+    
+    if (!options.placeholder && this.type === 'prompt') {
+      this.placeholder = this.localizer.t('dialog.placeholder.default');
+    } else {
+      this.placeholder = options.placeholder || '';
+    }
     this.defaultValue = options.defaultValue || '';
     this.showClose = options.showClose !== undefined ? options.showClose : true;
     this.closeOnOverlayClick = options.closeOnOverlayClick !== undefined ? options.closeOnOverlayClick : true;
@@ -571,21 +591,29 @@ export class AppDialog extends LitElement {
   }
 
   private _getDefaultTitle(): string {
+    if (this.title) return this.title;
+    
     switch (this.type) {
       case 'confirm':
-        return 'Confirm';
+        return this.localizer.t('dialog.title.confirm');
       case 'prompt':
-        return 'Input';
+        return this.localizer.t('dialog.title.input');
       case 'modal':
-        return this.title || 'Modal';
+        return this.localizer.t('dialog.title.modal');
       default:
-        return this.title || 'Alert';
+        return this.localizer.t('dialog.title.alert');
     }
   }
 
   render() {
-    const title = this.title || this._getDefaultTitle();
+    const title = this._getDefaultTitle();
     const iconClass = this._getIconClass();
+    
+    // Get localized button texts
+    const confirmBtnText = this.confirmText || this.localizer.t(`dialog.${this.type === 'alert' ? 'ok' : 'confirm'}`);
+    const cancelBtnText = this.cancelText || this.localizer.t('dialog.cancel');
+    const inputPlaceholder = this.placeholder || this.localizer.t('dialog.placeholder.default');
+    const closeLabel = this.localizer.t('dialog.close');
     
     return html`
       <div 
@@ -600,7 +628,7 @@ export class AppDialog extends LitElement {
               <button 
                 class="dialog-close" 
                 @click="${this._handleCancel}"
-                aria-label="Close"
+                aria-label="${closeLabel}"
               >
                 ×
               </button>
@@ -622,7 +650,7 @@ export class AppDialog extends LitElement {
                 class="dialog-input"
                 type="text"
                 .value="${this._inputValue}"
-                placeholder="${this.placeholder}"
+                placeholder="${inputPlaceholder}"
                 @input="${this._handleInputChange}"
                 @keydown="${(e: KeyboardEvent) => {
                   if (e.key === 'Enter') {
@@ -639,20 +667,20 @@ export class AppDialog extends LitElement {
                 class="btn ${this.danger ? 'btn-danger' : 'btn-primary'}"
                 @click="${this._handleConfirm}"
               >
-                ${this.confirmText}
+                ${confirmBtnText}
               </button>
             ` : html`
               <button 
                 class="btn btn-secondary"
                 @click="${this._handleCancel}"
               >
-                ${this.cancelText}
+                ${cancelBtnText}
               </button>
               <button 
                 class="btn ${this.danger ? 'btn-danger' : 'btn-primary'}"
                 @click="${this._handleConfirm}"
               >
-                ${this.confirmText}
+                ${confirmBtnText}
               </button>
             `}
           </div>

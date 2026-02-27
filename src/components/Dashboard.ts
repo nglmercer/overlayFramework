@@ -1,7 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { Component, state, property } from '../litcomponents';
 import { dbManager, AlertBox } from '../lib/db';
-import { getLocale, setLocale, LocalizeController } from '../locales/localization';
+import { LocalizeController } from '../locales/localization';
 
 @Component('app-dashboard')
 export class AppDashboard extends LitElement {
