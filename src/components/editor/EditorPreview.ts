@@ -1,7 +1,8 @@
 import { html, css, LitElement } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
+import { AppAlertView } from '../AlertView';
 
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
@@ -130,7 +131,8 @@ export class EditorPreview extends LitElement {
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
 
-  @query('app-alert-view') private alertView!: HTMLElement;
+  @query('app-alert-view') private alertView!: AppAlertView;
+  @state() private _isPlaying = false;
 
   private _localize = new LocalizeController(this);
 
@@ -170,6 +172,13 @@ export class EditorPreview extends LitElement {
       bubbles: true,
       composed: true
     }));
+  }
+
+  // Public method to trigger preview animation - called by parent Editor
+  public async playPreview() {
+    if (this.alertView && this.alertView.playPreview) {
+      await this.alertView.playPreview();
+    }
   }
 
   render() {

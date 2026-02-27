@@ -53,6 +53,7 @@ export class AppEditor extends LitElement {
   });
 
   @query('#file-input') private fileInput!: HTMLInputElement;
+  @query('editor-preview') private editorPreview!: EditorPreview;
   @query('app-alert-view') private alertView!: any;
 
   static styles = css`
@@ -91,8 +92,8 @@ export class AppEditor extends LitElement {
   }
 
   handlePlayPreview() {
-    if (this.alertView && this.alertView.playPreview) {
-      this.alertView.playPreview();
+    if (this.editorPreview && this.editorPreview.playPreview) {
+      this.editorPreview.playPreview();
     }
   }
 
