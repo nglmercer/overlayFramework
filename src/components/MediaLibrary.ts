@@ -1,28 +1,44 @@
 import { html, LitElement } from 'lit';
-import { Component, property, state, queryAll } from '../litcomponents';
+import { Component, property, state } from '../litcomponents';
 import { LocalizeController } from '../locales/localization';
 import { createBrowserClient } from '../api/client';
 import type { FileItem } from '../api/client';
 import { confirm } from '../lib/dialog';
 import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
-import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
 
 // Register sub-component
 import './media-library/MediaLibraryItem';
+import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
 
 const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MediaLibrary component
+//
+// Events dispatched (for consumers who prefer event-based integration):
+//   'media-select'  { url: string, name: string }
+//   'media-close'   {}
+//
+// Or pass callbacks via .onSelect / .onClose properties (legacy).
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {
   // ── Public API ──────────────────────────────────────────────────────────
+  /** Filter files by type shown in the grid */
   @property({ type: String }) type: 'image' | 'sound' = 'image';
+
+  /**
+   * The currently-selected URL in the parent (used to pre-highlight the
+   * matching item when the library first opens).
+   */
   @property({ type: String }) selectedUrl: string | null = null;
-  @property({ type: Function }) onClose: () => void = () => {};
-  @property({ type: Function }) onSelect: (url: string, name: string) => void = () => {};
+
+  /** Callback – called when user confirms selection (url, name) */
+  @property({ attribute: false }) onSelect: (url: string, name: string) => void = () => {};
+
+  /** Callback – called when the modal is closed without selecting */
+  @property({ attribute: false }) onClose: () => void = () => {};
 
   // ── Internal state ──────────────────────────────────────────────────────
   @state() private selectedItem: string | null = null;
@@ -33,10 +49,16 @@ export class MediaLibrary extends LitElement {
   @state() private loading = true;
   @state() private uploading = false;
   @state() private error: string | null = null;
-  @state() private quotaUsed = 0;   // bytes
-  @state() private quotaMax = 0;    // bytes
+  @state() private quotaUsed = 0;
+  @state() private quotaMax = 0;
 
-  @queryAll('media-library-item') private itemEls!: NodeListOf<MediaLibraryItem>;
+  /**
+   * ID of the item whose audio is currently playing.
+   * Kept here (not in the child) so the parent can stop the old
+   * player when a new card is selected — without needing queryAll
+   * across shadow boundaries.
+   */
+  @state() private playingItemId: string | null = null;
 
   private readonly ITEMS_PER_PAGE = 6;
   private _localize = new LocalizeController(this);
@@ -51,26 +73,38 @@ export class MediaLibrary extends LitElement {
     this.fetchQuota();
   }
 
+  /**
+   * Once items arrive, try to sync the pre-selection from `selectedUrl`.
+   * We only do this once (when `selectedItem` is still null).
+   */
   updated(changedProperties: Map<string, unknown>) {
-    // Auto-select the page that contains the pre-selected item
-    if (changedProperties.has('selectedUrl') || changedProperties.has('items')) {
-      if (this.selectedUrl && !this.selectedItem && this.items.length > 0) {
-        const match = this.items.find(f => apiClient.files.getUrl(f) === this.selectedUrl);
-        if (match) {
-          this.selectedItem = match.id;
-          const idx = this.filteredAndSortedItems.findIndex(i => i.id === match.id);
-          if (idx >= 0) {
-            const targetPage = Math.floor(idx / this.ITEMS_PER_PAGE) + 1;
-            if (this.currentPage !== targetPage) this.currentPage = targetPage;
-          }
-        }
-      }
+    const itemsArrived = changedProperties.has('items') && this.items.length > 0;
+    const urlChanged   = changedProperties.has('selectedUrl');
+
+    if ((itemsArrived || urlChanged) && this.selectedUrl && !this.selectedItem) {
+      this._syncSelectionFromUrl();
+    }
+  }
+
+  private _syncSelectionFromUrl() {
+    const match = this.items.find(f => apiClient.files.getUrl(f) === this.selectedUrl);
+    if (!match) return;
+
+    this.selectedItem = match.id;
+
+    // Jump to the page that contains the pre-selected item
+    const ordered = this._filteredAndSorted();
+    const idx = ordered.findIndex(i => i.id === match.id);
+    if (idx >= 0) {
+      const targetPage = Math.floor(idx / this.ITEMS_PER_PAGE) + 1;
+      if (this.currentPage !== targetPage) this.currentPage = targetPage;
     }
   }
 
   // ── Data fetching ───────────────────────────────────────────────────────
   private async fetchFiles() {
     this.loading = true;
+    this.error = null;
     try {
       const result = await apiClient.files.list({ pageSize: 100 });
       this.items = result.files.filter(f => {
@@ -85,9 +119,8 @@ export class MediaLibrary extends LitElement {
           f.mimeType === 'video/webm'
         );
       });
-      this.error = null;
     } catch (err: any) {
-      console.error(err);
+      console.error('[MediaLibrary] fetchFiles:', err);
       this.error = err.message ?? 'Error fetching files';
     } finally {
       this.loading = false;
@@ -98,7 +131,7 @@ export class MediaLibrary extends LitElement {
     try {
       const q = await apiClient.quota.get();
       this.quotaUsed = q.usedStorage;
-      this.quotaMax = q.maxStorage;
+      this.quotaMax  = q.maxStorage;
     } catch {
       // Non-fatal — hide quota bar gracefully
     }
@@ -132,6 +165,7 @@ export class MediaLibrary extends LitElement {
     try {
       await apiClient.files.delete(e.detail.id);
       if (this.selectedItem === e.detail.id) this.selectedItem = null;
+      if (this.playingItemId === e.detail.id) this.playingItemId = null;
       await Promise.all([this.fetchFiles(), this.fetchQuota()]);
     } catch (err: any) {
       alert('Error deleting file: ' + err.message);
@@ -139,28 +173,66 @@ export class MediaLibrary extends LitElement {
   }
 
   /**
-   * When selecting an audio item, stop all other playing audio cards first.
+   * Handle item selection from ml-select event.
+   * Signals the previously-playing item to stop via property change —
+   * MediaLibraryItem watches `playingExternal` to stop itself.
+   * This avoids queryAll across shadow DOM boundaries.
    */
   private handleItemSelect(e: CustomEvent<{ item: FileItem }>) {
     const { item } = e.detail;
-    // Stop audio on all other cards
-    this.itemEls?.forEach(el => {
-      if ((el as any).item?.id !== item.id) el.stopAudio?.();
-    });
     this.selectedItem = item.id;
+  }
+
+  /**
+   * Audio state is managed inside MediaLibraryItem.
+   * The parent tracks which item is "playing" via this event so it can
+   * tell previously-playing cards to stop when a new one starts.
+   */
+  private handleItemPlayStart(e: CustomEvent<{ id: string }>) {
+    if (this.playingItemId && this.playingItemId !== e.detail.id) {
+      // Find the old playing element and stop it via a custom event
+      const old = this.shadowRoot?.querySelector(
+        `media-library-item[data-id="${this.playingItemId}"]`
+      ) as MediaLibraryItem | null;
+      old?.stopAudio();
+    }
+    this.playingItemId = e.detail.id;
+  }
+
+  private handleItemPlayStop(e: CustomEvent<{ id: string }>) {
+    if (this.playingItemId === e.detail.id) {
+      this.playingItemId = null;
+    }
   }
 
   private handleConfirmSelection() {
     const selected = this.items.find(i => i.id === this.selectedItem);
-    if (selected) {
-      this.onSelect(apiClient.files.getUrl(selected), selected.originalName);
-    }
+    if (!selected) return;
+
+    const url  = apiClient.files.getUrl(selected);
+    const name = selected.originalName;
+
+    // Support both callback prop and event-based integration
+    this.onSelect(url, name);
+    this.dispatchEvent(new CustomEvent('media-select', {
+      detail: { url, name },
+      bubbles: true,
+      composed: true,
+    }));
   }
 
-  // ── Computed ────────────────────────────────────────────────────────────
-  private get filteredAndSortedItems(): FileItem[] {
+  private handleClose() {
+    this.onClose();
+    this.dispatchEvent(new CustomEvent('media-close', {
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  // ── Computed (pure, no side-effects) ────────────────────────────────────
+  private _filteredAndSorted(): FileItem[] {
     const q = this.searchQuery.toLowerCase().trim();
-    let filtered = q
+    const filtered = q
       ? this.items.filter(f => f.originalName.toLowerCase().includes(q))
       : this.items;
 
@@ -187,7 +259,7 @@ export class MediaLibrary extends LitElement {
     return html`
       <div class="header">
         <h2>${this._localize.t('media.resourceLibrary')}</h2>
-        <button class="header-close" @click="${this.onClose}" title="Close">
+        <button class="header-close" @click="${this.handleClose}" title="Close">
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -199,7 +271,6 @@ export class MediaLibrary extends LitElement {
   private renderToolbar() {
     return html`
       <div class="toolbar">
-        <!-- Search -->
         <div class="search-wrapper">
           <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -217,14 +288,13 @@ export class MediaLibrary extends LitElement {
           />
         </div>
 
-        <!-- Sort -->
         <div class="sort-container">
           <label>${this._localize.t('media.sortBy')}</label>
           <select
             class="sort-select"
             .value="${this.sortBy}"
             @change="${(e: Event) => {
-              this.sortBy = (e.target as HTMLSelectElement).value as any;
+              this.sortBy = (e.target as HTMLSelectElement).value as 'date' | 'name' | 'size';
               this.currentPage = 1;
             }}"
           >
@@ -255,7 +325,9 @@ export class MediaLibrary extends LitElement {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
-          ${this.uploading ? this._localize.t('media.uploading') || 'Uploading…' : this._localize.t('media.uploadFile')}
+          ${this.uploading
+            ? (this._localize.t('media.uploading') || 'Uploading…')
+            : this._localize.t('media.uploadFile')}
           <input
             type="file"
             style="display:none"
@@ -296,10 +368,14 @@ export class MediaLibrary extends LitElement {
       <div class="grid">
         ${currentItems.map(item => html`
           <media-library-item
+            data-id="${item.id}"
             .item="${item}"
             .selected="${this.selectedItem === item.id}"
+            .isPlayingExternal="${this.playingItemId === item.id}"
             @ml-select="${this.handleItemSelect}"
             @ml-delete="${this.handleDelete}"
+            @ml-play-start="${this.handleItemPlayStart}"
+            @ml-play-stop="${this.handleItemPlayStop}"
           ></media-library-item>
         `)}
       </div>
@@ -307,29 +383,28 @@ export class MediaLibrary extends LitElement {
   }
 
   private renderPagination(totalPages: number) {
-    if (totalPages <= 1) return '';
+    if (totalPages <= 1) return html``;
 
     const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
     return html`
       <div class="pagination">
         <button
           class="page-btn"
           ?disabled="${this.currentPage === 1}"
-          @click="${() => this.currentPage--}"
+          @click="${() => { this.currentPage--; }}"
         >&lsaquo;</button>
 
         ${pages.map(p => html`
           <button
             class="page-btn ${this.currentPage === p ? 'active' : ''}"
-            @click="${() => this.currentPage = p}"
+            @click="${() => { this.currentPage = p; }}"
           >${p}</button>
         `)}
 
         <button
           class="page-btn"
           ?disabled="${this.currentPage === totalPages}"
-          @click="${() => this.currentPage++}"
+          @click="${() => { this.currentPage++; }}"
         >&rsaquo;</button>
 
         <span class="page-info">${this.currentPage} / ${totalPages}</span>
@@ -337,16 +412,14 @@ export class MediaLibrary extends LitElement {
     `;
   }
 
-  // ── Main render ─────────────────────────────────────────────────────────
+  // ── Main render (NO side-effects) ───────────────────────────────────────
   render() {
-    const allItems = this.filteredAndSortedItems;
+    const allItems   = this._filteredAndSorted();
     const totalPages = Math.max(1, Math.ceil(allItems.length / this.ITEMS_PER_PAGE));
-
-    // Clamp page
-    if (this.currentPage > totalPages) this.currentPage = totalPages;
-
-    const start = (this.currentPage - 1) * this.ITEMS_PER_PAGE;
-    const currentItems = allItems.slice(start, start + this.ITEMS_PER_PAGE);
+    // Clamp page safely — use Math.min, not mutation inside render
+    const safePage   = Math.min(this.currentPage, totalPages);
+    const start      = (safePage - 1) * this.ITEMS_PER_PAGE;
+    const pageItems  = allItems.slice(start, start + this.ITEMS_PER_PAGE);
 
     return html`
       <div class="modal">
@@ -356,14 +429,14 @@ export class MediaLibrary extends LitElement {
 
         <div class="content">
           ${this.error ? html`<div class="error-msg">${this.error}</div>` : ''}
-          ${this.renderGrid(currentItems)}
+          ${this.renderGrid(pageItems)}
         </div>
 
         <div class="footer">
           ${this.renderPagination(totalPages)}
 
           <div class="footer-actions">
-            <button class="btn-cancel" @click="${this.onClose}">
+            <button class="btn-cancel" @click="${this.handleClose}">
               ${this._localize.t('app.cancel')}
             </button>
             <button

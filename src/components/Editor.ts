@@ -216,7 +216,8 @@ export class AppEditor extends LitElement {
     this.showMediaLibrary = type;
   }
 
-  private _handleMediaSelect(url: string, name: string, variants: AlertVariant[]) {
+  private _handleMediaSelect(url: string, name: string) {
+    const variants = this._variantsTask.value ?? [];
     if (this.showMediaLibrary === 'image') {
       this.handlePropertyChange({ imageUrl: url, imageName: name }, variants);
     } else {
@@ -283,7 +284,7 @@ export class AppEditor extends LitElement {
         <media-library 
           .type="${this.showMediaLibrary}"
           .onClose="${() => this.showMediaLibrary = null}"
-          .onSelect="${(url: string, name: string) => this._handleMediaSelect(url, name, variants)}"
+          .onSelect="${(url: string, name: string) => this._handleMediaSelect(url, name)}"
         ></media-library>
       ` : ''}
     `;

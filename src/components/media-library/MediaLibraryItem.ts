@@ -8,17 +8,25 @@ const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 /**
  * MediaLibraryItem — a single card in the MediaLibrary grid.
  *
- * Handles its own audio playback state so multiple cards can coexist
- * cleanly; the parent stops all audio when a new card is selected.
+ * Audio playback is managed here, but *coordinated* by the parent:
+ *  - When this card starts playing it emits `ml-play-start { id }`.
+ *  - When this card stops  it emits `ml-play-stop  { id }`.
+ *  - The parent can call `stopAudio()` directly (using `data-id` selector).
+ *  - The parent also passes `.isPlayingExternal` — when it becomes false
+ *    while we are playing we know another card took over, so we stop.
  *
  * Events emitted:
- *  - ml-select  (detail: { item: FileItem })
- *  - ml-delete  (detail: { id: string, event: Event })
+ *   ml-select      { item: FileItem }
+ *   ml-delete      { id: string }
+ *   ml-play-start  { id: string }
+ *   ml-play-stop   { id: string }
  */
 @Component('media-library-item')
 export class MediaLibraryItem extends LitElement {
   @property({ type: Object }) item!: FileItem;
   @property({ type: Boolean }) selected = false;
+  /** Set to false by parent when another card starts playing */
+  @property({ type: Boolean }) isPlayingExternal = false;
 
   @state() private isPlaying = false;
 
@@ -50,6 +58,7 @@ export class MediaLibraryItem extends LitElement {
       background: rgba(255,255,255,0.06);
     }
 
+    /* ── Preview box ──────────────────────────────────── */
     .preview-box {
       aspect-ratio: 16/9;
       background: #0d0d14;
@@ -74,7 +83,7 @@ export class MediaLibraryItem extends LitElement {
       display: block;
     }
 
-    /* Audio preview */
+    /* ── Audio card ──────────────────────────────────── */
     .audio-preview {
       display: flex;
       flex-direction: column;
@@ -98,7 +107,7 @@ export class MediaLibraryItem extends LitElement {
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(0.94); }
+      50%       { opacity: 0.7; transform: scale(0.94); }
     }
 
     /* Waveform bars */
@@ -118,17 +127,17 @@ export class MediaLibraryItem extends LitElement {
       background: #a970ff;
       animation: wave 0.8s ease-in-out infinite;
     }
-    .wave-bar:nth-child(1) { animation-delay: 0s; }
-    .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-    .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-    .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(1) { animation-delay: 0s;    }
+    .wave-bar:nth-child(2) { animation-delay: 0.1s;  }
+    .wave-bar:nth-child(3) { animation-delay: 0.2s;  }
+    .wave-bar:nth-child(4) { animation-delay: 0.3s;  }
     .wave-bar:nth-child(5) { animation-delay: 0.15s; }
     @keyframes wave {
-      0%, 100% { height: 4px; }
-      50% { height: 16px; }
+      0%, 100% { height: 4px;  }
+      50%       { height: 16px; }
     }
 
-    /* Play/pause floating button */
+    /* Play / pause floating button */
     .play-btn {
       position: absolute;
       bottom: 0.5rem;
@@ -206,37 +215,81 @@ export class MediaLibraryItem extends LitElement {
     .item-meta .dot { opacity: 0.4; }
   `;
 
+  // ── Lifecycle ────────────────────────────────────────────────────────────
+
+  updated(changed: Map<string, unknown>) {
+    // When the parent clears our "playing slot", stop our audio
+    if (changed.has('isPlayingExternal') && !this.isPlayingExternal && this.isPlaying) {
+      this._stopAudioInternal();
+    }
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
-    this._stopAudio();
+    this._stopAudioInternal();
   }
 
-  /** Called by parent to force stop (e.g. when another card is selected) */
+  // ── Public API (called by parent via direct selector) ────────────────────
+
+  /** Parent calls this to stop audio (e.g. when another card starts playing) */
   stopAudio() {
-    this._stopAudio();
+    this._stopAudioInternal();
   }
 
-  private _stopAudio() {
+  // ── Private audio helpers ────────────────────────────────────────────────
+
+  private _stopAudioInternal() {
     if (this.audio) {
       this.audio.pause();
-      this.audio.currentTime = 0;
+      this.audio.src = '';   // release media resource
       this.audio = null;
     }
-    this.isPlaying = false;
+    if (this.isPlaying) {
+      this.isPlaying = false;
+      this._emitPlayStop();
+    }
+  }
+
+  private _emitPlayStop() {
+    this.dispatchEvent(new CustomEvent('ml-play-stop', {
+      detail: { id: this.item.id },
+      bubbles: true,
+      composed: true,
+    }));
   }
 
   private togglePlay(e: Event) {
     e.stopPropagation();
+
     if (this.isPlaying) {
-      this._stopAudio();
-    } else {
-      this.audio = new Audio(apiClient.files.getUrl(this.item));
-      this.audio.volume = 0.7;
-      this.audio.play().catch(err => console.warn('Audio play failed:', err));
-      this.audio.addEventListener('ended', () => { this.isPlaying = false; });
-      this.isPlaying = true;
+      this._stopAudioInternal();
+      return;
     }
+
+    const url = apiClient.files.getUrl(this.item);
+    const audio = new Audio(url);
+    audio.volume = 0.7;
+
+    audio.addEventListener('ended', () => {
+      this.audio = null;
+      this.isPlaying = false;
+      this._emitPlayStop();
+    });
+
+    audio.play().catch(err => console.warn('[MediaLibraryItem] audio play failed:', err));
+
+    this.audio = audio;
+    this.isPlaying = true;
+
+    // Tell the parent this card is the new "playing" card
+    this.dispatchEvent(new CustomEvent('ml-play-start', {
+      detail: { id: this.item.id },
+      bubbles: true,
+      composed: true,
+    }));
   }
+
+  // ── Selection / delete ───────────────────────────────────────────────────
 
   private handleSelect() {
     this.dispatchEvent(new CustomEvent('ml-select', {
@@ -249,15 +302,19 @@ export class MediaLibraryItem extends LitElement {
   private handleDelete(e: Event) {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('ml-delete', {
-      detail: { id: this.item.id, event: e },
+      detail: { id: this.item.id },
       bubbles: true,
       composed: true,
     }));
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
   private formatDate(ts: number) {
     return new Date(ts).toLocaleDateString();
   }
+
+  // ── Preview rendering ────────────────────────────────────────────────────
 
   private renderPreview() {
     const { item } = this;
@@ -282,16 +339,19 @@ export class MediaLibraryItem extends LitElement {
       `;
     }
 
-    if (item.mimeType?.startsWith('audio/') || item.mimeType?.includes('ogg') || item.mimeType?.includes('wav')) {
+    // Audio / unknown
+    const isAudio = item.mimeType?.startsWith('audio/')
+      || item.mimeType?.includes('ogg')
+      || item.mimeType?.includes('wav');
+
+    if (isAudio) {
       return html`
         <div class="audio-preview">
-          <!-- Music note icon (animated when playing) -->
           <svg class="audio-icon ${this.isPlaying ? 'playing' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
           </svg>
 
-          <!-- Waveform visualizer -->
           <div class="waveform ${this.isPlaying ? 'playing' : ''}">
             <div class="wave-bar"></div>
             <div class="wave-bar"></div>
@@ -301,11 +361,19 @@ export class MediaLibraryItem extends LitElement {
           </div>
         </div>
 
-        <!-- Play / Pause button floating bottom-right -->
-        <button class="play-btn" @click="${this.togglePlay}" title="${this.isPlaying ? 'Pause' : 'Play preview'}">
+        <button
+          class="play-btn"
+          @click="${this.togglePlay}"
+          title="${this.isPlaying ? 'Pause' : 'Play preview'}"
+        >
           ${this.isPlaying
-            ? html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`
-            : html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`
+            ? html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6"  y="4" width="4" height="16" rx="1"/>
+                <rect x="14" y="4" width="4" height="16" rx="1"/>
+               </svg>`
+            : html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+               </svg>`
           }
         </button>
       `;
@@ -320,6 +388,8 @@ export class MediaLibraryItem extends LitElement {
     `;
   }
 
+  // ── Main render ──────────────────────────────────────────────────────────
+
   render() {
     const { item } = this;
     return html`
@@ -327,16 +397,14 @@ export class MediaLibraryItem extends LitElement {
         class="item ${this.selected ? 'selected' : ''}"
         @click="${this.handleSelect}"
       >
-        <!-- Selected check badge -->
         ${this.selected ? html`
           <div class="selected-badge">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3">
+            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         ` : ''}
 
-        <!-- Delete button -->
         <button class="delete-btn" @click="${this.handleDelete}" title="Delete file">
           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -344,12 +412,10 @@ export class MediaLibraryItem extends LitElement {
           </svg>
         </button>
 
-        <!-- Preview area -->
         <div class="preview-box">
           ${this.renderPreview()}
         </div>
 
-        <!-- Meta -->
         <div class="item-name" title="${item.originalName}">${item.originalName}</div>
         <div class="item-meta">
           <span>${this.formatDate(item.uploadedAt)}</span>
