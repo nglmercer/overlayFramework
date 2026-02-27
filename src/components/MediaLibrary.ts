@@ -10,8 +10,11 @@ const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 @Component('media-library')
 export class MediaLibrary extends LitElement {
   @property({ type: String }) type: 'image' | 'sound' = 'image';
+  @property({ type: String }) selectedUrl: string | null = null;
   @property({ type: Function }) onClose: () => void = () => {};
   @property({ type: Function }) onSelect: (url: string, name: string) => void = () => {};
+
+  private currentAudio: HTMLAudioElement | null = null;
 
   @state() private selectedItem: string | null = null;
   @state() private currentPage = 1;
@@ -116,6 +119,34 @@ export class MediaLibrary extends LitElement {
     super.connectedCallback();
     this.fetchFiles();
     this.fetchQuota();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
+  }
+
+  updated(changedProperties: Map<string, any>) {
+    if (changedProperties.has('selectedUrl') || changedProperties.has('items')) {
+      if (this.selectedUrl && !this.selectedItem && this.items.length > 0) {
+        const match = this.items.find(f => apiClient.files.getUrl(f) === this.selectedUrl);
+        if (match) {
+          this.selectedItem = match.id;
+          
+          // Focus current page to display selected item
+          const itemIndex = this.sortedItems.findIndex(i => i.id === match.id);
+          if (itemIndex >= 0) {
+              const expectedPage = Math.floor(itemIndex / this.itemsPerPage) + 1;
+              if (this.currentPage !== expectedPage) {
+                  this.currentPage = expectedPage;
+              }
+          }
+        }
+      }
+    }
   }
 
   async fetchFiles() {
@@ -270,7 +301,12 @@ export class MediaLibrary extends LitElement {
                   @click="${() => {
                     this.selectedItem = item.id;
                     if (this.type === 'sound') {
-                      new Audio(apiClient.files.getUrl(item)).play().catch(e => console.warn('Could not play list audio:', e));
+                      if (this.currentAudio) {
+                        this.currentAudio.pause();
+                        this.currentAudio.currentTime = 0;
+                      }
+                      this.currentAudio = new Audio(apiClient.files.getUrl(item));
+                      this.currentAudio.play().catch(e => console.warn('Could not play list audio:', e));
                     }
                   }}"
                 >
@@ -284,7 +320,16 @@ export class MediaLibrary extends LitElement {
                     ${item.mimeType?.startsWith('image/') ? html`
                       <img src="${apiClient.files.getUrl(item)}" alt="${item.originalName}" />
                     ` : item.mimeType?.startsWith('video/') ? html`
-                      <video src="${apiClient.files.getUrl(item)}" autoplay loop muted playsinline></video>
+                      <video 
+                        src="${apiClient.files.getUrl(item)}" 
+                        muted loop playsinline
+                        @mouseenter="${(e: Event) => (e.target as HTMLVideoElement).play()}"
+                        @mouseleave="${(e: Event) => {
+                          const v = e.target as HTMLVideoElement;
+                          v.pause();
+                          v.currentTime = 0;
+                        }}"
+                      ></video>
                     ` : item.mimeType?.startsWith('audio/') ? html`
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
