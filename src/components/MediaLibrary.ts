@@ -302,11 +302,11 @@ export class MediaLibrary extends LitElement {
                     this.selectedItem = item.id;
                     if (this.type === 'sound') {
                       if (this.currentAudio) {
-                        this.currentAudio.pause();
-                        this.currentAudio.currentTime = 0;
+                        //this.currentAudio.pause();
+                        //this.currentAudio.currentTime = 0;
                       }
-                      this.currentAudio = new Audio(apiClient.files.getUrl(item));
-                      this.currentAudio.play().catch(e => console.warn('Could not play list audio:', e));
+                      //this.currentAudio = new Audio(apiClient.files.getUrl(item));
+                      //this.currentAudio.play().catch(e => console.warn('Could not play list audio:', e));
                     }
                   }}"
                 >

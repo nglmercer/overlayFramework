@@ -238,7 +238,6 @@ export class AppEditor extends LitElement {
     return html`
       <editor-topbar
         .title="${this.t('app.editor')}"
-        .backLabel="${this.t('app.back')}"
         .onBack="${this.onBack}"
       ></editor-topbar>
 
