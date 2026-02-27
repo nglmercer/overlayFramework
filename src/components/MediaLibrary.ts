@@ -1,5 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property, state } from '../litcomponents';
+import { getLocale, setLocale, LocalizeController } from '../locales/localization';
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {

@@ -7,6 +7,7 @@ import { twitchEventsSchema } from './lib/twitchEvents';
 import { loadSchemas, schemaLoader, SchemaMap, LifecycleHooks } from './lib/schema-loader';
 import { initializeFramework, cleanupFramework } from './lib/index';
 import './components/index';
+import { getLocale, setLocale, LocalizeController } from './locales/localization';
 
 // Define custom schemas map
 const customSchemas: SchemaMap = new Map([

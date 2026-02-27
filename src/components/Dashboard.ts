@@ -1,12 +1,15 @@
 import { html, css, LitElement } from 'lit';
 import { Component, state, property } from '../litcomponents';
 import { dbManager, AlertBox } from '../lib/db';
+import { getLocale, setLocale, LocalizeController, t } from '../locales/localization';
 
 @Component('app-dashboard')
 export class AppDashboard extends LitElement {
   @state() private alertBoxes: AlertBox[] = [];
   @state() private openMenuId: string | null = null;
   @property({ type: Function }) onEdit: (id: string) => void = () => {};
+
+  private _localize = new LocalizeController(this);
 
   static styles = css`
     :host {
@@ -193,8 +196,8 @@ export class AppDashboard extends LitElement {
   render() {
     return html`
       <div class="max-w-3xl">
-        <h1>Tus alertas</h1>
-        <p class="stats">Grupos de alertas: ${this.alertBoxes.length}/10</p>
+        <h1>${this._localize.t('app.dashboard')}</h1>
+        <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/10</p>
 
         <button 
           class="btn-create"
@@ -204,7 +207,7 @@ export class AppDashboard extends LitElement {
           <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Crear recuadro de alerta
+          ${this._localize.t('dashboard.createAlertBox')}
         </button>
 
         <div class="box-grid">

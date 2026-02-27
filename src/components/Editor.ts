@@ -26,6 +26,10 @@ export class AppEditor extends LitElement {
   @state() private showMediaLibrary: 'image' | 'sound' | null = null;
   @state() private selectedVariantId: string | null = null;
   
+  @state() private previewWidth = 800;
+  @state() private previewHeight = 600;
+  @state() private previewBgColor: 'transparent' | '#000000' | '#ffffff' | '#ff0000' = 'transparent';
+
   private _localize = new LocalizeController(this);
   
   private _variantsTask = new Task(this, {
@@ -40,6 +44,23 @@ export class AppEditor extends LitElement {
   });
 
   @query('#file-input') private fileInput!: HTMLInputElement;
+  @query('app-alert-view') private alertView!: any;
+
+  handlePlayPreview() {
+    if (this.alertView && this.alertView.playPreview) {
+      this.alertView.playPreview();
+    }
+  }
+
+  handleSendTestAlert() {
+    // Dispatch a standard custom event that your other components might be listening to
+    window.dispatchEvent(new CustomEvent('test-alert', { 
+      detail: { type: 'test' }
+    }));
+    
+    // Play local preview as well to provide immediate feedback
+    this.handlePlayPreview();
+  }
 
   static styles = css`
     :host {
@@ -127,15 +148,97 @@ export class AppEditor extends LitElement {
     .variant-card:not(.active):hover { background-color: rgba(255, 255, 255, 0.05); }
 
     .preview-area { flex: 1; display: flex; flex-direction: column; background-color: #0e0e10; position: relative; }
-    .preview-canvas {
+    
+    .preview-header {
+      padding: 0.75rem 1rem;
+      background-color: #1a1a1c;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-preview {
+      background-color: #3a3a3d;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-preview:hover { background-color: #464649; }
+
+    .preview-content {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: auto;
       padding: 2rem;
+    }
+
+    .preview-canvas {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .bg-checker {
       background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%);
       background-size: 24px 24px;
       background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+    }
+    
+    .preview-footer {
+      padding: 0.75rem 1rem;
+      background-color: #1a1a1c;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .preview-options {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .size-input {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .size-input input {
+      background-color: #0e0e10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      width: 60px;
+      text-align: center;
+    }
+    .bg-toggles {
+      display: flex;
+      gap: 0.25rem;
+      background-color: #0e0e10;
+      padding: 0.25rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .bg-btn {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 0.25rem;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .bg-btn.active {
+      border-color: #9146FF;
     }
     
     .sidebar-right {
@@ -323,14 +426,42 @@ export class AppEditor extends LitElement {
 
         <!-- Preview Area -->
         <div class="preview-area">
-          <div class="preview-canvas">
-            ${variant ? html`
+          ${variant ? html`
+          <div class="preview-header">
+            <button class="btn-preview" @click="${this.handlePlayPreview}">${msg('Vista previa de alerta')}</button>
+            <button class="btn-preview" @click="${this.handleSendTestAlert}">${msg('Enviar alerta de prueba')}</button>
+          </div>
+          <div class="preview-content">
+            <div 
+              class="preview-canvas ${this.previewBgColor === 'transparent' ? 'bg-checker' : ''}" 
+              style="width: ${this.previewWidth}px; height: ${this.previewHeight}px; background-color: ${this.previewBgColor === 'transparent' ? 'transparent' : this.previewBgColor};"
+            >
               <app-alert-view 
                 .variant="${variant}" 
                 .eventData="${{ username: 'FlavioliRavioli', amount: '1000', months: '6' }}"
               ></app-alert-view>
-            ` : msg('Selecciona una variante para previsualizar')}
+            </div>
           </div>
+          <div class="preview-footer">
+            <div style="font-size: 0.875rem; font-weight: 600;">${msg('Opciones de vista previa')}</div>
+            <div class="preview-options">
+              <div class="size-input">
+                <label>${msg('Ancho px')}</label>
+                <input type="number" .value="${this.previewWidth.toString()}" @change="${(e: any) => this.previewWidth = Number(e.target.value)}">
+              </div>
+              <div class="size-input">
+                <label>${msg('Altura px')}</label>
+                <input type="number" .value="${this.previewHeight.toString()}" @change="${(e: any) => this.previewHeight = Number(e.target.value)}">
+              </div>
+              <div class="bg-toggles">
+                <button class="bg-btn bg-checker ${this.previewBgColor === 'transparent' ? 'active' : ''}" @click="${() => this.previewBgColor = 'transparent'}"></button>
+                <button class="bg-btn ${this.previewBgColor === '#000000' ? 'active' : ''}" style="background-color: #000000;" @click="${() => this.previewBgColor = '#000000'}"></button>
+                <button class="bg-btn ${this.previewBgColor === '#ffffff' ? 'active' : ''}" style="background-color: #ffffff;" @click="${() => this.previewBgColor = '#ffffff'}"></button>
+                <button class="bg-btn ${this.previewBgColor === '#ff0000' ? 'active' : ''}" style="background-color: #ff0000;" @click="${() => this.previewBgColor = '#ff0000'}"></button>
+              </div>
+            </div>
+          </div>
+          ` : html`<div class="preview-content"><div class="preview-canvas bg-checker">${msg('Selecciona una variante para previsualizar')}</div></div>`}
         </div>
 
         <!-- Sidebar Right -->
