@@ -1,6 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
+import { LocalizeController } from '../../locales/localization';
 import './property-panels';
 
 type PanelId = 'general' | 'typography' | 'animations' | 'design' | 'media';
@@ -68,9 +69,14 @@ export class EditorRightSidebar extends LitElement {
 
   @property({ type: Object }) variant: AlertVariant | null = null;
   @property({ type: Boolean }) randomize = false;
-  @property({ type: Function }) t: (key: string) => string = (key) => key;
 
   @state() private _expandedSection: PanelId = 'general';
+
+  private _localize = new LocalizeController(this);
+
+  private _t(key: string): string {
+    return this._localize.t(key);
+  }
 
   private _panels: { id: PanelId; labelKey: string }[] = [
     { id: 'general', labelKey: 'sidebar.general' },
@@ -113,7 +119,7 @@ export class EditorRightSidebar extends LitElement {
       return html`
         <div class="sidebar-right">
           <div class="empty-state">
-            ${this.t('preview.select')}
+            ${this._t('preview.select')}
           </div>
         </div>
       `;
@@ -127,7 +133,7 @@ export class EditorRightSidebar extends LitElement {
               class="section-btn" 
               @click="${() => this._togglePanel(panel.id)}"
             >
-              <span style="font-weight: 600;">${this.t(panel.labelKey)}</span>
+              <span style="font-weight: 600;">${this._t(panel.labelKey)}</span>
             </button>
             
             ${this._expandedSection === panel.id ? this._renderPanel(panel.id) : ''}
@@ -142,7 +148,7 @@ export class EditorRightSidebar extends LitElement {
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            ${this.t('variant.delete')}
+            ${this._t('variant.delete')}
           </button>
         </div>
       </div>
@@ -150,19 +156,12 @@ export class EditorRightSidebar extends LitElement {
   }
 
   private _renderPanel(panelId: PanelId) {
-    const commonProps = {
-      variant: this.variant,
-      randomize: this.randomize,
-      t: this.t
-    };
-
     switch (panelId) {
       case 'general':
         return html`
           <property-panel-general
             .variant="${this.variant}"
             .randomize="${this.randomize}"
-            .t="${this.t}"
             @property-change="${this._handlePropertyChange}"
             @duplicate-variant="${this._handleDuplicate}"
           ></property-panel-general>
@@ -171,7 +170,6 @@ export class EditorRightSidebar extends LitElement {
         return html`
           <property-panel-typography
             .variant="${this.variant}"
-            .t="${this.t}"
             @property-change="${this._handlePropertyChange}"
           ></property-panel-typography>
         `;
@@ -179,7 +177,6 @@ export class EditorRightSidebar extends LitElement {
         return html`
           <property-panel-animation
             .variant="${this.variant}"
-            .t="${this.t}"
             @property-change="${this._handlePropertyChange}"
           ></property-panel-animation>
         `;
@@ -187,7 +184,6 @@ export class EditorRightSidebar extends LitElement {
         return html`
           <property-panel-design
             .variant="${this.variant}"
-            .t="${this.t}"
             @property-change="${this._handlePropertyChange}"
           ></property-panel-design>
         `;
@@ -195,7 +191,6 @@ export class EditorRightSidebar extends LitElement {
         return html`
           <property-panel-media
             .variant="${this.variant}"
-            .t="${this.t}"
             @property-change="${this._handlePropertyChange}"
             @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
           ></property-panel-media>

@@ -2,6 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { PlatformEventDefinition } from '../../lib/alertEvents';
+import { LocalizeController } from '../../locales/localization';
 
 @customElement('editor-left-sidebar')
 export class EditorLeftSidebar extends LitElement {
@@ -122,16 +123,19 @@ export class EditorLeftSidebar extends LitElement {
   @property({ type: String }) selectedVariantId: string | null = null;
   @property({ type: String }) expandedSection: string | null = null;
   @property({ type: Boolean }) randomize = false;
-  @property({ type: String }) variantsLabel = '';
-  @property({ type: String }) randomLabel = '';
-  @property({ type: Function }) t: (key: string) => string = (key) => key;
 
   @state() private _localExpandedSection: string | null = null;
+
+  private _localize = new LocalizeController(this);
 
   updated(changedProperties: Map<string, unknown>) {
     if (changedProperties.has('expandedSection')) {
       this._localExpandedSection = this.expandedSection;
     }
+  }
+
+  private _t(key: string): string {
+    return this._localize.t(key);
   }
 
   private _toggleSection(sectionId: string) {
@@ -162,7 +166,7 @@ export class EditorLeftSidebar extends LitElement {
     return html`
       <div class="sidebar-left">
         <div class="sidebar-header">
-          <span>${this.variantsLabel}</span>
+          <span>${this._t('sidebar.variants')}</span>
           <button class="btn-add" @click="${() => this.dispatchEvent(new CustomEvent('create-variant', { bubbles: true, composed: true }))}">+</button>
         </div>
         
@@ -176,7 +180,7 @@ export class EditorLeftSidebar extends LitElement {
                 class="section-btn" 
                 @click="${() => this._toggleSection(item.id)}"
               >
-                <span style="font-weight: 600; font-size: 0.875rem;">${this.t('event.' + item.id)}</span>
+                <span style="font-weight: 600; font-size: 0.875rem;">${this._t('event.' + item.id)}</span>
                 <span>${isExpanded ? '▲' : '▼'}</span>
               </button>
               
@@ -190,7 +194,7 @@ export class EditorLeftSidebar extends LitElement {
                       >
                         <div class="toggle-knob"></div>
                       </div>
-                      <span style="font-size: 0.75rem;">${this.randomLabel}</span>
+                      <span style="font-size: 0.75rem;">${this._t('variant.random')}</span>
                     </div>
                   ` : ''}
                   

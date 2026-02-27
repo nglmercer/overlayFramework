@@ -19,6 +19,7 @@ import {
 // Environment detection
 function detectEnvironment(): Environment {
   if (typeof window !== 'undefined') return 'browser';
+  //@ts-ignore
   if (typeof Bun !== 'undefined') return 'bun';
   if (typeof process !== 'undefined' && process.versions?.node) return 'node';
   return 'browser';

@@ -1,6 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
+import { LocalizeController } from '../../locales/localization';
 
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
@@ -128,14 +129,14 @@ export class EditorPreview extends LitElement {
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
-  @property({ type: String }) playLabel = '';
-  @property({ type: String }) sendTestLabel = '';
-  @property({ type: String }) optionsLabel = '';
-  @property({ type: String }) widthLabel = '';
-  @property({ type: String }) heightLabel = '';
-  @property({ type: String }) selectLabel = '';
 
   @query('app-alert-view') private alertView!: HTMLElement;
+
+  private _localize = new LocalizeController(this);
+
+  private _t(key: string): string {
+    return this._localize.t(key);
+  }
 
   private _handlePlay() {
     this.dispatchEvent(new CustomEvent('play-preview', { bubbles: true, composed: true }));
@@ -179,8 +180,8 @@ export class EditorPreview extends LitElement {
       <div class="preview-area">
         ${this.variant ? html`
           <div class="preview-header">
-            <button class="btn-preview" @click="${this._handlePlay}">${this.playLabel}</button>
-            <button class="btn-preview" @click="${this._handleSendTest}">${this.sendTestLabel}</button>
+            <button class="btn-preview" @click="${this._handlePlay}">${this._t('preview.alert')}</button>
+            <button class="btn-preview" @click="${this._handleSendTest}">${this._t('preview.sendTest')}</button>
           </div>
           <div class="preview-content">
             <div 
@@ -194,10 +195,10 @@ export class EditorPreview extends LitElement {
             </div>
           </div>
           <div class="preview-footer">
-            <div style="font-size: 0.875rem; font-weight: 600;">${this.optionsLabel}</div>
+            <div style="font-size: 0.875rem; font-weight: 600;">${this._t('preview.options')}</div>
             <div class="preview-options">
               <div class="size-input">
-                <label>${this.widthLabel}</label>
+                <label>${this._t('preview.width')}</label>
                 <input 
                   type="number" 
                   .value="${this.width.toString()}" 
@@ -205,7 +206,7 @@ export class EditorPreview extends LitElement {
                 >
               </div>
               <div class="size-input">
-                <label>${this.heightLabel}</label>
+                <label>${this._t('preview.height')}</label>
                 <input 
                   type="number" 
                   .value="${this.height.toString()}" 
@@ -238,7 +239,7 @@ export class EditorPreview extends LitElement {
         ` : html`
           <div class="preview-content">
             <div class="preview-canvas bg-checker" style="width: 400px; height: 300px;">
-              ${this.selectLabel}
+              ${this._t('preview.select')}
             </div>
           </div>
         `}

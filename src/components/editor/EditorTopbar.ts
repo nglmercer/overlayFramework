@@ -1,6 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { getLocale, setLocale } from '../../locales/localization';
+import { getLocale, setLocale, LocalizeController } from '../../locales/localization';
 
 @customElement('editor-topbar')
 export class EditorTopbar extends LitElement {
@@ -54,6 +54,12 @@ export class EditorTopbar extends LitElement {
   @property({ type: String }) backLabel = '';
   @property({ type: Function }) onBack: () => void = () => {};
 
+  private _localize = new LocalizeController(this);
+
+  private _t(key: string): string {
+    return this._localize.t(key);
+  }
+
   private _handleLocaleChange(e: Event) {
     const select = e.target as HTMLSelectElement;
     setLocale(select.value);
@@ -64,9 +70,9 @@ export class EditorTopbar extends LitElement {
     return html`
       <div class="topbar">
         <button class="btn-back" @click="${this.onBack}">
-          <span>← ${this.backLabel}</span>
+          <span>← ${this._t('app.back')}</span>
         </button>
-        <div style="font-weight: 700;">${this.title}</div>
+        <div style="font-weight: 700;">${this.title || this._t('app.editor')}</div>
         <div style="display: flex; align-items: center; gap: 1rem;">
           <select 
             class="locale-select"

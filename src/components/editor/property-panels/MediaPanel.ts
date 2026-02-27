@@ -1,6 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { AlertVariant } from '../../../lib/db';
+import { LocalizeController } from '../../../locales/localization';
 
 @customElement('property-panel-media')
 export class PropertyPanelMedia extends LitElement {
@@ -37,7 +38,12 @@ export class PropertyPanelMedia extends LitElement {
   `;
 
   @property({ type: Object }) variant: AlertVariant | null = null;
-  @property({ type: Function }) t: (key: string) => string = (key) => key;
+
+  private _localize = new LocalizeController(this);
+
+  private _t(key: string): string {
+    return this._localize.t(key);
+  }
 
   private _handleChange(field: keyof AlertVariant, value: unknown) {
     this.dispatchEvent(new CustomEvent('property-change', {
@@ -72,17 +78,17 @@ export class PropertyPanelMedia extends LitElement {
           class="btn-media"
           @click="${this._openImageLibrary}"
         >
-          ${this.t('media.changeImage')}
+          ${this._t('media.changeImage')}
         </button>
         
         <ui-range 
-          label="${this.t('media.imageScale')}" 
+          label="${this._t('media.imageScale')}" 
           .value="${this.variant.imageScale}" 
           @change="${(e: CustomEvent) => this._handleChange('imageScale', e.detail)}"
         ></ui-range>
         
         <ui-range 
-          label="${this.t('media.imageVolume')}" 
+          label="${this._t('media.imageVolume')}" 
           .value="${this.variant.imageVolume}" 
           @change="${(e: CustomEvent) => this._handleChange('imageVolume', e.detail)}"
         ></ui-range>
@@ -93,11 +99,11 @@ export class PropertyPanelMedia extends LitElement {
           class="btn-media"
           @click="${this._openSoundLibrary}"
         >
-          ${this.t('media.changeSound')}
+          ${this._t('media.changeSound')}
         </button>
         
         <ui-range 
-          label="${this.t('media.soundVolume')}" 
+          label="${this._t('media.soundVolume')}" 
           .value="${this.variant.soundVolume}" 
           @change="${(e: CustomEvent) => this._handleChange('soundVolume', e.detail)}"
         ></ui-range>
