@@ -20,6 +20,7 @@ export class EditorPreview extends LitElement {
       flex-direction: column;
       background-color: #0e0e10;
       position: relative;
+      height: 99%;
     }
     
     .preview-header {
@@ -123,6 +124,46 @@ export class EditorPreview extends LitElement {
     
     .bg-btn.active {
       border-color: #9146FF;
+    }
+
+    /* ── Responsive Styles ── */
+    @media (max-width: 1024px) {
+      .preview-content {
+        padding: 1rem;
+      }
+
+      .preview-footer {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .preview-options {
+        gap: 1rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .preview-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .preview-content {
+        padding: 0.5rem;
+      }
+
+      .preview-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-options {
+        justify-content: center;
+      }
+
+      .size-input {
+        justify-content: center;
+      }
     }
   `;
 

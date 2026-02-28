@@ -109,7 +109,9 @@
   "media.name": "Nombre",
   "media.size": "Tamaño",
   "media.addToAlerts": "Añadir a alertas",
-  
+  "media.noImageSelected": "No se seleccionó ninguna imagen",
+  "media.noSoundSelected": "No se seleccionó ningun audio",
+
   "preview.select": "Selecciona una variante para previsualizar",
   "preview.loading": "Cargando variantes...",
   "preview.alert": "Vista previa de alerta",

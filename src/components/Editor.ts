@@ -71,11 +71,25 @@ export class AppEditor extends LitElement {
       display: flex; 
       flex: 1; 
       overflow: hidden; 
+      position: relative;
     }
     
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #3a3a3d; border-radius: 10px; }
+
+    /* ── Responsive Styles ── */
+    @media (max-width: 1024px) {
+      .workspace {
+        flex-direction: row;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .workspace {
+        flex-direction: column;
+      }
+    }
   `;
 
   async connectedCallback() {

@@ -41,6 +41,7 @@ export class EditorRightSidebar extends LitElement {
       padding: 0.55rem 0.75rem;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       flex-shrink: 0;
+      min-height: 2.5rem;
     }
 
     .collapse-bar-label {
@@ -86,8 +87,13 @@ export class EditorRightSidebar extends LitElement {
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .sidebar-right.collapsed .btn-collapse svg {
+    /* Right sidebar collapse icon points outward (right) when expanded */
+    .sidebar-right .btn-collapse svg {
       transform: rotate(180deg);
+    }
+
+    .sidebar-right.collapsed .btn-collapse svg {
+      transform: rotate(0deg);
     }
 
     /* ── Scrollable body (hidden when collapsed) ── */
@@ -200,6 +206,35 @@ export class EditorRightSidebar extends LitElement {
       text-align: center;
       font-size: 0.875rem;
     }
+
+    /* ── Responsive Styles ── */
+    @media (max-width: 1024px) {
+      .sidebar-right {
+        width: 16rem;
+        min-width: 16rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar-right {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 280px;
+        min-width: 240px;
+        z-index: 100;
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-right.collapsed {
+        transform: translateX(100%);
+        width: 0;
+        min-width: 0;
+      }
+    }
   `;
 
   @property({ type: Object }) variant: AlertVariant | null = null;
@@ -274,10 +309,10 @@ export class EditorRightSidebar extends LitElement {
             <span class="collapse-bar-label">${this._t('sidebar.properties')}</span>
             <button class="btn-collapse" @click="${this._toggleCollapse}"
                     title="${collapsed ? 'Expand' : 'Collapse'} panel">
-              <!-- double-chevron pointing left = close -->
+              <!-- chevron pointing right = collapse right sidebar -->
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                    stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/><polyline points="21 18 15 12 21 6"/>
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
           </div>
@@ -304,7 +339,7 @@ export class EditorRightSidebar extends LitElement {
                   title="${collapsed ? 'Expand panel' : 'Collapse panel'}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"/><polyline points="21 18 15 12 21 6"/>
+              <polyline points="9 18 15 12 9 6"/>
             </svg>
           </button>
         </div>

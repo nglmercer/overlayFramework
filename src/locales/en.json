@@ -109,6 +109,8 @@
   "media.name": "Name",
   "media.size": "Size",
   "media.addToAlerts": "Add to alerts",
+  "media.noImageSelected": "No image selected",
+  "media.noSoundSelected": "No sound selected",
   
   "preview.select": "Select a variant to preview",
   "preview.loading": "Loading variants...",

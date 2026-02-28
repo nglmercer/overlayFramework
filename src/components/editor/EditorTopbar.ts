@@ -48,6 +48,29 @@ export class EditorTopbar extends LitElement {
       cursor: pointer;
       font-size: 0.875rem;
     }
+
+    /* ── Responsive Styles ── */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 0.5rem;
+      }
+
+      .btn-back span {
+        display: none;
+      }
+
+      .btn-back::before {
+        content: '←';
+      }
+
+      .topbar > div:nth-child(2) {
+        font-size: 0.875rem;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
   `;
 
   @property({ type: String }) title = '';

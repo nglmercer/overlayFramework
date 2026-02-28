@@ -39,6 +39,7 @@ export class EditorLeftSidebar extends LitElement {
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       flex-shrink: 0;
       gap: 0.5rem;
+      min-height: 2.5rem;
     }
 
     .header-title {
@@ -108,6 +109,11 @@ export class EditorLeftSidebar extends LitElement {
       width: 1rem;
       height: 1rem;
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Left sidebar collapse icon points outward (left) when expanded */
+    .sidebar-left .btn-collapse svg {
+      transform: rotate(0deg);
     }
 
     .sidebar-left.collapsed .btn-collapse svg {
@@ -237,6 +243,35 @@ export class EditorLeftSidebar extends LitElement {
     }
 
     .toggle.on .toggle-knob { transform: translateX(1.25rem); }
+
+    /* ── Responsive Styles ── */
+    @media (max-width: 1024px) {
+      .sidebar-left {
+        width: 16rem;
+        min-width: 16rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar-left {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 280px;
+        min-width: 240px;
+        z-index: 100;
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-left.collapsed {
+        transform: translateX(-100%);
+        width: 0;
+        min-width: 0;
+      }
+    }
   `;
 
   @property({ type: Array }) variants: AlertVariant[] = [];
@@ -302,21 +337,21 @@ export class EditorLeftSidebar extends LitElement {
     return html`
       <div class="sidebar-left ${collapsed ? 'collapsed' : ''}">
         <div class="sidebar-header">
-          <span class="header-title">${this._t('sidebar.variants')}</span>
           <div class="header-actions">
-            <button
-              class="btn-add"
-              title="${this._t('variant.new')}"
-              @click="${() => this.dispatchEvent(new CustomEvent('create-variant', { bubbles: true, composed: true }))}"
-            >+</button>
             <button class="btn-collapse" @click="${this._toggleCollapse}"
                     title="${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                    stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"/><polyline points="3 18 9 12 3 6"/>
+                <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
           </div>
+          <span class="header-title">${this._t('sidebar.variants')}</span>
+          <button
+            class="btn-add"
+            title="${this._t('variant.new')}"
+            @click="${() => this.dispatchEvent(new CustomEvent('create-variant', { bubbles: true, composed: true }))}"
+          >+</button>
         </div>
 
         <div class="sidebar-body custom-scrollbar">
