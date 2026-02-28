@@ -34,6 +34,7 @@ export class AppEditor extends LitElement {
   @state() private randomize = false;
   @state() private showMediaLibrary: 'image' | 'sound' | null = null;
   @state() private selectedVariantId: string | null = null;
+  @state() private _localVariants: AlertVariant[] = [];
   
   @state() private previewWidth = 600;
   @state() private previewHeight = 600;
@@ -161,14 +162,19 @@ export class AppEditor extends LitElement {
     this.selectedVariantId = newVariant.id;
   }
 
-  async handlePropertyChange(updates: Partial<AlertVariant>, variants: AlertVariant[]) {
+  async handlePropertyChange(updates: Partial<AlertVariant>, _variants: AlertVariant[]) {
     if (!this.selectedVariantId) return;
+    
+    // Use local variants state for immediate update without refetching
+    const variants = this._localVariants.length > 0 ? this._localVariants : _variants;
     const variant = variants.find(v => v.id === this.selectedVariantId);
     if (!variant) return;
     
     const updated = { ...variant, ...updates };
     await dbManager.saveVariant(updated);
-    this._variantsTask.run();
+    
+    // Update local state - creates new array reference to trigger Lit reactivity
+    this._localVariants = variants.map(v => v.id === this.selectedVariantId ? updated : v);
   }
 
   async handleDuplicateVariant(variant: AlertVariant) {
@@ -243,13 +249,21 @@ export class AppEditor extends LitElement {
   render() {
     return this._variantsTask.render({
       pending: () => html`<div style="display: flex; align-items: center; justify-content: center; height: 100%;">${this.t('preview.loading')}</div>`,
-      complete: (variants) => this.renderEditor(variants),
+      complete: (variants) => {
+        // Sync local variants state on initial load
+        if (this._localVariants.length === 0 && variants.length > 0) {
+          this._localVariants = [...variants];
+        }
+        return this.renderEditor(variants);
+      },
       error: (e) => html`<div style="padding: 2rem;">${this.t('errors.loadFailed')}</div>`
     });
   }
 
   renderEditor(variants: AlertVariant[]) {
-    const variant = this.getSelectedVariant(variants);
+    // Use local variants state if available for immediate updates
+    const currentVariants = this._localVariants.length > 0 ? this._localVariants : variants;
+    const variant = this.getSelectedVariant(currentVariants);
 
     return html`
       <editor-topbar
@@ -260,7 +274,7 @@ export class AppEditor extends LitElement {
       <div class="workspace">
         <editor-left-sidebar
           class="custom-scrollbar"
-          .variants="${variants}"
+          .variants="${currentVariants}"
           .schema="${this.schema}"
           .selectedVariantId="${this.selectedVariantId}"
           .expandedSection="${this.expandedSection}"

@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'lit';
-import { Component, property, state } from '../../litcomponents';
+import { Component, property, query } from '../../litcomponents';
 
 @Component('ui-range')
 export class UIRange extends LitElement {
@@ -9,7 +9,12 @@ export class UIRange extends LitElement {
   @property({ type: Number }) max = 100;
   @property({ type: String }) unit = '';
   @property({ type: Number }) step = 1;
-  @state() private _dragging = false;
+  
+  @query('.value-display') private _valueDisplay?: HTMLSpanElement;
+  @query('input') private _input!: HTMLInputElement;
+
+  // Use plain property instead of @state() to avoid re-renders on drag
+  private _dragging = false;
 
   static styles = css`
     :host {
@@ -181,49 +186,89 @@ export class UIRange extends LitElement {
     }
   `;
 
+  /**
+   * Calculate fill percentage - used for initial render only
+   */
   private get _fillPct(): number {
     return ((this.value - this.min) / (this.max - this.min)) * 100;
   }
 
+  /**
+   * Handle input changes - update display directly without re-rendering
+   */
   private _handleInput(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.value = Number(input.value);
+    const newValue = Number(input.value);
+    
+    // Update fill percentage via CSS variable directly (no re-render)
     this._updateFill(input);
+    
+    // Update value display directly via DOM (no re-render)
+    this._updateDisplay(newValue);
+    
+    // Update ARIA value
+    input.setAttribute('aria-valuenow', String(newValue));
+    
+    // Dispatch change event for parent components
     this.dispatchEvent(
       new CustomEvent('change', {
-        detail: this.value,
+        detail: newValue,
         bubbles: true,
         composed: true,
       })
     );
   }
 
+  /**
+   * Update fill percentage CSS variable directly
+   */
   private _updateFill(input: HTMLInputElement) {
     const pct = ((Number(input.value) - this.min) / (this.max - this.min)) * 100;
     input.style.setProperty('--fill-pct', `${pct}%`);
   }
 
+  /**
+   * Update value display text directly without re-rendering component
+   */
+  private _updateDisplay(value: number) {
+    if (this._valueDisplay) {
+      this._valueDisplay.textContent = this.unit ? `${value}${this.unit}` : `${value}`;
+    }
+  }
+
   private _handleMousedown() {
     this._dragging = true;
+    this.setAttribute('dragging', '');
+    // Direct DOM manipulation - no re-render
+    if (this._valueDisplay) {
+      this._valueDisplay.classList.add('active');
+    }
   }
 
   private _handleMouseup() {
     this._dragging = false;
+    this.removeAttribute('dragging');
+    // Direct DOM manipulation - no re-render
+    if (this._valueDisplay) {
+      this._valueDisplay.classList.remove('active');
+    }
   }
 
   protected firstUpdated() {
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement;
-    if (input) this._updateFill(input);
+    if (this._input) {
+      // Initialize fill percentage
+      this._updateFill(this._input);
+      // Initialize display value
+      this._updateDisplay(this.value);
+    }
   }
 
   render() {
-    const displayValue = this.unit ? `${this.value}${this.unit}` : `${this.value}`;
-
     return html`
       <div class="wrapper">
         <div class="header">
           <label for="range-input">${this.label}</label>
-          <span class="value-display ${this._dragging ? 'active' : ''}">${displayValue}</span>
+          <span class="value-display"></span>
         </div>
         <div class="slider-container">
           <input
