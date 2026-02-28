@@ -184,6 +184,7 @@ export class AlertRenderer {
     }
     
     // Add media element if imageUrl exists
+    // Note: Image field always mutes audio - for video with audio, use separate sound field
     if (imageUrl) {
       elements.push({
         id: 'alert-media',
@@ -202,7 +203,7 @@ export class AlertRenderer {
         autoPlay: true,
         volume: imageVolume ?? 100,
         loop: false,
-        muted: false,
+        muted: true, // Always mute - frames only, audio handled by sound field
         objectFit: 'contain' as const,
       });
     }

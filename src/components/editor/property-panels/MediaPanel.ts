@@ -15,6 +15,22 @@ export class PropertyPanelMedia extends LitElement {
       padding: 1rem;
     }
 
+    /* ── Section label ───────────────────────────────────── */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .section-description {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
     /* ── Current media preview strip ──────────────────── */
     .current-media {
       display: flex;
@@ -40,6 +56,12 @@ export class PropertyPanelMedia extends LitElement {
       align-items: center;
       justify-content: center;
       color: #a970ff;
+    }
+    .current-media-thumb.video-thumb {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4ade80;
     }
     .current-media-name {
       flex: 1;
@@ -101,6 +123,28 @@ export class PropertyPanelMedia extends LitElement {
     return this._localize.t(key);
   }
 
+  // Helper to detect if URL is a video file
+  private _isVideo(url: string | undefined): boolean {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.includes('.webm') || 
+           lowerUrl.includes('.mp4') || 
+           lowerUrl.includes('.mov') ||
+           lowerUrl.includes('video');
+  }
+
+  // Helper to detect if URL is an audio file
+  private _isAudio(url: string | undefined): boolean {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.includes('.mp3') || 
+           lowerUrl.includes('.wav') || 
+           lowerUrl.includes('.ogg') ||
+           lowerUrl.includes('.flac') ||
+           lowerUrl.includes('audio') ||
+           (!this._isVideo(url) && !lowerUrl.includes('.png') && !lowerUrl.includes('.jpg') && !lowerUrl.includes('.jpeg') && !lowerUrl.includes('.gif') && !lowerUrl.includes('.webp'));
+  }
+
   private _handleChange(field: keyof AlertVariant, value: unknown) {
     this.dispatchEvent(new CustomEvent('property-change', {
       detail: { field, value },
@@ -141,16 +185,14 @@ export class PropertyPanelMedia extends LitElement {
     const url = this.variant?.imageUrl;
     if (!url) return html``;
 
-    // Detect video/webm vs image
-    const isVideo = url.toLowerCase().includes('.webm') || url.toLowerCase().includes('video');
+    const isVideo = this._isVideo(url);
     if (isVideo) {
       return html`
-        <video
-          class="current-media-thumb"
-          src="${url}"
-          muted playsinline
-          style="background:#0d0d14;"
-        ></video>
+        <div class="current-media-thumb video-thumb">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+        </div>
       `;
     }
     return html`<img class="current-media-thumb" src="${url}" alt="" />`;
@@ -159,8 +201,16 @@ export class PropertyPanelMedia extends LitElement {
   private _renderCurrentImage() {
     const { variant } = this;
     const hasImage = !!(variant?.imageUrl);
+    const imageUrl = variant?.imageUrl;
+    const isVideo = this._isVideo(imageUrl);
 
     return html`
+      <div class="section-label">Visual (Image/Video)</div>
+      <div class="section-description">
+        ${isVideo 
+          ? 'Video file - will display frames only (no audio). For video with audio, add the same file to Sound.' 
+          : 'Image file or video for visual display. Video files show frames only.'}
+      </div>
       <div class="current-media">
         ${hasImage
           ? html`
@@ -174,7 +224,7 @@ export class PropertyPanelMedia extends LitElement {
               </svg>
             </button>
           `
-          : html`<span class="current-media-empty">${this._t('media.noImageSelected') || 'No image selected'}</span>`
+          : html`<span class="current-media-empty">No visual selected</span>`
         }
       </div>
     `;
@@ -183,8 +233,19 @@ export class PropertyPanelMedia extends LitElement {
   private _renderCurrentSound() {
     const { variant } = this;
     const hasSound = !!(variant?.soundUrl);
+    const soundUrl = variant?.soundUrl;
+    const isVideo = this._isVideo(soundUrl);
+    const isAudio = this._isAudio(soundUrl);
 
     return html`
+      <div class="section-label">Audio (Sound/Video)</div>
+      <div class="section-description">
+        ${isVideo 
+          ? 'Video file - will play audio only (no video). For visual with audio, add the same file to Visual.' 
+          : isAudio 
+            ? 'Audio file for sound alert.' 
+            : 'Select audio file or video (for audio track only).'}
+      </div>
       <div class="current-media">
         ${hasSound
           ? html`
@@ -203,7 +264,7 @@ export class PropertyPanelMedia extends LitElement {
               </svg>
             </button>
           `
-          : html`<span class="current-media-empty">${this._t('media.noSoundSelected') || 'No sound selected'}</span>`
+          : html`<span class="current-media-empty">No sound selected</span>`
         }
       </div>
     `;
@@ -212,39 +273,62 @@ export class PropertyPanelMedia extends LitElement {
   render() {
     if (!this.variant) return html``;
 
+    const imageUrl = this.variant.imageUrl;
+    const soundUrl = this.variant.soundUrl;
+    const isImageVideo = this._isVideo(imageUrl);
+    const isSoundVideo = this._isVideo(soundUrl);
+    const isSoundAudio = this._isAudio(soundUrl);
+
+    // Show image volume only if image is a video (images don't have volume)
+    const showImageVolume = isImageVideo;
+    // Show sound volume if sound is audio OR video (both have audio)
+    const showSoundVolume = isSoundAudio || isSoundVideo;
+
     return html`
       <div class="section-content">
-        <!-- Image -->
+        <!-- Visual (Image/Video) -->
         ${this._renderCurrentImage()}
         <button class="btn-media" @click="${this._openImageLibrary}">
-          ${this._t('media.changeImage')}
+          ${this._t('media.changeImage') || 'Change Visual'}
         </button>
 
         <ui-range
-          label="${this._t('media.imageScale')}"
+          label="${this._t('media.imageScale') || 'Visual Scale'}"
           .value="${this.variant.imageScale}"
           @change="${(e: CustomEvent) => this._handleChange('imageScale', e.detail)}"
         ></ui-range>
 
-        <ui-range
-          label="${this._t('media.imageVolume')}"
-          .value="${this.variant.imageVolume}"
-          @change="${(e: CustomEvent) => this._handleChange('imageVolume', e.detail)}"
-        ></ui-range>
+        ${showImageVolume ? html`
+          <ui-range
+            label="${this._t('media.imageVolume') || 'Video Volume (frames only)'}"
+            .value="${this.variant.imageVolume}"
+            @change="${(e: CustomEvent) => this._handleChange('imageVolume', e.detail)}"
+          ></ui-range>
+        ` : html`
+          <div class="section-description" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">
+            Volume not available for static images
+          </div>
+        `}
 
         <div class="divider"></div>
 
-        <!-- Sound -->
+        <!-- Sound (Audio/Video) -->
         ${this._renderCurrentSound()}
         <button class="btn-media" @click="${this._openSoundLibrary}">
-          ${this._t('media.changeSound')}
+          ${this._t('media.changeSound') || 'Change Sound'}
         </button>
 
-        <ui-range
-          label="${this._t('media.soundVolume')}"
-          .value="${this.variant.soundVolume}"
-          @change="${(e: CustomEvent) => this._handleChange('soundVolume', e.detail)}"
-        ></ui-range>
+        ${showSoundVolume ? html`
+          <ui-range
+            label="${this._t('media.soundVolume') || 'Sound Volume'}"
+            .value="${this.variant.soundVolume}"
+            @change="${(e: CustomEvent) => this._handleChange('soundVolume', e.detail)}"
+          ></ui-range>
+        ` : html`
+          <div class="section-description" style="margin-top: -0.25rem;">
+            Select an audio or video file to control volume
+          </div>
+        `}
       </div>
     `;
   }
