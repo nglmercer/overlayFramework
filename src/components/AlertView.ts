@@ -1,8 +1,15 @@
-import { html, css, LitElement, nothing } from 'lit';
+import { html, css, LitElement } from 'lit';
 import { Component, property, query, state } from '../litcomponents';
 import { AlertVariant } from '../lib/db';
-import { getLocale, setLocale, LocalizeController } from '../locales/localization';
-import { Renderer } from '../core/renderer';
+import { 
+  AlertRenderer, 
+  AlertConfig, 
+  createAlertRenderer, 
+  injectAnimationStyles,
+  defaultAlertConfig,
+  AnimationType,
+  AlertLayout
+} from '../core/alertRenderer';
 
 @Component('app-alert-view')
 export class AppAlertView extends LitElement {
@@ -13,8 +20,8 @@ export class AppAlertView extends LitElement {
   // Query for the factory container
   @query('.alert-container') private containerRef!: HTMLDivElement;
 
-  // Renderer instance
-  private renderer?: Renderer;
+  // AlertRenderer instance from core library
+  private alertRenderer?: AlertRenderer;
 
   static styles = css`
     :host {
@@ -27,167 +34,96 @@ export class AppAlertView extends LitElement {
       overflow: hidden;
     }
 
-    /* Keyframes */
-    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
-    
-    @keyframes slide-in-up { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    @keyframes slide-out-down { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100px); opacity: 0; } }
-    
-    @keyframes zoom-in { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    @keyframes zoom-out { from { transform: scale(1); opacity: 1; } to { transform: scale(0.5); opacity: 0; } }
-    
-    @keyframes bounce-in { 
-      0% { transform: scale(0.3); opacity: 0; }
-      50% { transform: scale(1.05); opacity: 1; }
-      70% { transform: scale(0.9); }
-      100% { transform: scale(1); }
-    }
-    
-    /* Pre-defined animation classes mapped to state */
-    .animate-in { animation-fill-mode: both; }
-    .animate-out { animation-fill-mode: both; }
-    
     .hidden { opacity: 0; pointer-events: none; }
   `;
 
-  // method exposed to editor to trigger the preview logic
-  public async playPreview() {
-    if (!this.variant) return;
-    
-    // Clean up any existing audio first
-    this.cleanupMedia();
-    
-    // Dispatch event for sound playback (handled by parent/editor)
-    if (this.variant.soundUrl && this.variant.soundVolume !== undefined) {
-      this.dispatchEvent(new CustomEvent('play-sound', {
-        detail: {
-          url: this.variant.soundUrl,
-          volume: this.variant.soundVolume / 100
-        },
-        bubbles: true,
-        composed: true
-      }));
-    }
-
-    // Reset and trigger In
-    this.animationPhase = 'none';
-    await new Promise(r => setTimeout(r, 50));
-    
-    this.animationPhase = 'in';
-    
-    // Apply animation phase
-    this.applyAnimationPhase();
-
-    // Trigger Out after duration
-    setTimeout(() => {
-      if (this.animationPhase === 'in') { // prevent race conditions
-        this.animationPhase = 'out';
-        
-        // Apply animation phase
-        this.applyAnimationPhase();
-        
-        // Hide after out animation completes
-        setTimeout(() => {
-          if (this.animationPhase === 'out') {
-            this.animationPhase = 'none';
-            this.applyAnimationPhase();
-          }
-        }, (this.variant?.animationOutDuration || 1) * 1000 + 100);
-      }
-    }, (this.variant.duration || 10) * 1000);
+  // Initialize animation styles on first load
+  static initializeStyles() {
+    injectAnimationStyles();
   }
 
-  // Clean up media elements (audio/video)
-  private cleanupMedia() {
-    // Dispatch event to stop sound (handled by parent/editor)
-    this.dispatchEvent(new CustomEvent('stop-sound', {
-      bubbles: true,
-      composed: true
-    }));
+  // Method exposed to editor to trigger the preview logic
+  public async playPreview() {
+    if (!this.variant || !this.alertRenderer) return;
     
-    // Clean up any video elements in the container
-    const container = this.containerRef;
-    if (container) {
-      const videos = container.querySelectorAll('video');
-      videos.forEach(video => {
-        video.pause();
-        video.src = '';
-        video.load();
-      });
+    // Convert AlertVariant to AlertConfig
+    const config = this.buildAlertConfig();
+    
+    // Play preview using the core renderer
+    await this.alertRenderer.playPreview(config);
+    
+    // Update local animation phase state for reactivity
+    this.updateAnimationPhase();
+  }
+
+  // Convert AlertVariant to AlertConfig
+  private buildAlertConfig(): AlertConfig {
+    const v = this.variant;
+    if (!v) return { ...defaultAlertConfig };
+    
+    return {
+      animationIn: (v.animationIn as AnimationType) || 'fade-in',
+      animationOut: (v.animationOut as AnimationType) || 'fade-out',
+      animationInDuration: v.animationInDuration || 1,
+      animationOutDuration: v.animationOutDuration || 1,
+      duration: v.duration || 10,
+      layout: (v.layout as AlertLayout) || 'text-below',
+      bgColor: v.bgColor || '#000000',
+      bgOpacity: v.bgOpacity || 0,
+      padding: v.padding || 16,
+      spacing: v.spacing || 16,
+      rounded: v.rounded ?? true,
+      shadow: v.shadow ?? false,
+      message: v.message || '',
+      fontFamily: v.fontFamily || 'Roboto',
+      fontWeight: v.fontWeight || 'Normal',
+      fontSize: v.fontSize || 24,
+      textAlign: v.textAlign || 'center',
+      textColor: v.textColor || '#FFFFFF',
+      highlightColor: v.highlightColor || '#9146FF',
+      textShadow: v.textShadow ?? true,
+      imageUrl: v.imageUrl,
+      imageScale: v.imageScale || 50,
+      imageVolume: v.imageVolume || 50,
+      soundUrl: v.soundUrl,
+      soundVolume: v.soundVolume || 50,
+      eventData: this.eventData,
+      containerWidth: 600,
+      containerHeight: 600,
+    };
+  }
+
+  // Update animation phase from renderer
+  private updateAnimationPhase() {
+    if (this.alertRenderer) {
+      // Poll for animation phase changes
+      const checkPhase = () => {
+        if (this.alertRenderer) {
+          const phase = this.alertRenderer.getAnimationPhase();
+          if (phase !== this.animationPhase) {
+            this.animationPhase = phase;
+          }
+          if (phase !== 'none') {
+            requestAnimationFrame(checkPhase);
+          }
+        }
+      };
+      requestAnimationFrame(checkPhase);
     }
   }
 
   // Clean up when component is disconnected from DOM
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.cleanupMedia();
-  }
-
-  // Build template data for renderer
-  private buildTemplateData(message: string): any {
-    if (!this.variant) return null;
-
-    const elements: any[] = [];
-    
-    // Add media element if imageUrl exists
-    if (this.variant.imageUrl) {
-      elements.push({
-        id: 'alert-media',
-        name: 'Alert Media',
-        type: 'multimedia' as const,
-        x: 0,
-        y: 0,
-        width: this.variant.imageScale !== undefined ? this.variant.imageScale * 4 : 200,
-        height: 'auto' as const,
-        position: 'relative' as const,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 0,
-        visible: true,
-        url: this.variant.imageUrl,
-        autoPlay: true,
-        volume: this.variant.imageVolume ?? 100,
-        loop: false,
-        muted: false,
-        objectFit: 'contain' as const,
-      });
+    if (this.alertRenderer) {
+      this.alertRenderer.destroy();
+      this.alertRenderer = undefined;
     }
-    
-    // Add text element
-    elements.push({
-      id: 'alert-text',
-      name: 'Alert Text',
-      type: 'text' as const,
-      x: 0,
-      y: 0,
-      width: 'auto',
-      height: 'auto',
-      position: 'relative' as const,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 1,
-      visible: true,
-      content: message,
-      fontSize: this.variant.fontSize,
-      fontFamily: this.variant.fontFamily,
-      fontWeight: this.variant.fontWeight,
-      color: this.variant.textColor,
-      textAlign: this.variant.textAlign,
-      textShadow: this.variant.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : undefined,
-    });
-
-    return {
-      id: 'alert-template',
-      name: 'Alert Template',
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'transparent',
-      elements,
-    };
   }
 
   firstUpdated() {
+    // Initialize animation styles
+    (this.constructor as typeof AppAlertView).initializeStyles();
     this.updateContent();
   }
 
@@ -201,25 +137,14 @@ export class AppAlertView extends LitElement {
     const container = this.containerRef;
     if (!this.variant || !container) return;
     
-    // Replace variables in message
-    let message = this.variant.message || '';
-    if (this.eventData) {
-      for (const [key, value] of Object.entries(this.eventData)) {
-        message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
-      }
+    // Initialize AlertRenderer if not already done
+    if (!this.alertRenderer) {
+      this.alertRenderer = createAlertRenderer(container);
     }
     
-    // Build template data
-    const templateData = this.buildTemplateData(message);
-    if (!templateData) return;
-    
-    // Initialize or update renderer
-    if (!this.renderer) {
-      this.renderer = new Renderer(container);
-    }
-    
-    // Render using the Renderer class
-    this.renderer.render(templateData);
+    // Build alert config and render
+    const config = this.buildAlertConfig();
+    this.alertRenderer.render(config);
     
     // Apply animation phase
     this.applyAnimationPhase();

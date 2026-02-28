@@ -51,8 +51,54 @@ export class Renderer {
       if (element.visible === false) continue;
       
       const el = ElementFactory.create(element);
+      
+      // Apply positioning and base styles directly to element
+      this.applyElementStyles(el, element);
+      
       this.container.appendChild(el);
     }
+  }
+
+  /**
+   * Apply element-specific positioning and styling
+   */
+  private applyElementStyles(el: HTMLElement, element: any) {
+    // Set position
+    el.style.position = element.position || 'absolute';
+    
+    // Set coordinates
+    if (element.x !== undefined && element.x !== 0) {
+      el.style.left = formatUnit(element.x);
+    }
+    if (element.y !== undefined && element.y !== 0) {
+      el.style.top = formatUnit(element.y);
+    }
+    
+    // Set dimensions
+    if (element.width !== undefined) {
+      el.style.width = formatUnit(element.width);
+    }
+    if (element.height !== undefined) {
+      el.style.height = formatUnit(element.height);
+    }
+    
+    // Set rotation
+    if (element.rotation !== undefined && element.rotation !== 0) {
+      el.style.transform = `rotate(${element.rotation}deg)`;
+    }
+    
+    // Set opacity
+    if (element.opacity !== undefined && element.opacity !== 1) {
+      el.style.opacity = String(element.opacity);
+    }
+    
+    // Set z-index
+    if (element.zIndex !== undefined) {
+      el.style.zIndex = String(element.zIndex);
+    }
+    
+    // Set data-id for querying
+    el.setAttribute('data-id', element.id);
   }
 
   /**
@@ -61,8 +107,8 @@ export class Renderer {
   updateElement(id: string, partialData: any) {
     const el = this.container.querySelector(`[data-id="${id}"]`) as HTMLElement;
     if (el) {
-      // Logic for partial update could be complex, for now we might want to re-render the specific element
-      // This is a placeholder for a more reactive approach
+      // Apply partial update styles
+      this.applyElementStyles(el, partialData);
     }
   }
 }
