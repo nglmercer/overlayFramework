@@ -27,10 +27,13 @@ export class MediaLibraryItem extends LitElement {
   @property({ type: Boolean }) selected = false;
   /** Set to false by parent when another card starts playing */
   @property({ type: Boolean }) isPlayingExternal = false;
+  /** Whether video should be muted (for image type) or unmuted (for video type) */
+  @property({ type: Boolean }) muted = true;
 
   @state() private isPlaying = false;
 
   private audio: HTMLAudioElement | null = null;
+  private video: HTMLVideoElement | null = null;
 
   static styles = css`
     :host {
@@ -77,6 +80,12 @@ export class MediaLibraryItem extends LitElement {
       display: block;
     }
     .preview-box video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-box .preview-video {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -244,6 +253,11 @@ export class MediaLibraryItem extends LitElement {
       this.audio.src = '';   // release media resource
       this.audio = null;
     }
+    if (this.video) {
+      this.video.pause();
+      this.video.src = '';
+      this.video = null;
+    }
     if (this.isPlaying) {
       this.isPlaying = false;
       this._emitPlayStop();
@@ -279,6 +293,39 @@ export class MediaLibraryItem extends LitElement {
     audio.play().catch(err => console.warn('[MediaLibraryItem] audio play failed:', err));
 
     this.audio = audio;
+    this.isPlaying = true;
+
+    // Tell the parent this card is the new "playing" card
+    this.dispatchEvent(new CustomEvent('ml-play-start', {
+      detail: { id: this.item.id },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  private toggleVideoPlay(e: Event, url: string) {
+    e.stopPropagation();
+
+    if (this.isPlaying) {
+      this._stopAudioInternal();
+      return;
+    }
+
+    const videoEl = this.shadowRoot?.querySelector('.preview-video') as HTMLVideoElement | null;
+    if (!videoEl) return;
+
+    videoEl.volume = 0.7;
+    videoEl.muted = false;
+
+    videoEl.addEventListener('ended', () => {
+      this.video = null;
+      this.isPlaying = false;
+      this._emitPlayStop();
+    }, { once: true });
+
+    videoEl.play().catch(err => console.warn('[MediaLibraryItem] video play failed:', err));
+
+    this.video = videoEl;
     this.isPlaying = true;
 
     // Tell the parent this card is the new "playing" card
@@ -325,10 +372,14 @@ export class MediaLibraryItem extends LitElement {
     }
 
     if (item.mimeType?.startsWith('video/')) {
+      const url = apiClient.files.getUrl(item);
       return html`
         <video
+          class="preview-video"
           src="${url}"
-          muted loop playsinline
+          ?muted="${this.muted}"
+          loop
+          playsinline
           @mouseenter="${(e: Event) => (e.target as HTMLVideoElement).play()}"
           @mouseleave="${(e: Event) => {
             const v = e.target as HTMLVideoElement;
@@ -336,6 +387,23 @@ export class MediaLibraryItem extends LitElement {
             v.currentTime = 0;
           }}"
         ></video>
+        ${!this.muted ? html`
+          <button
+            class="play-btn"
+            @click="${(e: Event) => this.toggleVideoPlay(e, url)}"
+            title="${this.isPlaying ? 'Pause' : 'Play with sound'}"
+          >
+            ${this.isPlaying
+              ? html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                  <rect x="6"  y="4" width="4" height="16" rx="1"/>
+                  <rect x="14" y="4" width="4" height="16" rx="1"/>
+                 </svg>`
+              : html`<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                 </svg>`
+            }
+          </button>
+        ` : ''}
       `;
     }
 

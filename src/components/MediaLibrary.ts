@@ -2,7 +2,8 @@ import { html, LitElement } from 'lit';
 import { Component, property, state } from '../litcomponents';
 import { LocalizeController } from '../locales/localization';
 import { createBrowserClient } from '../api/client';
-import type { FileItem } from '../api/client';
+import type { FileItem,FileTypes } from '../api/client';
+import { FileCategory } from '../api/client';
 import { confirm } from '../lib/dialog';
 import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 
@@ -10,7 +11,7 @@ import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 import './media-library/MediaLibraryItem';
 import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
 
-const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
+const apiClient = createBrowserClient({ baseUrl: 'http://localhost:35021' });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MediaLibrary component
@@ -26,7 +27,7 @@ const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
 export class MediaLibrary extends LitElement {
   // ── Public API ──────────────────────────────────────────────────────────
   /** Filter files by type shown in the grid */
-  @property({ type: String }) type: 'image' | 'sound' = 'image';
+  @property({ type: String }) type: 'image' | 'sound' | 'video' = 'image';
 
   /**
    * The currently-selected URL in the parent (used to pre-highlight the
@@ -112,12 +113,14 @@ export class MediaLibrary extends LitElement {
         if (this.type === 'image') {
           return f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/');
         }
-        return (
-          f.mimeType.startsWith('audio/') ||
-          f.mimeType.includes('ogg') ||
-          f.mimeType.includes('wav') ||
-          f.mimeType === 'video/webm'
-        );
+        if (this.type === 'sound') {
+          return f.mimeType.startsWith('audio/') ||
+                 f.mimeType.includes('ogg') ||
+                 f.mimeType.includes('wav') ||
+                 f.mimeType.startsWith('video/');
+        }
+        // video type - only videos
+        return f.mimeType.startsWith('video/');
       });
     } catch (err: any) {
       console.error('[MediaLibrary] fetchFiles:', err);
@@ -145,9 +148,10 @@ export class MediaLibrary extends LitElement {
     const file = input.files[0];
     this.uploading = true;
     try {
-      let category = 'other';
-      if (file.type.startsWith('image/')) category = 'image';
-      else if (file.type.startsWith('audio/') || file.type.startsWith('video/')) category = 'audio';
+      let category: FileTypes = FileCategory.OTHER;
+      if (file.type.startsWith('image/')) category = FileCategory.IMAGE;
+      else if (file.type.startsWith('video/')) category = FileCategory.VIDEO;
+      else if (file.type.startsWith('audio/')) category = FileCategory.AUDIO;
 
       await apiClient.files.upload(file, { category });
       await Promise.all([this.fetchFiles(), this.fetchQuota()]);
@@ -332,7 +336,7 @@ export class MediaLibrary extends LitElement {
             type="file"
             style="display:none"
             @change="${this.handleUpload}"
-            accept="${this.type === 'image' ? 'image/*,video/webm,.gif' : 'audio/*,.ogg,.wav,.mp3'}"
+            accept="${this.type === 'sound' ? 'audio/*,.ogg,.wav,.mp3,video/*' : 'image/*,video/*'}"
             ?disabled="${this.uploading}"
           />
         </label>
@@ -372,6 +376,7 @@ export class MediaLibrary extends LitElement {
             .item="${item}"
             .selected="${this.selectedItem === item.id}"
             .isPlayingExternal="${this.playingItemId === item.id}"
+            .muted="${this.type === 'image'}"
             @ml-select="${this.handleItemSelect}"
             @ml-delete="${this.handleDelete}"
             @ml-play-start="${this.handleItemPlayStart}"
