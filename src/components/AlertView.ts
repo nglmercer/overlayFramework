@@ -1,9 +1,8 @@
 import { html, css, LitElement, nothing } from 'lit';
-import { Component, property, state } from '../litcomponents';
+import { Component, property, query, state } from '../litcomponents';
 import { AlertVariant } from '../lib/db';
 import { getLocale, setLocale, LocalizeController } from '../locales/localization';
-import { ElementFactory } from '../core/renderer/factory';
-import { Ref, ref } from 'lit/directives/ref.js';
+import { Renderer } from '../core/renderer';
 
 @Component('app-alert-view')
 export class AppAlertView extends LitElement {
@@ -11,8 +10,11 @@ export class AppAlertView extends LitElement {
   @property({ type: Object }) eventData: Record<string, string> = {};
   @state() private animationPhase: 'in' | 'out' | 'none' = 'none';
   
-  // Ref for the factory container
-  private containerRef: Ref<HTMLDivElement> = ref();
+  // Query for the factory container
+  @query('.alert-container') private containerRef!: HTMLDivElement;
+
+  // Renderer instance
+  private renderer?: Renderer;
 
   static styles = css`
     :host {
@@ -53,11 +55,19 @@ export class AppAlertView extends LitElement {
   public async playPreview() {
     if (!this.variant) return;
     
-    // Play sound if present
+    // Clean up any existing audio first
+    this.cleanupMedia();
+    
+    // Dispatch event for sound playback (handled by parent/editor)
     if (this.variant.soundUrl && this.variant.soundVolume !== undefined) {
-      const audio = new Audio(this.variant.soundUrl);
-      audio.volume = this.variant.soundVolume / 100;
-      audio.play().catch(e => console.warn('Could not play test audio:', e));
+      this.dispatchEvent(new CustomEvent('play-sound', {
+        detail: {
+          url: this.variant.soundUrl,
+          volume: this.variant.soundVolume / 100
+        },
+        bubbles: true,
+        composed: true
+      }));
     }
 
     // Reset and trigger In
@@ -88,53 +98,64 @@ export class AppAlertView extends LitElement {
     }, (this.variant.duration || 10) * 1000);
   }
 
-  // Create image element using factory
-  private createImageElement(): HTMLElement {
-    if (!this.variant?.imageUrl) {
-      // Return default placeholder
-      const placeholder = document.createElement('div');
-      placeholder.style.width = '200px';
-      placeholder.style.height = '200px';
-      placeholder.style.background = '#26262c';
-      placeholder.style.borderRadius = '1rem';
-      placeholder.style.display = 'flex';
-      placeholder.style.alignItems = 'center';
-      placeholder.style.justifyContent = 'center';
-      placeholder.innerHTML = '<span style="font-size: 4rem;">❤</span>';
-      return placeholder;
+  // Clean up media elements (audio/video)
+  private cleanupMedia() {
+    // Dispatch event to stop sound (handled by parent/editor)
+    this.dispatchEvent(new CustomEvent('stop-sound', {
+      bubbles: true,
+      composed: true
+    }));
+    
+    // Clean up any video elements in the container
+    const container = this.containerRef;
+    if (container) {
+      const videos = container.querySelectorAll('video');
+      videos.forEach(video => {
+        video.pause();
+        video.src = '';
+        video.load();
+      });
     }
-    
-    const imageData = {
-      id: 'alert-image',
-      name: 'Alert Image',
-      type: 'image' as const,
-      x: 0,
-      y: 0,
-      width: this.variant.imageScale !== undefined ? this.variant.imageScale * 4 : 200,
-      height: 'auto',
-      position: 'relative' as const,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 0,
-      visible: true,
-      url: this.variant.imageUrl,
-      volume: 100,
-      loop: false,
-      objectFit: 'contain' as const,
-    };
-    
-    const img = ElementFactory.create(imageData);
-    img.style.width = `${imageData.width}px`;
-    img.style.height = 'auto';
-    
-    return img;
   }
 
-  // Create text element using factory
-  private createTextElement(message: string): HTMLElement {
-    if (!this.variant) return document.createElement('div');
+  // Clean up when component is disconnected from DOM
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.cleanupMedia();
+  }
+
+  // Build template data for renderer
+  private buildTemplateData(message: string): any {
+    if (!this.variant) return null;
+
+    const elements: any[] = [];
     
-    const textData = {
+    // Add media element if imageUrl exists
+    if (this.variant.imageUrl) {
+      elements.push({
+        id: 'alert-media',
+        name: 'Alert Media',
+        type: 'multimedia' as const,
+        x: 0,
+        y: 0,
+        width: this.variant.imageScale !== undefined ? this.variant.imageScale * 4 : 200,
+        height: 'auto' as const,
+        position: 'relative' as const,
+        rotation: 0,
+        opacity: 1,
+        zIndex: 0,
+        visible: true,
+        url: this.variant.imageUrl,
+        autoPlay: true,
+        volume: this.variant.imageVolume ?? 100,
+        loop: false,
+        muted: false,
+        objectFit: 'contain' as const,
+      });
+    }
+    
+    // Add text element
+    elements.push({
       id: 'alert-text',
       name: 'Alert Text',
       type: 'text' as const,
@@ -145,7 +166,7 @@ export class AppAlertView extends LitElement {
       position: 'relative' as const,
       rotation: 0,
       opacity: 1,
-      zIndex: 0,
+      zIndex: 1,
       visible: true,
       content: message,
       fontSize: this.variant.fontSize,
@@ -154,9 +175,16 @@ export class AppAlertView extends LitElement {
       color: this.variant.textColor,
       textAlign: this.variant.textAlign,
       textShadow: this.variant.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : undefined,
+    });
+
+    return {
+      id: 'alert-template',
+      name: 'Alert Template',
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'transparent',
+      elements,
     };
-    
-    return ElementFactory.create(textData);
   }
 
   firstUpdated() {
@@ -170,11 +198,8 @@ export class AppAlertView extends LitElement {
   }
 
   private updateContent() {
-    const container = this.containerRef.value;
+    const container = this.containerRef;
     if (!this.variant || !container) return;
-    
-    // Clear existing content
-    container.innerHTML = '';
     
     // Replace variables in message
     let message = this.variant.message || '';
@@ -184,20 +209,24 @@ export class AppAlertView extends LitElement {
       }
     }
     
-    // Create and append image
-    const imageEl = this.createImageElement();
-    container.appendChild(imageEl);
+    // Build template data
+    const templateData = this.buildTemplateData(message);
+    if (!templateData) return;
     
-    // Create and append text
-    const textEl = this.createTextElement(message);
-    container.appendChild(textEl);
+    // Initialize or update renderer
+    if (!this.renderer) {
+      this.renderer = new Renderer(container);
+    }
+    
+    // Render using the Renderer class
+    this.renderer.render(templateData);
     
     // Apply animation phase
     this.applyAnimationPhase();
   }
 
   private applyAnimationPhase() {
-    const container = this.containerRef.value;
+    const container = this.containerRef;
     if (!this.variant || !container) return;
     
     let animStyle = '';
@@ -219,8 +248,7 @@ export class AppAlertView extends LitElement {
     // Render with a container that will hold factory-created elements
     return html`
       <div 
-        ${this.containerRef}
-        class="${this.animationPhase === 'none' ? 'hidden' : ''}"
+        class="alert-container ${this.animationPhase === 'none' ? 'hidden' : ''}"
       ></div>
     `;
   }

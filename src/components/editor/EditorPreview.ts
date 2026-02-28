@@ -173,7 +173,6 @@ export class EditorPreview extends LitElement {
   @property({ type: String }) bgColor: BgColor = 'transparent';
 
   @query('app-alert-view') private alertView!: AppAlertView;
-  @state() private _isPlaying = false;
 
   private _localize = new LocalizeController(this);
 
