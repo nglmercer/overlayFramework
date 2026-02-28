@@ -45,6 +45,8 @@
   "variant.layout": "Layout",
   "variant.layout.textBelow": "Text below",
   "variant.layout.textRight": "Text right",
+  "variant.layout.textOver": "Text over",
+  "variant.layout.center": "Center",
   "variant.bgColor": "Background color",
   "variant.bgOpacity": "Background opacity %",
   "variant.padding": "Padding (px)",

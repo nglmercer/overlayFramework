@@ -19,7 +19,7 @@ export type AnimationType =
   | 'bounce-in' | 'pulse-in';
 
 // Layout types for alert positioning
-export type AlertLayout = 'text-below' | 'text-right' | 'text-over';
+export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'center';
 
 // Alert configuration interface
 export interface AlertConfig {
@@ -165,19 +165,35 @@ export class AlertRenderer {
     let textX = effectivePadding;
     let textY = effectivePadding;
     
+    // Container inner dimensions
+    const innerWidth = containerWidth - effectivePadding * 2;
+    const innerHeight = containerHeight - effectivePadding * 2;
+    
     if (layout === 'text-right') {
+      // Image on left, text on right
       imageX = effectivePadding;
-      imageY = effectivePadding + (containerHeight - effectivePadding * 2 - effectiveImageWidth) / 2;
+      imageY = effectivePadding + (innerHeight - effectiveImageWidth) / 2;
       textX = effectivePadding + effectiveImageWidth + effectiveSpacing;
-      textY = effectivePadding + (containerHeight - effectivePadding * 2) / 2;
+      textY = effectivePadding + (innerHeight - (fontSize || 24) * 1.5) / 2;
     } else if (layout === 'text-over') {
-      imageX = effectivePadding + (containerWidth - effectivePadding * 2 - effectiveImageWidth) / 2;
-      imageY = effectivePadding + (containerHeight - effectivePadding * 2 - effectiveImageWidth) / 3;
+      // Text over the image (centered)
+      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
+      imageY = effectivePadding + (innerHeight - effectiveImageWidth) / 3;
+      textX = effectivePadding + (innerWidth - (containerWidth - effectivePadding * 2)) / 2;
+      textY = effectivePadding + (innerHeight - effectiveImageWidth) / 3 - (fontSize || 24) * 1.5;
+    } else if (layout === 'center') {
+      // Both image and text centered in the middle
+      // First, calculate total content height
+      const totalContentHeight = effectiveImageWidth + effectiveSpacing + (fontSize || 24) * 1.5;
+      const startY = effectivePadding + (innerHeight - totalContentHeight) / 2;
+      
+      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
+      imageY = startY;
       textX = effectivePadding;
-      textY = effectivePadding;
+      textY = startY + effectiveImageWidth + effectiveSpacing;
     } else {
-      // text-below (default)
-      imageX = effectivePadding + (containerWidth - effectivePadding * 2 - effectiveImageWidth) / 2;
+      // text-below (default) - image on top, text below centered
+      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
       imageY = effectivePadding;
       textX = effectivePadding;
       textY = effectivePadding + effectiveImageWidth + effectiveSpacing;
@@ -197,7 +213,7 @@ export class AlertRenderer {
         position: 'absolute' as const,
         rotation: 0,
         opacity: 1,
-        zIndex: 0,
+        zIndex: 2,
         visible: true,
         url: imageUrl,
         autoPlay: true,
@@ -223,7 +239,7 @@ export class AlertRenderer {
       position: 'absolute' as const,
       rotation: 0,
       opacity: 1,
-      zIndex: 1,
+      zIndex: 3,
       visible: true,
       content: processedContent,
       fontSize: fontSize || 24,
@@ -246,7 +262,7 @@ export class AlertRenderer {
       position: 'absolute' as const,
       rotation: 0,
       opacity: (bgOpacity ?? 0) / 100,
-      zIndex: -1,
+      zIndex: 0,
       visible: bgOpacity > 0,
       backgroundColor: bgColor || '#000000',
       borderRadius: rounded ? '16px' : '0px',

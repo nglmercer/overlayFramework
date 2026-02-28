@@ -37,7 +37,9 @@ export class PropertyPanelDesign extends LitElement {
 
     const layoutOptions = [
       { value: 'text-below', label: this._t('variant.layout.textBelow') },
-      { value: 'text-right', label: this._t('variant.layout.textRight') }
+      { value: 'text-right', label: this._t('variant.layout.textRight') },
+      { value: 'text-over', label: this._t('variant.layout.textOver') },
+      { value: 'center', label: this._t('variant.layout.center') }
     ];
 
     return html`
