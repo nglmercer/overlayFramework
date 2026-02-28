@@ -205,11 +205,11 @@ export class PropertyPanelMedia extends LitElement {
     const isVideo = this._isVideo(imageUrl);
 
     return html`
-      <div class="section-label">Visual (Image/Video)</div>
+      <div class="section-label">${this._t('media.visualLabel')}</div>
       <div class="section-description">
         ${isVideo 
-          ? 'Video file - will display frames only (no audio). For video with audio, add the same file to Sound.' 
-          : 'Image file or video for visual display. Video files show frames only.'}
+          ? html`${this._t('media.videoFramesOnly')} ${this._t('media.forVideoWithAudio')}` 
+          : this._t('media.visualDescription')}
       </div>
       <div class="current-media">
         ${hasImage
@@ -218,13 +218,13 @@ export class PropertyPanelMedia extends LitElement {
             <span class="current-media-name" title="${variant!.imageName ?? variant!.imageUrl}">
               ${variant!.imageName ?? variant!.imageUrl}
             </span>
-            <button class="btn-clear" @click="${this._clearImage}" title="Remove image">
+            <button class="btn-clear" @click="${this._clearImage}" title="${this._t('dialog.remove') || 'Remove'}">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           `
-          : html`<span class="current-media-empty">No visual selected</span>`
+          : html`<span class="current-media-empty">${this._t('media.noVisualSelected')}</span>`
         }
       </div>
     `;
@@ -238,13 +238,13 @@ export class PropertyPanelMedia extends LitElement {
     const isAudio = this._isAudio(soundUrl);
 
     return html`
-      <div class="section-label">Audio (Sound/Video)</div>
+      <div class="section-label">${this._t('media.soundLabel')}</div>
       <div class="section-description">
         ${isVideo 
-          ? 'Video file - will play audio only (no video). For visual with audio, add the same file to Visual.' 
+          ? html`${this._t('media.videoAudioOnly')} ${this._t('media.forVisualWithAudio')}` 
           : isAudio 
-            ? 'Audio file for sound alert.' 
-            : 'Select audio file or video (for audio track only).'}
+            ? this._t('media.audioOnly')
+            : this._t('media.soundDescription')}
       </div>
       <div class="current-media">
         ${hasSound
@@ -258,13 +258,13 @@ export class PropertyPanelMedia extends LitElement {
             <span class="current-media-name" title="${variant!.soundName ?? variant!.soundUrl}">
               ${variant!.soundName ?? variant!.soundUrl}
             </span>
-            <button class="btn-clear" @click="${this._clearSound}" title="Remove sound">
+            <button class="btn-clear" @click="${this._clearSound}" title="${this._t('dialog.remove') || 'Remove'}">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           `
-          : html`<span class="current-media-empty">No sound selected</span>`
+          : html`<span class="current-media-empty">${this._t('media.noAudioSelected')}</span>`
         }
       </div>
     `;
@@ -289,24 +289,24 @@ export class PropertyPanelMedia extends LitElement {
         <!-- Visual (Image/Video) -->
         ${this._renderCurrentImage()}
         <button class="btn-media" @click="${this._openImageLibrary}">
-          ${this._t('media.changeImage') || 'Change Visual'}
+          ${this._t('media.changeVisual')}
         </button>
 
         <ui-range
-          label="${this._t('media.imageScale') || 'Visual Scale'}"
+          label="${this._t('media.visualScale')}"
           .value="${this.variant.imageScale}"
           @change="${(e: CustomEvent) => this._handleChange('imageScale', e.detail)}"
         ></ui-range>
 
         ${showImageVolume ? html`
           <ui-range
-            label="${this._t('media.imageVolume') || 'Video Volume (frames only)'}"
+            label="${this._t('media.imageVolume')}"
             .value="${this.variant.imageVolume}"
             @change="${(e: CustomEvent) => this._handleChange('imageVolume', e.detail)}"
           ></ui-range>
         ` : html`
           <div class="section-description" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">
-            Volume not available for static images
+            ${this._t('media.volumeNotAvailable')}
           </div>
         `}
 
@@ -315,18 +315,18 @@ export class PropertyPanelMedia extends LitElement {
         <!-- Sound (Audio/Video) -->
         ${this._renderCurrentSound()}
         <button class="btn-media" @click="${this._openSoundLibrary}">
-          ${this._t('media.changeSound') || 'Change Sound'}
+          ${this._t('media.changeAudio')}
         </button>
 
         ${showSoundVolume ? html`
           <ui-range
-            label="${this._t('media.soundVolume') || 'Sound Volume'}"
+            label="${this._t('media.soundVolume')}"
             .value="${this.variant.soundVolume}"
             @change="${(e: CustomEvent) => this._handleChange('soundVolume', e.detail)}"
           ></ui-range>
         ` : html`
           <div class="section-description" style="margin-top: -0.25rem;">
-            Select an audio or video file to control volume
+            ${this._t('media.selectAudioOrVideo')}
           </div>
         `}
       </div>
