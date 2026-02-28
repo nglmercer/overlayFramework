@@ -93,60 +93,6 @@ export class FileClient {
     });
   }
 
-  async uploadNode(
-    filePath: string,
-    options?: UploadOptions
-  ): Promise<FileItem> {
-    const { readFile, stat } = await import('fs/promises');
-    
-    const fileStats = await stat(filePath);
-    const fileSize = fileStats.size;
-    
-    const baseUrl = this.client.config.baseUrl;
-    const token = this.client.config.token;
-    const url = `${baseUrl}/api/files`;
-    
-    const fileBuffer = await readFile(filePath);
-    const blob = new Blob([fileBuffer]);
-    
-    const formData = new FormData();
-    formData.append('file', blob, filePath.split('/').pop() || 'upload');
-    
-    if (options?.metadata) {
-      formData.append('metadata', JSON.stringify(options.metadata));
-    }
-
-    if (options?.category) {
-      formData.append('category', options.category);
-    }
-    
-    if (options?.onProgress) {
-      options.onProgress({ loaded: 0, total: fileSize, percentage: 0 });
-    }
-    
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['X-Auth-Token'] = token;
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    
-    if (options?.onProgress) {
-      options.onProgress({ loaded: fileSize, total: fileSize, percentage: 100 });
-    }
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
-      throw new Error(error.error || `Upload failed: ${response.status}`);
-    }
-    
-    return response.json();
-  }
-
   async list(filters?: ListFilters): Promise<PaginatedResult<FileItem>> {
     const params = new URLSearchParams();
 
@@ -195,57 +141,6 @@ export class FileClient {
     }
 
     return response.blob();
-  }
-
-  async downloadNode(id: string, outputPath: string, options?: DownloadOptions): Promise<void> {
-    const { createWriteStream } = await import('fs');
-    
-    const baseUrl = this.client.config.baseUrl;
-    const token = this.client.config.token;
-    const url = `${baseUrl}/api/files/${id}/download`;
-
-    const response = await fetch(url, {
-      headers: token ? { 'X-Auth-Token': token } : {},
-    });
-
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.statusText}`);
-    }
-
-    const fileStream = createWriteStream(outputPath);
-    const body = response.body;
-
-    if (!body) {
-      throw new Error('Response body is null');
-    }
-
-    const total = parseInt(response.headers.get('content-length') || '0', 10);
-    let loaded = 0;
-
-    const reader = body.getReader();
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        loaded += value.length;
-        fileStream.write(Buffer.from(value));
-
-        if (options?.onProgress) {
-          options.onProgress({
-            loaded,
-            total,
-            percentage: total > 0 ? (loaded / total) * 100 : 100,
-            rate: loaded / (Date.now() / 1000),
-            eta: total > 0 ? (total - loaded) / (loaded / (Date.now() / 1000)) : 0,
-          });
-        }
-      }
-    } finally {
-      fileStream.end();
-    }
   }
 
   getUrl(file: FileItem): string {

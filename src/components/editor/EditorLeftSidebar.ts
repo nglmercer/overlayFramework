@@ -280,25 +280,23 @@ export class EditorLeftSidebar extends LitElement {
   @property({ type: String }) expandedSection: string | null = null;
   @property({ type: Boolean }) randomize = false;
 
-  @state() private _localExpandedSection: string | null = null;
   @state() private _collapsed = false;
 
-  private _localize = new LocalizeController(this);
-
-  updated(changedProperties: Map<string, unknown>) {
-    if (changedProperties.has('expandedSection')) {
-      this._localExpandedSection = this.expandedSection;
-    }
+  // Use getter to derive local state from property to avoid update scheduling issues
+  private get _localExpandedSection(): string | null {
+    return this.expandedSection ?? null;
   }
+
+  private _localize = new LocalizeController(this);
 
   private _t(key: string): string {
     return this._localize.t(key);
   }
 
   private _toggleSection(sectionId: string) {
-    this._localExpandedSection = this._localExpandedSection === sectionId ? null : sectionId;
+    const newSection = this.expandedSection === sectionId ? null : sectionId;
     this.dispatchEvent(new CustomEvent('section-change', {
-      detail: this._localExpandedSection,
+      detail: newSection,
       bubbles: true,
       composed: true
     }));
