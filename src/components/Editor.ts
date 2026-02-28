@@ -35,7 +35,7 @@ export class AppEditor extends LitElement {
   @state() private showMediaLibrary: 'image' | 'sound' | null = null;
   @state() private selectedVariantId: string | null = null;
   
-  @state() private previewWidth = 800;
+  @state() private previewWidth = 600;
   @state() private previewHeight = 600;
   @state() private previewBgColor: BgColor = 'transparent';
 
@@ -216,12 +216,12 @@ export class AppEditor extends LitElement {
     this.showMediaLibrary = type;
   }
 
-  private _handleMediaSelect(url: string, name: string) {
+  private async _handleMediaSelect(url: string, name: string) {
     const variants = this._variantsTask.value ?? [];
     if (this.showMediaLibrary === 'image') {
-      this.handlePropertyChange({ imageUrl: url, imageName: name }, variants);
+      await this.handlePropertyChange({ imageUrl: url, imageName: name }, variants);
     } else {
-      this.handlePropertyChange({ soundUrl: url, soundName: name }, variants);
+      await this.handlePropertyChange({ soundUrl: url, soundName: name }, variants);
     }
     this.showMediaLibrary = null;
   }
@@ -283,6 +283,11 @@ export class AppEditor extends LitElement {
       ${this.showMediaLibrary ? html`
         <media-library 
           .type="${this.showMediaLibrary}"
+          .selectedUrl="${
+            this.showMediaLibrary === 'image'
+              ? (variant?.imageUrl ?? null)
+              : (variant?.soundUrl ?? null)
+          }"
           .onClose="${() => this.showMediaLibrary = null}"
           .onSelect="${(url: string, name: string) => this._handleMediaSelect(url, name)}"
         ></media-library>

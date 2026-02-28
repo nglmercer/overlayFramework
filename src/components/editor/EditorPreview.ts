@@ -127,7 +127,7 @@ export class EditorPreview extends LitElement {
   `;
 
   @property({ type: Object }) variant: AlertVariant | null = null;
-  @property({ type: Number }) width = 800;
+  @property({ type: Number }) width = 600;
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
 
@@ -247,7 +247,7 @@ export class EditorPreview extends LitElement {
           </div>
         ` : html`
           <div class="preview-content">
-            <div class="preview-canvas bg-checker" style="width: 400px; height: 300px;">
+            <div class="preview-canvas bg-checker" style="width: 400px; height: 400px;">
               ${this._t('preview.select')}
             </div>
           </div>
