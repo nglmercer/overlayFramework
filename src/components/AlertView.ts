@@ -1,14 +1,18 @@
-import { html, css, LitElement } from 'lit';
+import { html, css, LitElement, nothing } from 'lit';
 import { Component, property, state } from '../litcomponents';
 import { AlertVariant } from '../lib/db';
 import { getLocale, setLocale, LocalizeController } from '../locales/localization';
+import { ElementFactory } from '../core/renderer/factory';
+import { Ref, ref } from 'lit/directives/ref.js';
 
 @Component('app-alert-view')
 export class AppAlertView extends LitElement {
   @property({ type: Object }) variant?: AlertVariant;
   @property({ type: Object }) eventData: Record<string, string> = {};
-
   @state() private animationPhase: 'in' | 'out' | 'none' = 'none';
+  
+  // Ref for the factory container
+  private containerRef: Ref<HTMLDivElement> = ref();
 
   static styles = css`
     :host {
@@ -61,24 +65,116 @@ export class AppAlertView extends LitElement {
     await new Promise(r => setTimeout(r, 50));
     
     this.animationPhase = 'in';
+    
+    // Apply animation phase
+    this.applyAnimationPhase();
 
     // Trigger Out after duration
     setTimeout(() => {
       if (this.animationPhase === 'in') { // prevent race conditions
         this.animationPhase = 'out';
         
+        // Apply animation phase
+        this.applyAnimationPhase();
+        
         // Hide after out animation completes
         setTimeout(() => {
           if (this.animationPhase === 'out') {
             this.animationPhase = 'none';
+            this.applyAnimationPhase();
           }
         }, (this.variant?.animationOutDuration || 1) * 1000 + 100);
       }
     }, (this.variant.duration || 10) * 1000);
   }
 
-  render() {
-    if (!this.variant) return html``;
+  // Create image element using factory
+  private createImageElement(): HTMLElement {
+    if (!this.variant?.imageUrl) {
+      // Return default placeholder
+      const placeholder = document.createElement('div');
+      placeholder.style.width = '200px';
+      placeholder.style.height = '200px';
+      placeholder.style.background = '#26262c';
+      placeholder.style.borderRadius = '1rem';
+      placeholder.style.display = 'flex';
+      placeholder.style.alignItems = 'center';
+      placeholder.style.justifyContent = 'center';
+      placeholder.innerHTML = '<span style="font-size: 4rem;">❤</span>';
+      return placeholder;
+    }
+    
+    const imageData = {
+      id: 'alert-image',
+      name: 'Alert Image',
+      type: 'image' as const,
+      x: 0,
+      y: 0,
+      width: this.variant.imageScale !== undefined ? this.variant.imageScale * 4 : 200,
+      height: 'auto',
+      position: 'relative' as const,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 0,
+      visible: true,
+      url: this.variant.imageUrl,
+      volume: 100,
+      loop: false,
+      objectFit: 'contain' as const,
+    };
+    
+    const img = ElementFactory.create(imageData);
+    img.style.width = `${imageData.width}px`;
+    img.style.height = 'auto';
+    
+    return img;
+  }
+
+  // Create text element using factory
+  private createTextElement(message: string): HTMLElement {
+    if (!this.variant) return document.createElement('div');
+    
+    const textData = {
+      id: 'alert-text',
+      name: 'Alert Text',
+      type: 'text' as const,
+      x: 0,
+      y: 0,
+      width: 'auto',
+      height: 'auto',
+      position: 'relative' as const,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 0,
+      visible: true,
+      content: message,
+      fontSize: this.variant.fontSize,
+      fontFamily: this.variant.fontFamily,
+      fontWeight: this.variant.fontWeight,
+      color: this.variant.textColor,
+      textAlign: this.variant.textAlign,
+      textShadow: this.variant.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : undefined,
+    };
+    
+    return ElementFactory.create(textData);
+  }
+
+  firstUpdated() {
+    this.updateContent();
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has('variant') || changedProperties.has('eventData')) {
+      this.updateContent();
+    }
+  }
+
+  private updateContent() {
+    const container = this.containerRef.value;
+    if (!this.variant || !container) return;
+    
+    // Clear existing content
+    container.innerHTML = '';
     
     // Replace variables in message
     let message = this.variant.message || '';
@@ -88,46 +184,44 @@ export class AppAlertView extends LitElement {
       }
     }
     
+    // Create and append image
+    const imageEl = this.createImageElement();
+    container.appendChild(imageEl);
+    
+    // Create and append text
+    const textEl = this.createTextElement(message);
+    container.appendChild(textEl);
+    
+    // Apply animation phase
+    this.applyAnimationPhase();
+  }
+
+  private applyAnimationPhase() {
+    const container = this.containerRef.value;
+    if (!this.variant || !container) return;
+    
     let animStyle = '';
-    let visibilityClass = this.animationPhase === 'none' ? 'hidden' : '';
+    const visibilityClass = this.animationPhase === 'none' ? 'hidden' : '';
     
     if (this.animationPhase === 'in') {
       animStyle = `animation: ${this.variant.animationIn || 'fade-in'} ${this.variant.animationInDuration || 1}s ease-out forwards;`;
     } else if (this.animationPhase === 'out') {
       animStyle = `animation: ${this.variant.animationOut || 'fade-out'} ${this.variant.animationOutDuration || 1}s ease-in forwards;`;
     }
+    
+    container.className = visibilityClass;
+    container.style.cssText += animStyle;
+  }
 
+  render() {
+    if (!this.variant) return html``;
+    
+    // Render with a container that will hold factory-created elements
     return html`
       <div 
-        class="${visibilityClass}"
-        style="
-          background-color: ${this.variant.bgColor}${Math.round((this.variant.bgOpacity || 0) * 2.55).toString(16).padStart(2, '0')};
-          padding: ${this.variant.padding}px;
-          border-radius: ${this.variant.rounded ? '1rem' : '0'};
-          text-align: ${this.variant.textAlign};
-          box-shadow: ${this.variant.shadow ? '0 10px 25px -5px rgba(0,0,0,0.5)' : 'none'};
-          display: flex;
-          flex-direction: ${this.variant.layout === 'text-below' ? 'column' : 'row'};
-          align-items: center;
-          gap: ${this.variant.spacing}px;
-          ${animStyle}
-        "
-      >
-        ${this.variant.imageUrl ? html`<img src="${this.variant.imageUrl}" style="width: ${this.variant.imageScale !== undefined ? this.variant.imageScale * 4 : 200}px; height: auto; object-fit: contain;" />` : html`
-          <div style="width: 200px; height: 200px; background: #26262c; border-radius: 1rem; display: flex; align-items: center; justify-content: center;">
-            <span style="font-size: 4rem;">❤</span>
-          </div>
-        `}
-        <div style="
-          color: ${this.variant.textColor};
-          font-family: ${this.variant.fontFamily};
-          font-weight: ${this.variant.fontWeight};
-          font-size: ${this.variant.fontSize}px;
-          text-shadow: ${this.variant.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none'};
-        ">
-          ${message}
-        </div>
-      </div>
+        ${this.containerRef}
+        class="${this.animationPhase === 'none' ? 'hidden' : ''}"
+      ></div>
     `;
   }
 }

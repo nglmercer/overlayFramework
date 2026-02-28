@@ -10,18 +10,8 @@ import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 // Register sub-component
 import './media-library/MediaLibraryItem';
 import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
-
-const apiClient = createBrowserClient({ baseUrl: 'http://localhost:35021' });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MediaLibrary component
-//
-// Events dispatched (for consumers who prefer event-based integration):
-//   'media-select'  { url: string, name: string }
-//   'media-close'   {}
-//
-// Or pass callbacks via .onSelect / .onClose properties (legacy).
-// ─────────────────────────────────────────────────────────────────────────────
+//@ts-expect-error
+const apiClient = createBrowserClient({ baseUrl: 'http://localhost:'+`${import.meta.env.PORT || 35871}` });
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {

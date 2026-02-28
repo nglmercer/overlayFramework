@@ -46,6 +46,7 @@ export const MediaElementSchema = BaseElementSchema.extend({
   volume: z.number().min(0).max(100).default(100),
   loop: z.boolean().default(false),
   objectFit: z.enum(['contain', 'cover', 'fill', 'none']).default('contain'),
+  muted: z.boolean().optional(), // undefined = auto-mute for autoplay, true/false for explicit control
 });
 
 export const BoxElementSchema = BaseElementSchema.extend({
@@ -64,6 +65,7 @@ export const MultimediaElementSchema = BaseElementSchema.extend({
   autoPlay: z.boolean().default(true),
   loop: z.boolean().default(false),
   volume: z.number().default(100),
+  muted: z.boolean().optional(), // undefined = auto-mute for autoplay, true/false for explicit control
 });
 
 // Definition for recursive group structure

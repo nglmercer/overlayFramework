@@ -5,7 +5,7 @@ import { applyBaseStyles, formatUnit } from './utils';
 export class ElementFactory {
   static create(data: TemplateElement): HTMLElement {
     let el: HTMLElement;
-
+    console.log("[data]",data);
     switch (data.type) {
       case 'text':
         el = this.createText(data);
@@ -46,8 +46,15 @@ export class ElementFactory {
     if (data.textShadow) el.style.textShadow = data.textShadow;
     return el;
   }
-
+  private static _validate(data:any){
+    if (!data || !data.url) {
+      console.error('[ElementFactory] createImage: Missing url', data);
+      return false;
+    }
+    return true;
+  }
   private static createImage(data: any): HTMLElement {
+    if (!this._validate(data)) return document.createElement('div');
     const img = document.createElement('img');
     img.src = mediaRegistry.resolve(data.url);
     img.style.objectFit = data.objectFit || 'contain';
@@ -55,12 +62,19 @@ export class ElementFactory {
   }
 
   private static createVideo(data: any): HTMLElement {
+    if (!this._validate(data)) return document.createElement('div');
     const video = document.createElement('video');
     video.src = mediaRegistry.resolve(data.url);
     video.autoplay = true;
-    video.muted = (data.volume === 0);
+    // Muted by default for autoplay support (browsers require muted for autoplay)
+    // Only unmute if explicitly set to false AND volume > 0
+    video.muted = data.muted !== false ? true : (data.volume === 0);
     video.loop = data.loop || false;
     video.style.objectFit = data.objectFit || 'contain';
+    // Set volume if specified and not muted
+    if (data.volume !== undefined && video.muted === false) {
+      video.volume = data.volume / 100;
+    }
     return video;
   }
 
