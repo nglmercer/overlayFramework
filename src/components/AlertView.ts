@@ -15,9 +15,8 @@ import {
 export class AppAlertView extends LitElement {
   @property({ type: Object }) variant?: AlertVariant;
   @property({ type: Object }) eventData: Record<string, string> = {};
-  @state() private animationPhase: 'in' | 'out' | 'none' = 'none';
   
-  // Query for the factory container
+  // Query for the renderer container
   @query('.alert-container') private containerRef!: HTMLDivElement;
 
   // AlertRenderer instance from core library
@@ -49,14 +48,12 @@ export class AppAlertView extends LitElement {
     // Convert AlertVariant to AlertConfig
     const config = this.buildAlertConfig();
     
-    // Play preview using the core renderer
+    // Play preview using the core renderer (handles all animation internally)
     await this.alertRenderer.playPreview(config);
-    
-    // Update local animation phase state for reactivity
-    this.updateAnimationPhase();
   }
 
-  // Convert AlertVariant to AlertConfig
+  // Convert AlertVariant (DB model) to AlertConfig (core config)
+  // This is the only mapping logic that should remain in the component
   private buildAlertConfig(): AlertConfig {
     const v = this.variant;
     if (!v) return { ...defaultAlertConfig };
@@ -93,25 +90,6 @@ export class AppAlertView extends LitElement {
     };
   }
 
-  // Update animation phase from renderer
-  private updateAnimationPhase() {
-    if (this.alertRenderer) {
-      // Poll for animation phase changes
-      const checkPhase = () => {
-        if (this.alertRenderer) {
-          const phase = this.alertRenderer.getAnimationPhase();
-          if (phase !== this.animationPhase) {
-            this.animationPhase = phase;
-          }
-          if (phase !== 'none') {
-            requestAnimationFrame(checkPhase);
-          }
-        }
-      };
-      requestAnimationFrame(checkPhase);
-    }
-  }
-
   // Clean up when component is disconnected from DOM
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -133,6 +111,7 @@ export class AppAlertView extends LitElement {
     }
   }
 
+  // Update content - delegates to core AlertRenderer
   private updateContent() {
     const container = this.containerRef;
     if (!this.variant || !container) return;
@@ -142,39 +121,17 @@ export class AppAlertView extends LitElement {
       this.alertRenderer = createAlertRenderer(container);
     }
     
-    // Build alert config and render
+    // Build alert config and render - core handles all styling
     const config = this.buildAlertConfig();
     this.alertRenderer.render(config);
-    
-    // Apply animation phase
-    this.applyAnimationPhase();
-  }
-
-  private applyAnimationPhase() {
-    const container = this.containerRef;
-    if (!this.variant || !container) return;
-    
-    let animStyle = '';
-    const visibilityClass = this.animationPhase === 'none' ? 'hidden' : '';
-    
-    if (this.animationPhase === 'in') {
-      animStyle = `animation: ${this.variant.animationIn || 'fade-in'} ${this.variant.animationInDuration || 1}s ease-out forwards;`;
-    } else if (this.animationPhase === 'out') {
-      animStyle = `animation: ${this.variant.animationOut || 'fade-out'} ${this.variant.animationOutDuration || 1}s ease-in forwards;`;
-    }
-    
-    container.className = visibilityClass;
-    container.style.cssText += animStyle;
   }
 
   render() {
     if (!this.variant) return html``;
     
-    // Render with a container that will hold factory-created elements
+    // Container that AlertRenderer will populate
     return html`
-      <div 
-        class="alert-container ${this.animationPhase === 'none' ? 'hidden' : ''}"
-      ></div>
+      <div class="alert-container"></div>
     `;
   }
 }
