@@ -1,3 +1,12 @@
+/**
+ * Alert View Component
+ * 
+ * Renders alert variants using the core AlertRenderer.
+ * Handles preview playback and content updates.
+ * 
+ * @module components/AlertView
+ */
+
 import { html, css, LitElement } from 'lit';
 import { Component, property, query, state } from '../litcomponents';
 import { AlertVariant } from '../lib/db';
@@ -10,6 +19,9 @@ import {
   AnimationType,
   AlertLayout
 } from '../core/alertRenderer';
+
+// Import constants for default values
+import { ALERT_DEFAULTS, CONFIG } from '../lib/constants';
 
 @Component('app-alert-view')
 export class AppAlertView extends LitElement {
@@ -59,34 +71,34 @@ export class AppAlertView extends LitElement {
     if (!v) return { ...defaultAlertConfig };
     
     return {
-      animationIn: (v.animationIn as AnimationType) || 'fade-in',
-      animationOut: (v.animationOut as AnimationType) || 'fade-out',
-      animationInDuration: v.animationInDuration || 1,
-      animationOutDuration: v.animationOutDuration || 1,
-      duration: v.duration || 10,
-      layout: (v.layout as AlertLayout) || 'text-below',
-      bgColor: v.bgColor || '#000000',
-      bgOpacity: v.bgOpacity || 0,
-      padding: v.padding || 16,
-      spacing: v.spacing || 16,
-      rounded: v.rounded ?? true,
-      shadow: v.shadow ?? false,
+      animationIn: (v.animationIn as AnimationType) || ALERT_DEFAULTS.ANIMATION.IN,
+      animationOut: (v.animationOut as AnimationType) || ALERT_DEFAULTS.ANIMATION.OUT,
+      animationInDuration: v.animationInDuration || ALERT_DEFAULTS.ANIMATION_DURATION,
+      animationOutDuration: v.animationOutDuration || ALERT_DEFAULTS.ANIMATION_DURATION,
+      duration: v.duration || ALERT_DEFAULTS.DURATION,
+      layout: (v.layout as AlertLayout) || ALERT_DEFAULTS.LAYOUT,
+      bgColor: v.bgColor || ALERT_DEFAULTS.COLORS.BG,
+      bgOpacity: v.bgOpacity || ALERT_DEFAULTS.OPACITY.BG,
+      padding: v.padding || ALERT_DEFAULTS.SPACING.PADDING,
+      spacing: v.spacing || ALERT_DEFAULTS.SPACING.ITEM,
+      rounded: v.rounded ?? ALERT_DEFAULTS.BOX.ROUNDED,
+      shadow: v.shadow ?? ALERT_DEFAULTS.BOX.SHADOW,
       message: v.message || '',
-      fontFamily: v.fontFamily || 'Roboto',
-      fontWeight: v.fontWeight || 'Normal',
-      fontSize: v.fontSize || 24,
-      textAlign: v.textAlign || 'center',
-      textColor: v.textColor || '#FFFFFF',
-      highlightColor: v.highlightColor || '#9146FF',
+      fontFamily: v.fontFamily || ALERT_DEFAULTS.TYPOGRAPHY.FONT_FAMILY,
+      fontWeight: v.fontWeight || ALERT_DEFAULTS.TYPOGRAPHY.FONT_WEIGHT,
+      fontSize: v.fontSize || ALERT_DEFAULTS.TYPOGRAPHY.FONT_SIZE,
+      textAlign: v.textAlign || ALERT_DEFAULTS.TYPOGRAPHY.TEXT_ALIGN,
+      textColor: v.textColor || ALERT_DEFAULTS.COLORS.TEXT,
+      highlightColor: v.highlightColor || ALERT_DEFAULTS.COLORS.HIGHLIGHT,
       textShadow: v.textShadow ?? true,
       imageUrl: v.imageUrl,
-      imageScale: v.imageScale || 50,
-      imageVolume: v.imageVolume || 50,
+      imageScale: v.imageScale || ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
+      imageVolume: v.imageVolume || ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
       soundUrl: v.soundUrl,
-      soundVolume: v.soundVolume || 50,
+      soundVolume: v.soundVolume || ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,
       eventData: this.eventData,
-      containerWidth: 600,
-      containerHeight: 600,
+      containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE,
+      containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE,
     };
   }
 

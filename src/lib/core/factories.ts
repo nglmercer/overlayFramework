@@ -8,7 +8,7 @@
  * from the schema definitions.
  * 
  * @module lib/core/factories
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { z } from 'zod';
@@ -39,6 +39,9 @@ import {
   makeValidator,
   mergeDefaults,
 } from './utils';
+
+// Import constants
+import { ALERT_DEFAULTS, EVENT_DEFAULTS, ENVIRONMENT } from '../constants';
 
 /**
  * ============================================
@@ -100,7 +103,7 @@ export function createAppConfig(options?: FactoryOptions<AppConfig>): AppConfig 
 export function getEnvironment(): Environment {
   const env = typeof process !== 'undefined' ? process?.env?.NODE_ENV : undefined;
   const result = EnvironmentSchema.safeParse(env);
-  return result.success ? result.data : 'development';
+  return result.success ? result.data : ENVIRONMENT.DEFAULT;
 }
 
 /**
@@ -159,28 +162,6 @@ export function createAlertBox(options?: FactoryOptions<AlertBox>): AlertBox {
 export { validateAlertVariant } from './utils';
 
 /**
- * Default variant properties by event type
- * These are merged with schema defaults for event-specific configurations
- */
-const VARIANT_DEFAULTS_BY_TYPE: Record<string, Partial<AlertVariant>> = {
-  seguimientos: {
-    name: 'Seguimiento Variant',
-    message: '¡{username} acaba de seguir!',
-    highlightColor: '#9146FF',
-  },
-  suscripciones: {
-    name: 'Suscripción Variant',
-    message: '¡{username} se ha suscrito por {months} meses!',
-    highlightColor: '#00FF00',
-  },
-  bits: {
-    name: 'Bits Variant',
-    message: '¡{username} ha donado {amount} bits!',
-    highlightColor: '#FF0000',
-  },
-};
-
-/**
  * Creates an AlertVariant with validated defaults
  * 
  * This factory applies both schema defaults and event-type-specific defaults.
@@ -202,7 +183,7 @@ export function createAlertVariant(options: VariantFactoryOptions): AlertVariant
   const data = options.data || {};
   
   // Start with event-type-specific defaults
-  const eventDefaults = eventType ? VARIANT_DEFAULTS_BY_TYPE[eventType] || {} : {};
+  const eventDefaults = eventType ? EVENT_DEFAULTS[eventType] || {} : {};
   
   // Merge: explicit data > event defaults > schema defaults
   const mergedData = {

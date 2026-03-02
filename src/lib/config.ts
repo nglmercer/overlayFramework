@@ -11,7 +11,7 @@
  * - Factory functions for creating configurations
  * 
  * @module lib/config
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { 
@@ -23,6 +23,9 @@ import {
   getEnvironment,
   isEnvironment,
 } from './core';
+
+// Import constants
+import { ENVIRONMENT, CONFIG } from './constants';
 
 /**
  * ============================================
@@ -87,10 +90,10 @@ const validateConfig = validateAppConfig;
  */
 export const appConfig: AppConfig = createAppConfig({
   data: {
-    mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
-    baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
+    mediaUrl: getEnvValue('VITE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.DEFAULT),
+    baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.CDN),
     apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
-    environment: getEnvValue('NODE_ENV', 'development') as AppConfig['environment'],
+    environment: getEnvValue('NODE_ENV', ENVIRONMENT.DEFAULT) as AppConfig['environment'],
   },
 });
 
@@ -164,10 +167,10 @@ export function getCdnUrl(path?: string): string {
 export function reloadConfig(): AppConfig {
   return createAppConfig({
     data: {
-      mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
-      baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
+      mediaUrl: getEnvValue('VITE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.DEFAULT),
+      baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.CDN),
       apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
-      environment: getEnvValue('NODE_ENV', 'development') as AppConfig['environment'],
+      environment: getEnvValue('NODE_ENV', ENVIRONMENT.DEFAULT) as AppConfig['environment'],
     },
   });
 }
@@ -183,3 +186,6 @@ export { AppConfigSchema, EnvironmentSchema } from './core';
 
 // Re-export factory functions for convenience
 export { createAppConfig, getEnvironment, isEnvironment } from './core';
+
+// Export constants for convenience
+export { CONFIG, ENVIRONMENT } from './constants';

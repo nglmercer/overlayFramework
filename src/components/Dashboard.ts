@@ -1,7 +1,19 @@
+/**
+ * Dashboard Component
+ * 
+ * Main dashboard for managing alert boxes.
+ * Displays list of alert boxes with CRUD operations.
+ * 
+ * @module components/Dashboard
+ */
+
 import { html, css, LitElement } from 'lit';
 import { Component, state, property } from '../litcomponents';
 import { dbManager, AlertBox } from '../lib/db';
 import { LocalizeController } from '../locales/localization';
+
+// Import constants for default values
+import { CONFIG, COLORS, ALERT_DEFAULTS } from '../lib/constants';
 
 @Component('app-dashboard')
 export class AppDashboard extends LitElement {
@@ -171,7 +183,7 @@ export class AppDashboard extends LitElement {
   }
 
   async handleCreateBox() {
-    if (this.alertBoxes.length >= 10) return;
+    if (this.alertBoxes.length >= CONFIG.MAX_BOXES) return;
     const newBox = {
       id: crypto.randomUUID(),
       name: `Alerts Box ${this.alertBoxes.length + 1}`,
@@ -197,12 +209,12 @@ export class AppDashboard extends LitElement {
     return html`
       <div class="max-w-3xl">
         <h1>${this._localize.t('dashboard.title')}</h1>
-        <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/10</p>
+        <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/${CONFIG.MAX_BOXES}</p>
 
         <button 
           class="btn-create"
           @click="${this.handleCreateBox}"
-          ?disabled="${this.alertBoxes.length >= 10}"
+          ?disabled="${this.alertBoxes.length >= CONFIG.MAX_BOXES}"
         >
           <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

@@ -1,0 +1,364 @@
+/**
+ * Framework Constants
+ * 
+ * Centralized constants for the overlay framework.
+ * Contains all magic numbers, default values, and configuration constants
+ * to eliminate hardcoded values throughout the codebase.
+ * 
+ * @module lib/constants
+ * @version 1.0.0
+ */
+
+/**
+ * ============================================
+ * DATABASE CONSTANTS
+ * ============================================
+ */
+
+export const DB = {
+  /** IndexedDB database name */
+  NAME: 'AlertsDB',
+  /** Database version number */
+  VERSION: 2,
+  /** Object store names */
+  STORES: {
+    BOXES: 'boxes',
+    VARIANTS: 'variants',
+    TEMPLATES: 'templates',
+  },
+  /** Index names for variants store */
+  VARIANT_INDEXES: {
+    BOX_ID: 'boxId',
+    TYPE: 'type',
+  },
+} as const;
+
+/**
+ * ============================================
+ * ALERT VARIANT DEFAULTS
+ * ============================================
+ * 
+ * Default values for alert variants.
+ */
+
+export const ALERT_DEFAULTS = {
+  /** Default variant name */
+  NAME: 'Nueva variante',
+  
+  /** Default duration in seconds */
+  DURATION: 10,
+  
+  /** Default animation duration in seconds */
+  ANIMATION_DURATION: 1,
+  
+  /** Default timing in milliseconds */
+  TIMING: {
+    DURATION: 5000,
+    ANIMATION_IN: 300,
+    ANIMATION_OUT: 300,
+  },
+  
+  /** Default layout */
+  LAYOUT: 'text-below' as const,
+  
+  /** Default colors */
+  COLORS: {
+    BG: '#000000',
+    TEXT: '#FFFFFF',
+    HIGHLIGHT: '#9146FF',
+  },
+  
+  /** Default opacity values */
+  OPACITY: {
+    BG: 0,
+  },
+  
+  /** Default spacing values (px) */
+  SPACING: {
+    PADDING: 16,
+    ITEM: 16,
+  },
+  
+  /** Default typography */
+  TYPOGRAPHY: {
+    FONT_FAMILY: 'Roboto, sans-serif',
+    FONT_WEIGHT: 'normal',
+    FONT_SIZE: 24,
+    TEXT_ALIGN: 'center' as const,
+  },
+  
+  /** Default media settings (percentage) */
+  MEDIA: {
+    IMAGE_SCALE: 50,
+    IMAGE_VOLUME: 50,
+    SOUND_VOLUME: 50,
+  },
+  
+  /** Animation presets */
+  ANIMATION: {
+    IN: 'fade-in',
+    OUT: 'fade-out',
+  },
+  
+  /** Box element defaults */
+  BOX: {
+    ROUNDED: true,
+    SHADOW: false,
+  },
+} as const;
+
+/**
+ * ============================================
+ * EVENT TYPE DEFAULTS
+ * ============================================
+ * 
+ * Default values by event type.
+ */
+
+export const EVENT_DEFAULTS: Record<string, {
+  name: string;
+  message: string;
+  highlightColor: string;
+  variables: Array<{ name: string; description: string }>;
+}> = {
+  seguimientos: {
+    name: 'Seguimiento Variant',
+    message: '¡{username} acaba de seguir!',
+    highlightColor: '#9146FF',
+    variables: [{ name: 'username', description: 'Nombre del usuario' }],
+  },
+  suscripciones: {
+    name: 'Suscripción Variant',
+    message: '¡{username} se ha suscrito por {months} meses!',
+    highlightColor: '#00FF00',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'months', description: 'Meses suscrito' },
+    ],
+  },
+  bits: {
+    name: 'Bits Variant',
+    message: '¡{username} ha donado {amount} bits!',
+    highlightColor: '#FF0000',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'amount', description: 'Cantidad de bits' },
+    ],
+  },
+} as const;
+
+/**
+ * ============================================
+ * PLATFORM EVENTS
+ * ============================================
+ * 
+ * Built-in platform event definitions.
+ */
+
+export const PLATFORM_EVENTS = [
+  {
+    id: 'seguimientos',
+    label: 'Seguimientos',
+    conditionLabel: 'Cualquier nuevo seguimiento',
+    variables: [{ name: 'username', description: 'Nombre del usuario' }],
+    defaultMessage: '¡{username} acaba de seguir!',
+  },
+  {
+    id: 'suscripciones',
+    label: 'Suscripciones',
+    conditionLabel: 'Cualquier nueva suscripción',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'months', description: 'Meses suscrito' },
+    ],
+    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
+  },
+  {
+    id: 'bits',
+    label: 'Bits',
+    conditionLabel: 'Cualquier donación de bits',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'amount', description: 'Cantidad de bits' },
+    ],
+    defaultMessage: '¡{username} ha donado {amount} bits!',
+  },
+] as const;
+
+/**
+ * ============================================
+ * CONFIGURATION CONSTANTS
+ * ============================================
+ */
+
+export const CONFIG = {
+  /** Maximum number of alert boxes allowed */
+  MAX_BOXES: 10,
+  
+  /** Default preview dimensions (px) */
+  PREVIEW: {
+    DEFAULT_SIZE: 600,
+    MIN_SIZE: 100,
+    MAX_SIZE: 1200,
+  },
+  
+  /** Responsive breakpoints (px) */
+  BREAKPOINTS: {
+    MOBILE: 768,
+    TABLET: 1024,
+  },
+  
+  /** Animation timing constraints (ms) */
+  ANIMATION: {
+    MIN_DURATION: 100,
+    MAX_DURATION: 10000,
+    DEFAULT_DURATION: 300,
+  },
+  
+  /** Pagination */
+  PAGINATION: {
+    DEFAULT_PAGE_SIZE: 10,
+    MEDIA_LIBRARY_PAGE_SIZE: 6,
+  },
+} as const;
+
+/**
+ * ============================================
+ * ENVIRONMENT DEFAULTS
+ * ============================================
+ */
+
+export const ENVIRONMENT = {
+  /** Default environment */
+  DEFAULT: 'development' as const,
+  
+  /** Supported environments */
+  SUPPORTED: ['development', 'production', 'test'] as const,
+  
+  /** Default locale */
+  DEFAULT_LOCALE: 'es',
+  
+  /** Supported locales */
+  SUPPORTED_LOCALES: ['es', 'en'] as const,
+  
+  /** Default media URLs */
+  MEDIA_URL: {
+    DEFAULT: 'http://localhost:3000/media',
+    CDN: 'https://cdn.example.com',
+  },
+} as const;
+
+/**
+ * ============================================
+ * DIALOG DEFAULTS
+ * ============================================
+ */
+
+export const DIALOG = {
+  /** Default dialog theme */
+  DEFAULT_THEME: 'dark' as const,
+  
+  /** Default button texts */
+  BUTTONS: {
+    CONFIRM: 'OK',
+    CANCEL: 'Cancel',
+  },
+  
+  /** Animation durations (ms) */
+  ANIMATION: {
+    TRANSITION: 200,
+  },
+  
+  /** Dimensions */
+  DIMENSIONS: {
+    MAX_WIDTH: '420px',
+    WIDTH: '90%',
+  },
+  
+  /** Border radius */
+  BORDER_RADIUS: 16,
+} as const;
+
+/**
+ * ============================================
+ * COLOR PRESETS
+ * ============================================
+ */
+
+export const COLORS = {
+  /** Brand colors */
+  BRAND: {
+    PRIMARY: '#9146FF',
+    PRIMARY_HOVER: '#772ce8',
+  },
+  
+  /** Background colors */
+  BACKGROUND: {
+    DARK: '#0e0e10',
+    DARK_LIGHT: '#18181b',
+    DARK_LIGHTER: '#1f1f23',
+    GRAY: '#3a3a3d',
+    GRAY_LIGHT: '#4b5563',
+  },
+  
+  /** Text colors */
+  TEXT: {
+    WHITE: '#ffffff',
+    GRAY: '#9ca3af',
+    GRAY_LIGHT: '#a1a1aa',
+  },
+  
+  /** Semantic colors */
+  SEMANTIC: {
+    SUCCESS: '#4ade80',
+    WARNING: '#fbbf24',
+    ERROR: '#f87171',
+    DANGER: '#ef4444',
+  },
+  
+  /** Common preview backgrounds */
+  PREVIEW_BG: [
+    'transparent',
+    '#000000',
+    '#ffffff',
+    '#ff0000',
+  ] as const,
+} as const;
+
+/**
+ * ============================================
+ * FILE TYPE MAPPINGS
+ * ============================================
+ */
+
+export const FILE_TYPES = {
+  /** Supported image types */
+  IMAGE: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  
+  /** Supported video types */
+  VIDEO: ['video/mp4', 'video/webm', 'video/ogg'],
+  
+  /** Supported audio types */
+  AUDIO: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
+  
+  /** All supported media types */
+  MEDIA: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
+} as const;
+
+/**
+ * ============================================
+ * EXPORTS
+ * ============================================
+ */
+
+export default {
+  DB,
+  ALERT_DEFAULTS,
+  EVENT_DEFAULTS,
+  PLATFORM_EVENTS,
+  CONFIG,
+  ENVIRONMENT,
+  DIALOG,
+  COLORS,
+  FILE_TYPES,
+};

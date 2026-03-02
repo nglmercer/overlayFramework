@@ -3,6 +3,7 @@
  * Main entry point for all framework features
  * 
  * @module lib/index
+ * @version 2.1.0
  */
 
 // ============================================
@@ -63,6 +64,9 @@ export {
   isEnvironment,
   extendSchema,
   partialSchema,
+  
+  // Re-export Zod
+  z,
 } from './core';
 
 // Core types
@@ -85,6 +89,27 @@ export type {
   TextAlign,
   ValidationResult,
 } from './core';
+
+// ============================================
+// CONSTANTS EXPORTS
+// ============================================
+
+export {
+  DB,
+  ALERT_DEFAULTS,
+  EVENT_DEFAULTS,
+  PLATFORM_EVENTS,
+  CONFIG,
+  ENVIRONMENT,
+  DIALOG,
+  COLORS,
+  FILE_TYPES,
+} from './constants';
+
+export type {
+  FactoryOptions,
+  VariantFactoryOptions,
+} from './core/factories';
 
 // ============================================
 // CONFIG MODULE

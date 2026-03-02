@@ -11,7 +11,7 @@
  * - Factory functions for creating platform events
  * 
  * @module lib/alertEvents
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { z } from 'zod';
@@ -24,6 +24,9 @@ import {
   createPlatformEvent,
   makeValidator,
 } from './core';
+
+// Import constants for default events
+import { PLATFORM_EVENTS } from './constants';
 
 /**
  * ============================================
@@ -39,37 +42,7 @@ import {
  * Built-in platform event definitions
  * These define the structure of alert events for different platforms
  */
-export const platformEvents: PlatformEventDefinition[] = [
-  {
-    id: 'seguimientos',
-    label: 'Seguimientos',
-    conditionLabel: 'Cualquier nuevo seguimiento',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' }
-    ],
-    defaultMessage: '¡{username} acaba de seguir!',
-  },
-  {
-    id: 'suscripciones',
-    label: 'Suscripciones',
-    conditionLabel: 'Cualquier nueva suscripción',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'months', description: 'Meses suscrito' }
-    ],
-    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-  },
-  {
-    id: 'bits',
-    label: 'Bits',
-    conditionLabel: 'Cualquier donación de bits',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'amount', description: 'Cantidad de bits' }
-    ],
-    defaultMessage: '¡{username} ha donado {amount} bits!',
-  },
-];
+export const platformEvents: PlatformEventDefinition[] = PLATFORM_EVENTS as unknown as PlatformEventDefinition[];
 
 /**
  * Array to hold additional platform-specific event schemas

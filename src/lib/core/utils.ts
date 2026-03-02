@@ -96,6 +96,18 @@ export type EventVariable = z.infer<typeof EventVariableSchema>;
 /**
  * Platform event definition
  * 
+ * Defines a complete alert event type with its variables and default message.
+ * Used for configuring which events trigger alerts and how they're displayed.
+ */
+export const PlatformEventDefinitionSchema = z.object({
+  id: z.string().min(1, 'Event ID is required'),
+  label: z.string().min(1, 'Event label is required'),
+  conditionLabel: z.string().min(1, 'Condition label is required'),
+  variables: z.array(EventVariableSchema).default([]),
+  defaultMessage: z.string().default(''),
+});
+
+export type PlatformEventDefinition = z.infer<typeof PlatformEventDefinitionSchema>;
 
 /**
  * ============================================
@@ -172,7 +184,7 @@ export const AlertVariantSchema = z.object({
   name: z.string().default('New Variant'),
   condition: z.string().default(''),
   
-  // Timing
+  // Timing (in milliseconds)
   duration: z.number().int().positive().default(5000),
   
   // Legacy animation fields (backward compatibility)
@@ -187,7 +199,7 @@ export const AlertVariantSchema = z.object({
   
   // Design options
   layout: AlertLayoutSchema.default('text-below'),
-  bgColor: z.string().default('#000000'),
+  bgColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#000000'),
   bgOpacity: z.number().min(0).max(1).default(0.8),
   padding: z.number().int().nonnegative().default(16),
   spacing: z.number().int().nonnegative().default(8),
@@ -200,15 +212,15 @@ export const AlertVariantSchema = z.object({
   fontWeight: z.string().default('normal'),
   fontSize: z.number().int().positive().default(16),
   textAlign: TextAlignSchema.default('left'),
-  textColor: z.string().default('#ffffff'),
-  highlightColor: z.string().default('#ff0000'),
+  textColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#ffffff'),
+  highlightColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#ff0000'),
   textShadow: z.boolean().default(false),
   ttsEnabled: z.boolean().default(false),
   
-  // Media settings
-  imageScale: z.number().min(0).max(2).default(1),
-  imageVolume: z.number().min(0).max(1).default(1),
-  soundVolume: z.number().min(0).max(1).default(1),
+  // Media settings (scale and volume as 0-100 percentage)
+  imageScale: z.number().min(0).max(100).default(50),
+  imageVolume: z.number().min(0).max(100).default(50),
+  soundVolume: z.number().min(0).max(100).default(50),
   
   // State management
   active: z.boolean().default(true),
@@ -382,7 +394,7 @@ export type ValidationResult<T> =
  * @param schema - Zod schema to create validator from
  * @returns Validator function
  */
-export function makeValidator<T>(schema: z.ZodSchema<T>) {
+export function makeValidator<T>(schema: ZodSchema<T>) {
   return (data: unknown): ValidationResult<T> => {
     const result = schema.safeParse(data);
     if (result.success) {
@@ -417,7 +429,7 @@ export function makeValidator<T>(schema: z.ZodSchema<T>) {
  * @throws Error if validation fails
  */
 export function validateData<T>(
-  schema: z.ZodSchema<T>, 
+  schema: ZodSchema<T>, 
   data: unknown, 
   context?: string
 ): T {
@@ -432,8 +444,6 @@ export function validateData<T>(
   }
   return result.data;
 }
-
-
 
 /**
  * Merges default values from schema with provided data
@@ -451,7 +461,7 @@ export function validateData<T>(
  * @param data - Partial data to merge with defaults
  * @returns Complete data with defaults applied
  */
-export function mergeDefaults<T>(schema: z.ZodSchema<T>, data: Partial<T>): T {
+export function mergeDefaults<T>(schema: ZodSchema<T>, data: Partial<T>): T {
   const defaults = schema.parse({});
   return { ...defaults, ...data } as T;
 }
@@ -462,10 +472,10 @@ export function mergeDefaults<T>(schema: z.ZodSchema<T>, data: Partial<T>): T {
  * @param schema - Base schema to make all fields optional
  * @returns Partial schema
  */
-export function createPartialSchema<T extends z.ZodType<any>>(
+export function createPartialSchema<T extends z.ZodObject<z.ZodRawShape>>(
   schema: T
-) {
-  return schema.partial();
+): T {
+  return schema.partial() as unknown as T;
 }
 
 /**
@@ -552,7 +562,7 @@ export function getDefaultSchema(eventType: string): SchemaDefinition | undefine
  * @param schema - Zod schema to extract defaults from
  * @returns Object with default values
  */
-export function getSchemaDefaults<T>(schema: z.ZodSchema<T>): T {
+export function getSchemaDefaults<T>(schema: ZodSchema<T>): T {
   return schema.parse({});
 }
 
@@ -563,7 +573,7 @@ export function getSchemaDefaults<T>(schema: z.ZodSchema<T>): T {
  * @param data - Data to check
  * @returns true if valid, false otherwise
  */
-export function isValid<T>(schema: z.ZodSchema<T>, data: unknown): boolean {
+export function isValid<T>(schema: ZodSchema<T>, data: unknown): boolean {
   return schema.safeParse(data).success;
 }
 
@@ -582,3 +592,6 @@ export const validateAlertBox = makeValidator(AlertBoxSchema);
 export const validateTemplate = makeValidator(TemplateDBSchema);
 export const validatePlatformEvent = makeValidator(PlatformEventDefinitionSchema);
 export const validateDialogOptions = makeValidator(DialogOptionsSchema);
+
+// Re-export Zod for direct schema creation if needed
+export { z };

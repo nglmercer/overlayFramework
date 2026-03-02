@@ -11,7 +11,7 @@
  * - Cascade delete support
  * 
  * @module lib/db
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import {
@@ -30,14 +30,20 @@ import {
   ValidationResult,
 } from './core';
 
+// Re-export types for convenience
+export type { AlertVariant, AlertBox, TemplateDB };
+
+// Import constants
+import { DB } from './constants';
+
 /**
  * ============================================
  * DATABASE CONFIGURATION
  * ============================================
  */
 
-const DB_NAME = 'AlertsDB';
-const DB_VERSION = 2;
+const DB_NAME = DB.NAME;
+const DB_VERSION = DB.VERSION;
 
 /**
  * ============================================
@@ -67,20 +73,20 @@ export async function initDB(): Promise<IDBDatabase> {
       const db = (event.target as IDBOpenDBRequest).result;
       
       // Create boxes object store
-      if (!db.objectStoreNames.contains('boxes')) {
-        db.createObjectStore('boxes', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(DB.STORES.BOXES)) {
+        db.createObjectStore(DB.STORES.BOXES, { keyPath: 'id' });
       }
       
       // Create variants object store with indexes
-      if (!db.objectStoreNames.contains('variants')) {
-        const variantStore = db.createObjectStore('variants', { keyPath: 'id' });
-        variantStore.createIndex('boxId', 'boxId', { unique: false });
-        variantStore.createIndex('type', 'type', { unique: false });
+      if (!db.objectStoreNames.contains(DB.STORES.VARIANTS)) {
+        const variantStore = db.createObjectStore(DB.STORES.VARIANTS, { keyPath: 'id' });
+        variantStore.createIndex(DB.VARIANT_INDEXES.BOX_ID, DB.VARIANT_INDEXES.BOX_ID, { unique: false });
+        variantStore.createIndex(DB.VARIANT_INDEXES.TYPE, DB.VARIANT_INDEXES.TYPE, { unique: false });
       }
 
       // Create templates object store
-      if (!db.objectStoreNames.contains('templates')) {
-        db.createObjectStore('templates', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(DB.STORES.TEMPLATES)) {
+        db.createObjectStore(DB.STORES.TEMPLATES, { keyPath: 'id' });
       }
     };
   });
@@ -104,7 +110,7 @@ type ValidationError = { success: false; errors: string[] };
  * @param entityName - Name of the entity for error message
  * @throws Error if validation fails
  */
-function validateOrThrow(result: ValidationResult<any>, entityName: string): void {
+function validateOrThrow(result: ValidationResult<unknown>, entityName: string): void {
   if (!result.success) {
     throw new Error(`Invalid ${entityName}: ${(result as ValidationError).errors.join(', ')}`);
   }
@@ -147,8 +153,8 @@ export const dbManager = {
   async getTemplates(): Promise<TemplateDB[]> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('templates', 'readonly');
-      const store = transaction.objectStore('templates');
+      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readonly');
+      const store = transaction.objectStore(DB.STORES.TEMPLATES);
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -164,8 +170,8 @@ export const dbManager = {
   async getTemplateById(id: string): Promise<TemplateDB | undefined> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('templates', 'readonly');
-      const store = transaction.objectStore('templates');
+      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readonly');
+      const store = transaction.objectStore(DB.STORES.TEMPLATES);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -184,8 +190,8 @@ export const dbManager = {
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('templates', 'readwrite');
-      const store = transaction.objectStore('templates');
+      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.TEMPLATES);
       const request = store.put(template);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -215,8 +221,8 @@ export const dbManager = {
   async deleteTemplate(id: string): Promise<void> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('templates', 'readwrite');
-      const store = transaction.objectStore('templates');
+      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.TEMPLATES);
       const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -235,8 +241,8 @@ export const dbManager = {
   async getBoxes(): Promise<AlertBox[]> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('boxes', 'readonly');
-      const store = transaction.objectStore('boxes');
+      const transaction = db.transaction(DB.STORES.BOXES, 'readonly');
+      const store = transaction.objectStore(DB.STORES.BOXES);
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -252,8 +258,8 @@ export const dbManager = {
   async getBoxById(id: string): Promise<AlertBox | undefined> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('boxes', 'readonly');
-      const store = transaction.objectStore('boxes');
+      const transaction = db.transaction(DB.STORES.BOXES, 'readonly');
+      const store = transaction.objectStore(DB.STORES.BOXES);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -272,8 +278,8 @@ export const dbManager = {
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('boxes', 'readwrite');
-      const store = transaction.objectStore('boxes');
+      const transaction = db.transaction(DB.STORES.BOXES, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.BOXES);
       const request = store.put(box);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -306,8 +312,8 @@ export const dbManager = {
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('boxes', 'readwrite');
-      const store = transaction.objectStore('boxes');
+      const transaction = db.transaction(DB.STORES.BOXES, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.BOXES);
       const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -327,9 +333,9 @@ export const dbManager = {
   async getVariants(boxId: string): Promise<AlertVariant[]> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readonly');
-      const store = transaction.objectStore('variants');
-      const index = store.index('boxId');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
+      const index = store.index(DB.VARIANT_INDEXES.BOX_ID);
       const request = index.getAll(boxId);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -345,8 +351,8 @@ export const dbManager = {
   async getVariantById(id: string): Promise<AlertVariant | undefined> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readonly');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -362,9 +368,9 @@ export const dbManager = {
   async getVariantsByType(type: string): Promise<AlertVariant[]> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readonly');
-      const store = transaction.objectStore('variants');
-      const index = store.index('type');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
+      const index = store.index(DB.VARIANT_INDEXES.TYPE);
       const request = index.getAll(type);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -383,8 +389,8 @@ export const dbManager = {
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readwrite');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       const request = store.put(variant);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -415,8 +421,8 @@ export const dbManager = {
   async deleteVariant(id: string): Promise<void> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readwrite');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -432,8 +438,8 @@ export const dbManager = {
     const variants = await this.getVariants(boxId);
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readwrite');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       
       for (const variant of variants) {
         store.delete(variant.id);
@@ -465,8 +471,8 @@ export const dbManager = {
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readwrite');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       
       for (const variant of variants) {
         store.put(variant);
@@ -485,8 +491,8 @@ export const dbManager = {
   async deleteVariants(ids: string[]): Promise<void> {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction('variants', 'readwrite');
-      const store = transaction.objectStore('variants');
+      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
+      const store = transaction.objectStore(DB.STORES.VARIANTS);
       
       for (const id of ids) {
         store.delete(id);
@@ -503,20 +509,20 @@ export const dbManager = {
 
   /**
    * Clears all data from the database
-   * Use with caution!
+   * WARNING: This will delete all boxes, variants, and templates
    */
   async clearAll(): Promise<void> {
     const db = await initDB();
     
-    const stores = ['boxes', 'variants', 'templates'];
-    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(stores, 'readwrite');
+      const transaction = db.transaction(
+        [DB.STORES.BOXES, DB.STORES.VARIANTS, DB.STORES.TEMPLATES],
+        'readwrite'
+      );
       
-      for (const storeName of stores) {
-        const store = transaction.objectStore(storeName);
-        store.clear();
-      }
+      transaction.objectStore(DB.STORES.BOXES).clear();
+      transaction.objectStore(DB.STORES.VARIANTS).clear();
+      transaction.objectStore(DB.STORES.TEMPLATES).clear();
       
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -526,14 +532,8 @@ export const dbManager = {
 
 /**
  * ============================================
- * RE-EXPORTS
+ * DEFAULT EXPORTS
  * ============================================
- * 
- * Re-export types and schemas for convenience.
  */
 
-export type { AlertVariant, AlertBox, TemplateDB } from './core';
-export { AlertVariantSchema, AlertBoxSchema, TemplateDBSchema } from './core';
-
-// Re-export factory functions for convenience
-export { createAlertVariant, createAlertBox, createTemplate } from './core';
+export default dbManager;
