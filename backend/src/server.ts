@@ -74,8 +74,8 @@ const server = Bun.serve<WsClientData>({
       return new Response(file);
     }
 
-    // SPA Fallback: Default to index.html for non-webhook paths that aren't files or API
-    if (!url.pathname.startsWith('/webhook') && !url.pathname.startsWith('/api')) {
+    // SPA Fallback: Default to index.html for non-webhook paths that aren't files or API/uploads
+    if (!url.pathname.startsWith('/webhook') && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/uploads')) {
       const indexFile = Bun.file(join(DIST_PATH, 'index.html'));
       if (await indexFile.exists()) {
         return new Response(indexFile);
@@ -112,8 +112,8 @@ const server = Bun.serve<WsClientData>({
       });
     }
 
-    // Proxy /api requests to the media-upload-api
-    if (url.pathname.startsWith('/api')) {
+    // Proxy /api and /uploads requests to the media-upload-api
+    if (url.pathname.startsWith('/api') || url.pathname.startsWith('/uploads')) {
       const mediaServices = discovery ? discovery.filter({ name: 'media-upload-api' }) : [];
       const manualMediaUrl = process.env.MEDIA_UPLOAD_API_URL;
       
@@ -129,7 +129,7 @@ const server = Bun.serve<WsClientData>({
            const proxyResp = await fetch(proxyUrl, {
              method: req.method,
              headers: req.headers,
-             body: req.method !== 'GET' ? await req.blob() : undefined
+             body: req.method !== 'GET' && req.method !== 'HEAD' ? await req.blob() : undefined
            });
            return proxyResp;
         } catch (err) {
