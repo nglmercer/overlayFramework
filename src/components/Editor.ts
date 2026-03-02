@@ -275,6 +275,17 @@ export class AppEditor extends LitElement {
     return variants.find(v => v.id === this.selectedVariantId);
   }
 
+  /**
+   * Combined variants list: prioritizes local state over task value to avoid stale data.
+   */
+  private get variants(): AlertVariant[] {
+    // If we have local changes, use them. Otherwise use the task value.
+    if (this._localVariants && this._localVariants.length > 0) {
+      return this._localVariants;
+    }
+    return (this._variantsTask.value as AlertVariant[]) || [];
+  }
+
   // =============================================================================
   // Preview Control Methods
   // =============================================================================
@@ -294,11 +305,19 @@ export class AppEditor extends LitElement {
   handleGetPreviewUrl = async (): Promise<string | null> => {
     if (!this.boxId) return null;
     
-    // Use local variants state or task value
-    const variants = (this._variantsTask?.value || this._localVariants || []);
+    // Use the computed variants to avoid stale data
+    const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
     
-    if (!variant) return null;
+    if (!variant) {
+      console.warn('[Editor] handleGetPreviewUrl: No variant found to save');
+      return null;
+    }
+
+    console.log('[Editor] Saving variant to backend for preview:', { 
+      id: variant.id, 
+      imageUrl: variant.imageUrl 
+    });
     
     try {
       const response = await fetch(getBackendEndpoint('/webhook/save'), {
@@ -329,8 +348,8 @@ export class AppEditor extends LitElement {
    * Sends to backend via WebSocket for real testing.
    */
   handleSendTestAlert = (): void => {
-    // Get the selected variant to know the event type
-    const variants = (this._variantsTask?.value || this._localVariants || []);
+    // Use computed variants
+    const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
     
     if (!variant) {
@@ -444,8 +463,8 @@ export class AppEditor extends LitElement {
   async handlePropertyChange(updates: Partial<AlertVariant>, _variants: AlertVariant[]): Promise<void> {
     if (!this.selectedVariantId) return;
     
-    // Use local variants state for immediate update without refetching
-    const variants = this._localVariants.length > 0 ? this._localVariants : _variants;
+    // Use the computed variants list
+    const variants = this.variants;
     const variant = variants.find(v => v.id === this.selectedVariantId);
     if (!variant) return;
     
@@ -454,6 +473,9 @@ export class AppEditor extends LitElement {
     
     // Update local state - creates new array reference to trigger Lit reactivity
     this._localVariants = variants.map(v => v.id === this.selectedVariantId ? updated : v);
+    
+    // Auto-save to backend to keep standalone preview up to date
+    this.handleGetPreviewUrl().catch(err => console.error('Auto-save to backend failed:', err));
   }
 
   /**
@@ -653,8 +675,8 @@ export class AppEditor extends LitElement {
   // =============================================================================
 
   render() {
-    // Get variants from task
-    const variants = this._variantsTask.value || [];
+    // Use the computed variants list
+    const variants = this.variants;
     
     return html`
       <!-- Top Bar -->

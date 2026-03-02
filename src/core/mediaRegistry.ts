@@ -1,4 +1,5 @@
 import { MediaHandler } from './types';
+import { getBackendUrl } from '../lib/config';
 
 class MediaRegistry {
   private handlers: Map<string, (url: string) => string> = new Map();
@@ -17,10 +18,15 @@ class MediaRegistry {
    * If no handler matches, returns the original URL.
    */
   resolve(url: string): string {
-    if (!url) return '';
+    if (!url || typeof url !== 'string' || url === 'undefined') return '';
     
+    // If it's a relative path starting with /api/ or /uploads/, point to backend
+    if (url.startsWith('/api/') || url.startsWith('/uploads/')) {
+      return `${getBackendUrl()}${url}`;
+    }
+
     for (const [protocol, parser] of this.handlers.entries()) {
-      if (url.startsWith(protocol)) {
+      if (typeof url === 'string' && url.startsWith(protocol)) {
         return parser(url);
       }
     }

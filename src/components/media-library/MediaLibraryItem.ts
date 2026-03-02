@@ -3,7 +3,8 @@ import { Component, property, state } from '../../litcomponents';
 import type { FileItem } from '../../api/client';
 import { createBrowserClient } from '../../api/client';
 
-const apiClient = createBrowserClient({ baseUrl: 'http://localhost:39769' });
+import { getBackendUrl } from '../../lib/config';
+const apiClient = createBrowserClient({ baseUrl: getBackendUrl() });
 
 /**
  * MediaLibraryItem — a single card in the MediaLibrary grid.

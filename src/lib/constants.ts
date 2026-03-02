@@ -243,7 +243,7 @@ export const ENVIRONMENT = {
   
   /** Default media URLs */
   MEDIA_URL: {
-    DEFAULT: 'http://localhost:3000/media',
+    DEFAULT: 'http://localhost:3001/uploads',
     CDN: 'https://cdn.example.com',
   },
 } as const;

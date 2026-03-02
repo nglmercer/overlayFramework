@@ -160,6 +160,23 @@ if (root) {
   function handleAlertMessage(message: AlertMessage): void {
     console.log('[Preview] Alert received:', message.eventName, message.data);
 
+    // Re-render the variant with the new event data (for variable substitution)
+    if (currentVariant) {
+      try {
+        const config = variantToAlertConfig(
+          currentVariant as Parameters<typeof variantToAlertConfig>[0],
+          message.data,
+          { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
+        );
+        
+        // Play the entrance animation
+        alertRenderer.playPreview(config);
+        console.log('[Preview] Alert rendered with event data');
+      } catch (error) {
+        console.error('[Preview] Failed to render alert:', error);
+      }
+    }
+
     // Dispatch custom event for external listeners
     window.dispatchEvent(new CustomEvent('preview-alert', {
       detail: { eventName: message.eventName, data: message.data, id: message.id }
@@ -351,7 +368,15 @@ if (root) {
         if (response.ok) {
           const data = await response.json();
           if (data.data && data.data.variant) {
-            updateVariant(data.data.variant);
+            // Provide default dummy data for initial render so it doesn't show raw variables
+            const defaultTestData = { 
+              username: 'Viewer', 
+              amount: '1000', 
+              months: '1', 
+              message: '¡Gracias por el apoyo!' 
+            };
+            
+            updateVariant(data.data.variant, defaultTestData);
             // Auto-play preview when loaded from params
             setTimeout(() => playPreview(), 500);
           }

@@ -35,7 +35,7 @@ export class ElementFactory {
 
   private static createText(data: any): HTMLElement {
     const el = document.createElement('div');
-    el.innerText = data.content;
+    el.innerHTML = data.content;
     el.style.fontSize = formatUnit(data.fontSize);
     el.style.fontFamily = data.fontFamily;
     el.style.fontWeight = data.fontWeight;

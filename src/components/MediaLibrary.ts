@@ -10,8 +10,8 @@ import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 // Register sub-component
 import './media-library/MediaLibraryItem';
 import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
-//@ts-expect-error
-const apiClient = createBrowserClient({ baseUrl: 'http://localhost:'+`${import.meta.env.PORT || 35871}` });
+import { getBackendUrl } from '../lib/config';
+const apiClient = createBrowserClient({ baseUrl: getBackendUrl() });
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {

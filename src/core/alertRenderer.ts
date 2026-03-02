@@ -341,7 +341,9 @@ export class AlertRenderer {
     let processedMessage = message;
     if (eventData) {
       for (const [key, value] of Object.entries(eventData)) {
-        processedMessage = processedMessage.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
+        // Replace {variable} with highlighted value directly if we have it
+        const highlightedValue = `<span style="color: ${highlightColor || '#9146FF'}; font-weight: bold;">${value}</span>`;
+        processedMessage = processedMessage.replace(new RegExp(`\\{${key}\\}`, 'g'), highlightedValue);
       }
     }
 
@@ -488,7 +490,7 @@ export class AlertRenderer {
   processMessageWithHighlight(message: string, highlightColor: string): string {
     if (!message) return '';
     // Replace {variable} with highlighted span
-    return message.replace(/\{(\w+)\}/g, `<span style="color: ${highlightColor}; font-weight: bold;">{$1}</span>`);
+    return message.replace(/\{(\w+)\}/g, `<span style="color: ${highlightColor}; font-weight: bold;">$1</span>`);
   }
 
   /**
