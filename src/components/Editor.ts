@@ -17,6 +17,7 @@ import { Task } from '@lit/task';
 import { confirm } from '../lib/dialog';
 import { LocalizeController } from '../locales/localization';
 import { AnimationConfig, defaultAnimationConfig } from '../schemas/animation-schemas';
+import { duplicateAlertVariant } from '../lib/core';
 import './FormControls';
 import './MediaLibrary';
 
@@ -35,7 +36,7 @@ import tiktokGiftSample from '../../schemas/sample/tiktok_gift.json';
 import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
-import { CONFIG, ALERT_DEFAULTS, COLORS } from '../lib/constants';
+import { CONFIG, ALERT_DEFAULTS, COLORS, EVENTS } from '../lib/constants';
 import { getBackendEndpoint } from '../lib/config';
 
 // =============================================================================
@@ -538,18 +539,15 @@ export class AppEditor extends LitElement {
    * 
    * @param variant - The variant to duplicate
    */
-  async handleDuplicateVariant(variant: AlertVariant): Promise<void> {
-    if (!this.boxId) return;
+  async handleDuplicateVariant(id: string): Promise<void> {
+    const variant = await dbManager.getVariantById(id);
+    if (!variant) return;
+
+    const newVariant = duplicateAlertVariant(variant, { name: `${variant.name} (copy)` });
     
-    const duplicated: AlertVariant = {
-      ...variant,
-      id: crypto.randomUUID(),
-      name: `${variant.name} (Copy)`
-    };
-    
-    await dbManager.saveVariant(duplicated);
+    await dbManager.saveVariant(newVariant);
     this._localVariants = [];
-    this.selectedVariantId = duplicated.id;
+    this.selectedVariantId = newVariant.id;
     this._variantsTask.run();
   }
 
@@ -630,6 +628,14 @@ export class AppEditor extends LitElement {
    */
   private _handlePreviewBgChange(e: CustomEvent): void {
     this.previewBgColor = e.detail;
+  }
+
+  /**
+   * Handles WebSocket alert events from the preview iframe
+   */
+  private _handleWsAlert(e: CustomEvent): void {
+    console.log('[Editor] WS Alert received:', e.detail);
+    // Potentially update UI or log based on alert
   }
 
   // =============================================================================
@@ -764,12 +770,12 @@ export class AppEditor extends LitElement {
           .selectedVariantId="${this.selectedVariantId}"
           .expandedSection="${this.expandedSection}"
           .randomize="${this.randomize}"
-          @section-change="${this._handleSectionChange}"
-          @variant-select="${this._handleVariantSelect}"
-          @create-variant="${this.handleCreateVariant}"
-          @duplicate-variant="${this.handleDuplicateVariant}"
-          @delete-variant="${this.handleDeleteVariant}"
-          @randomize-toggle="${this._handleRandomizeToggle}"
+          @${EVENTS.COMPONENT.SECTION_CHANGE}="${this._handleSectionChange}"
+          @${EVENTS.COMPONENT.VARIANT_SELECT}="${this._handleVariantSelect}"
+          @${EVENTS.COMPONENT.CREATE_VARIANT}="${this.handleCreateVariant}"
+          @${EVENTS.COMPONENT.DUPLICATE_VARIANT}="${this.handleDuplicateVariant}"
+          @${EVENTS.COMPONENT.DELETE_VARIANT}="${this.handleDeleteVariant}"
+          @${EVENTS.COMPONENT.RANDOMIZE_TOGGLE}="${this._handleRandomizeToggle}"
         ></editor-left-sidebar>
 
         <!-- Preview Area -->
@@ -780,33 +786,34 @@ export class AppEditor extends LitElement {
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
-          @play-preview="${this.handlePlayPreview}"
-          @send-test="${this.handleSendTestAlert}"
-          @width-change="${this._handlePreviewWidthChange}"
-          @height-change="${this._handlePreviewHeightChange}"
-          @bg-change="${this._handlePreviewBgChange}"
-          @ws-connection-change="${this._handleWsConnectionChange}"
+          @${EVENTS.COMPONENT.PLAY_PREVIEW}="${this.handlePlayPreview}"
+          @${EVENTS.COMPONENT.SEND_TEST}="${this.handleSendTestAlert}"
+          @${EVENTS.COMPONENT.WIDTH_CHANGE}="${this._handlePreviewWidthChange}"
+          @${EVENTS.COMPONENT.HEIGHT_CHANGE}="${this._handlePreviewHeightChange}"
+          @${EVENTS.COMPONENT.BG_CHANGE}="${this._handlePreviewBgChange}"
+          @${EVENTS.COMPONENT.WS_ALERT}="${this._handleWsAlert}"
+          @${EVENTS.COMPONENT.WS_CONNECTION_CHANGE}="${this._handleWsConnectionChange}"
         ></editor-preview>
 
         <!-- Right Sidebar -->
         <editor-right-sidebar
           .variant="${this.getSelectedVariant(variants)}"
           .activePanel="${this.rightExpandedSection}"
-          @panel-change="${this._handleRightPanelChange}"
-          @property-change="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
-          @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
-          @delete-variant="${this.handleDeleteVariant}"
-          @duplicate-variant="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
+          @${EVENTS.COMPONENT.PANEL_CHANGE}="${this._handleRightPanelChange}"
+          @${EVENTS.COMPONENT.PROPERTY_CHANGE}="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
+          @${EVENTS.COMPONENT.OPEN_MEDIA_LIBRARY}="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
+          @${EVENTS.COMPONENT.DELETE_VARIANT}="${this.handleDeleteVariant}"
+          @${EVENTS.COMPONENT.DUPLICATE_VARIANT}="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
         ></editor-right-sidebar>
       </div>
 
       <!-- Media Library Modal -->
       ${this.showMediaLibrary ? html`
         <media-library
-          type="${this.showMediaLibrary}"
+          .type="${this.showMediaLibrary}"
           .selectedUrl="${this.getSelectedVariant(variants)?.imageUrl || this.getSelectedVariant(variants)?.soundUrl || null}"
-          @media-select="${this._handleMediaSelect}"
-          @media-close="${this._handleMediaClose}"
+          @${EVENTS.COMPONENT.MEDIA_SELECT}="${this._handleMediaSelect}"
+          @${EVENTS.COMPONENT.MEDIA_CLOSE}="${this._handleMediaClose}"
         ></media-library>
       ` : ''}
     `;

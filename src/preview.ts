@@ -6,7 +6,7 @@ import {
   createAlertConfig,
 } from './core/alertRenderer';
 import { getWebSocketUrl, getBackendUrl } from './lib/config';
-import { CONFIG } from './lib/constants';
+import { CONFIG, EVENTS } from './lib/constants';
 
 // Types for messages
 interface AlertMessage {
@@ -22,10 +22,7 @@ interface WindowMessage {
   payload?: unknown;
 }
 
-interface VariantPayload {
-  variant: Record<string, unknown>;
-  eventData?: Record<string, string>;
-}
+
 
 const root = document.getElementById('render-root');
 
@@ -63,7 +60,7 @@ if (root) {
         console.log('[Preview] WebSocket connected');
         // Notify parent of connection state change
         window.parent.postMessage({ 
-          type: 'connection-change', 
+          type: EVENTS.COMPONENT.WS_CONNECTION_CHANGE, 
           payload: { state: 'connected', type: 'websocket' } 
         }, '*');
       };
@@ -71,7 +68,7 @@ if (root) {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          if (message.type === 'alert') {
+          if (message.type === EVENTS.COMPONENT.ALERT) {
             handleAlertMessage(message as AlertMessage);
           }
         } catch (err) {
@@ -84,7 +81,7 @@ if (root) {
         ws = null;
         // Notify parent of connection state change
         window.parent.postMessage({ 
-          type: 'connection-change', 
+          type: EVENTS.COMPONENT.WS_CONNECTION_CHANGE, 
           payload: { state: 'disconnected', type: 'websocket' } 
         }, '*');
         // Auto-reconnect after 3 seconds
@@ -94,7 +91,7 @@ if (root) {
       ws.onerror = (error) => {
         console.error('[Preview] WebSocket error:', error);
         window.parent.postMessage({ 
-          type: 'connection-error', 
+          type: EVENTS.COMPONENT.WS_CONNECTION_ERROR, 
           payload: { error: 'WebSocket error' } 
         }, '*');
       };
@@ -129,9 +126,9 @@ if (root) {
     try {
       broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
       broadcastChannel.onmessage = (event) => {
-        if (event.data && event.data.type === 'alert') {
+        if (event.data && event.data.type === EVENTS.COMPONENT.ALERT) {
           handleAlertMessage(event.data as AlertMessage);
-        } else if (event.data && event.data.type === 'UPDATE_VARIANT') {
+        } else if (event.data && event.data.type === EVENTS.WINDOW.UPDATE_VARIANT) {
           const { variant, variants, eventData } = event.data.payload as any;
           console.log('[Preview] UPDATE received via BroadcastChannel:', { 
             variantType: variant?.type, 
@@ -150,7 +147,7 @@ if (root) {
       
       // Notify parent of connection state change
       window.parent.postMessage({ 
-        type: 'connection-change', 
+        type: EVENTS.COMPONENT.WS_CONNECTION_CHANGE, 
         payload: { state: 'connected', type: 'broadcast' } 
       }, '*');
     } catch (err) {
@@ -202,7 +199,7 @@ if (root) {
 
     // Forward to parent via postMessage
     window.parent.postMessage({
-      type: 'alert',
+      type: EVENTS.COMPONENT.ALERT,
       payload: { eventName: message.eventName, data: message.data, id: message.id }
     }, '*');
   }
@@ -315,7 +312,7 @@ if (root) {
   function sendTestAlert(eventName: string, data: Record<string, string>): void {
     // Create alert message
     const message: AlertMessage = {
-      type: 'alert',
+      type: EVENTS.COMPONENT.ALERT,
       eventName,
       data,
       timestamp: Date.now(),
@@ -334,7 +331,7 @@ if (root) {
     // Send via WebSocket to backend for broadcasting to all clients
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
-        type: 'alert',
+        type: EVENTS.COMPONENT.ALERT,
         eventName,
         data,
         timestamp: Date.now(),
@@ -369,7 +366,7 @@ if (root) {
     console.log('[Preview] Message received:', event.data);
     const { type, payload } = event.data;
 
-    if (type === 'UPDATE_VARIANT') {
+    if (type === EVENTS.WINDOW.UPDATE_VARIANT) {
       // Update variant and optional event data
       const { variant, variants, eventData } = payload as any;
       console.log('[Preview] UPDATE_VARIANT received:', { 
@@ -387,33 +384,33 @@ if (root) {
 
       // Broadcast to other tabs (standalone preview)
       if (broadcastChannel) {
-        broadcastChannel.postMessage({ type: 'UPDATE_VARIANT', payload });
+        broadcastChannel.postMessage({ type: EVENTS.WINDOW.UPDATE_VARIANT, payload });
       }
     }
-    else if (type === 'play-preview') {
+    else if (type === EVENTS.WINDOW.PLAY_PREVIEW) {
       // Trigger animation replay if we have a variant
       playPreview();
     }
-    else if (type === 'connect-ws') {
+    else if (type === EVENTS.WINDOW.CONNECT_WS) {
       connectWebSocket();
     }
-    else if (type === 'disconnect-ws') {
+    else if (type === EVENTS.WINDOW.DISCONNECT_WS) {
       disconnectWebSocket();
     }
-    else if (type === 'send-test-alert') {
+    else if (type === EVENTS.WINDOW.SEND_TEST_ALERT) {
       // Send test alert with event name and data
       const { eventName, data } = payload as { eventName: string; data: Record<string, string> };
       sendTestAlert(eventName, data);
     }
-    else if (type === 'emit-alert') {
+    else if (type === EVENTS.WINDOW.EMIT_ALERT) {
       // Emit alert (alias)
       const { eventName, data } = payload as { eventName: string; data: Record<string, string> };
       emitAlert(eventName, data);
     }
-    else if (type === 'get-connection-info') {
+    else if (type === EVENTS.WINDOW.GET_CONNECTION_INFO) {
       // Send connection info back to parent
       window.parent.postMessage({
-        type: 'connection-info',
+        type: EVENTS.COMPONENT.CONNECTION_INFO,
         payload: getConnectionInfo()
       }, '*');
     }
@@ -468,6 +465,6 @@ if (root) {
   loadOverlayFromParams();
 
   // Signal that we are ready
-  window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
+  window.parent.postMessage({ type: EVENTS.WINDOW.PREVIEW_READY }, '*');
   console.log('[Preview] Ready - Connection info:', getConnectionInfo());
 }

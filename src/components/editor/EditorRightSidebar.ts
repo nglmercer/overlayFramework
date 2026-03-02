@@ -313,7 +313,7 @@ export class EditorRightSidebar extends LitElement {
   }
 
   private _handleOpenMediaLibrary(type: 'image' | 'sound') {
-    this.dispatchEvent(new CustomEvent('open-media-library', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.OPEN_MEDIA_LIBRARY, {
       detail: type,
       bubbles: true,
       composed: true

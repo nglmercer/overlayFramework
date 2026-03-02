@@ -314,8 +314,32 @@ export const EVENTS = {
     PLAY_PREVIEW: 'play-preview',
     SEND_TEST: 'send-test',
     WS_ALERT: 'ws-alert',
+    ALERT: 'alert',
+    CONNECTION_INFO: 'connection-info',
     WS_CONNECTION_CHANGE: 'ws-connection-change',
     WS_CONNECTION_ERROR: 'ws-connection-error',
+    PREVIEW_ALERT: 'preview-alert',
+    LOCALE_CHANGED: 'locale-changed',
+  },
+  
+  /** UI Component Events */
+  UI: {
+    CHANGE: 'change',
+    MENU_CLICK: 'menu-click',
+    CONFIG_CHANGE: 'config-change',
+  },
+
+  /** Dialog Events */
+  DIALOG: {
+    CLOSE: 'dialog-close',
+  },
+
+  /** Media Library Events */
+  MEDIA_LIBRARY: {
+    SELECT: 'ml-select',
+    DELETE: 'ml-delete',
+    PLAY_START: 'ml-play-start',
+    PLAY_STOP: 'ml-play-stop',
   },
   
   /** Window PostMessage Events */
