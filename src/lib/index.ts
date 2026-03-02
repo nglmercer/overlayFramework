@@ -1,44 +1,191 @@
 /**
  * Overlay Framework - Library Exports
  * Main entry point for all framework features
+ * 
+ * @module lib/index
  */
 
-// Context exports
+// ============================================
+// RE-EXPORT FROM CORE MODULE (Schemas & Types)
+// ============================================
+
+// Core schemas and utilities
+export { 
+  // Zod schemas
+  AppConfigSchema,
+  EnvironmentSchema,
+  EventVariableSchema,
+  PlatformEventDefinitionSchema,
+  EventTypeSchema,
+  SchemaDefinitionSchema,
+  AlertLayoutSchema,
+  TextAlignSchema,
+  AlertVariantSchema,
+  AlertBoxSchema,
+  TemplateDBSchema,
+  DialogThemeSchema,
+  DialogTypeSchema,
+  DialogOptionsSchema,
+  FrameworkConfigSchema,
+  defaultSchemas,
+  
+  // Validation utilities
+  makeValidator,
+  validateData,
+  mergeDefaults,
+} from './core';
+
+// Core types
+export type {
+  AppConfig,
+  EventVariable,
+  PlatformEventDefinition,
+  EventType,
+  SchemaDefinition,
+  AlertVariant,
+  AlertBox,
+  TemplateDB,
+  DialogOptions,
+  DialogTheme,
+  DialogType,
+  DialogResult,
+  FrameworkConfig,
+} from './core';
+
+// ============================================
+// CONFIG MODULE
+// ============================================
+
+export {
+  appConfig,
+  isDevelopment,
+  isProduction,
+  isTest,
+  getMediaUrl,
+  getCdnUrl,
+} from './config';
+
+// ============================================
+// DATABASE MODULE
+// ============================================
+
+export {
+  initDB,
+  dbManager,
+} from './db';
+
+// ============================================
+// ALERT EVENTS MODULE
+// ============================================
+
+export {
+  platformEvents,
+  registerPlatformEvents,
+  clearCustomPlatformEvents,
+  getAllPlatformEvents,
+  getPlatformEventById,
+  getEventVariables,
+  getDefaultMessage,
+  getVariableNames,
+  formatMessage,
+} from './alertEvents';
+
+// Backward compatibility
+export { platformEventsSchema } from './alertEvents';
+
+// ============================================
+// SCHEMA LOADER MODULE
+// ============================================
+
+export {
+  schemaLoader,
+  loadSchemas,
+  restartSchemas,
+  unloadSchemas,
+  getSchema,
+  getAllSchemas,
+  isSchemasReady,
+  validateEvent,
+  getEventValidationErrors,
+  createEventData,
+} from './schema-loader';
+
+// ============================================
+// DIALOG MODULE
+// ============================================
+
+export {
+  alert,
+  confirm,
+  prompt,
+  modal,
+  setDialogTheme,
+  getDialogTheme,
+  patchGlobalAlert,
+  patchGlobalConfirm,
+  patchGlobalPrompt,
+  patchAllGlobals,
+} from './dialog';
+
+// ============================================
+// TASK CONTROLLERS MODULE
+// ============================================
+
+export {
+  Task,
+  TaskStatus,
+  createLoadVariantsConfig,
+  createSaveVariantConfig,
+  createLoadTemplatesConfig,
+  createLoadBoxesConfig,
+  createFetchMediaConfig,
+  createValidateEventConfig,
+  isTaskStatus,
+  getTaskStatusText,
+  renderTask,
+} from './task-controllers';
+
+// ============================================
+// TWITCH EVENTS MODULE
+// ============================================
+
+export { twitchEventsSchema } from './twitchEvents';
+
+// ============================================
+// CONTEXT EXPORTS
+// ============================================
+
 export * from '../context/index';
 export * from '../context/schemaContext';
 
-// Localization exports
+// ============================================
+// LOCALIZATION EXPORTS
+// ============================================
+
 export * from '../locales/localization';
 
-// Schema exports
-export * from './schema-loader';
-export * from './alertEvents';
+// ============================================
+// SCHEMA EXPORTS (Animation)
+// ============================================
 
-// Animation schemas export
 export * from '../schemas/animation-schemas';
 
-// Task exports
-export * from './task-controllers';
+// ============================================
+// MEDIA REGISTRY EXPORTS
+// ============================================
 
-// Database exports
-export * from './db';
-
-// Config exports
-export * from './config';
-
-// Alert events exports
-export * from './alertEvents';
-
-// Dialog exports
-export * from './dialog';
-
-// Media registry exports
 export * from '../core/mediaRegistry';
 
-// Renderer exports
+// ============================================
+// RENDERER EXPORTS
+// ============================================
+
 export * from '../core/renderer';
 
-// Schemas exports (excluding conflicting types)
+// ============================================
+// CORE SCHEMAS EXPORTS
+// ============================================
+
 export { 
   UnitSchema, 
   ElementTypeSchema,
@@ -51,6 +198,7 @@ export {
   TemplateElementSchema,
   TemplateSchema
 } from '../core/schemas';
+
 export type { 
   UnitValue,
   GroupElement, 
@@ -58,7 +206,10 @@ export type {
   Template
 } from '../core/schemas';
 
-// Types exports (specific types only)
+// ============================================
+// TYPES EXPORTS
+// ============================================
+
 export type { 
   ElementType, 
   BaseElement, 
@@ -70,21 +221,22 @@ export type {
 } from '../core/types';
 
 /**
+ * ============================================
+ * FRAMEWORK CONFIGURATION
+ * ============================================
+ */
+
+// Import FrameworkConfig type for use in this file
+import type { FrameworkConfig } from './core';
+
+/**
  * Framework version
  */
 export const VERSION = '1.0.0';
 
 /**
- * Framework configuration
+ * Default framework configuration
  */
-export interface FrameworkConfig {
-  defaultLocale: string;
-  supportedLocales: string[];
-  enableLocalization: boolean;
-  enableContext: boolean;
-  enableTasks: boolean;
-}
-
 export const defaultConfig: FrameworkConfig = {
   defaultLocale: 'es',
   supportedLocales: ['es', 'en'],
@@ -95,11 +247,12 @@ export const defaultConfig: FrameworkConfig = {
 
 /**
  * Initialize the framework
+ * 
+ * @param config - Optional configuration overrides
  */
 export async function initializeFramework(config: Partial<FrameworkConfig> = {}): Promise<void> {
   const finalConfig = { ...defaultConfig, ...config };
   
-  // Initialize schemas if enabled
   if (finalConfig.enableContext) {
     const { loadSchemas } = await import('./schema-loader');
     await loadSchemas();

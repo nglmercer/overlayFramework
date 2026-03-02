@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'lit';
-import { property, state, query } from '../litcomponents';
+import { Component, property, state, query } from '../litcomponents';
 import { dbManager, AlertVariant } from '../lib/db';
 import { platformEventsSchema, PlatformEventDefinition } from '../lib/alertEvents';
 import { consume } from '@lit/context';
@@ -580,7 +580,7 @@ export class AppEditor extends LitElement {
    * 
    * @param variants - Array of all available alert variants
    */
-  renderEditor(variants: AlertVariant[]): typeof html {
+  renderEditor(variants: AlertVariant[]) {
     // Use local variants state if available for immediate updates
     const currentVariants = this._localVariants.length > 0 ? this._localVariants : variants;
     const variant = this.getSelectedVariant(currentVariants);
