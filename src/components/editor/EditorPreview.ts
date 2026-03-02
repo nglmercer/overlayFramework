@@ -1,180 +1,23 @@
-import { html, css, LitElement } from 'lit';
+import { html, css, LitElement,unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
 import { getWebSocketUrl } from '../../lib/config';
 import { EVENTS } from '../../lib/constants';
+import EditorPreviewCSS from './EditorPreview.css?inline';
 
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
 @customElement('editor-preview')
 export class EditorPreview extends LitElement {
+
   static styles = css`
     :host {
       display: block;
       flex: 1;
     }
-    
-    .preview-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #0e0e10;
-      position: relative;
-      height: 99%;
-    }
-    
-    .preview-header {
-      padding: 0.75rem 1rem;
-      background-color: #1a1a1c;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      gap: 0.5rem;
-    }
-    
-    .btn-preview {
-      background-color: #3a3a3d;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .btn-preview:hover {
-      background-color: #464649;
-    }
-    
-    .preview-content {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: auto;
-      padding: 2rem;
-    }
-    
-    .preview-canvas {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
-      overflow: hidden;
-      transition: all 0.2s;
-    }
-    
-    .preview-iframe {
-      border: none;
-      background: transparent;
-      width: 100%;
-      height: 100%;
-    }
-    
-    .bg-checker {
-      background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%);
-      background-size: 24px 24px;
-      background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
-    }
-    
-    .preview-footer {
-      padding: 0.75rem 1rem;
-      background-color: #1a1a1c;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    
-    .preview-options {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-    }
-    
-    .size-input {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
-    
-    .size-input input {
-      background-color: #0e0e10;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: white;
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.25rem;
-      width: 60px;
-      text-align: center;
-    }
-    
-    .bg-toggles {
-      display: flex;
-      gap: 0.25rem;
-      background-color: #0e0e10;
-      padding: 0.25rem;
-      border-radius: 0.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .bg-btn {
-      width: 1.5rem;
-      height: 1.5rem;
-      border-radius: 0.25rem;
-      border: 2px solid transparent;
-      cursor: pointer;
-    }
-    
-    .bg-btn.active {
-      border-color: #9146FF;
-    }
-
-    /* ── Responsive Styles ── */
-    @media (max-width: 1024px) {
-      .preview-content {
-        padding: 1rem;
-      }
-
-      .preview-footer {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
-
-      .preview-options {
-        gap: 1rem;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .preview-header {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
-
-      .preview-content {
-        padding: 0.5rem;
-      }
-
-      .preview-footer {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .preview-options {
-        justify-content: center;
-      }
-
-      .size-input {
-        justify-content: center;
-      }
-    }
+      ${unsafeCSS(EditorPreviewCSS)}
   `;
-
   @property({ type: Object }) variant: AlertVariant | null = null;
   @property({ type: Array }) variants: AlertVariant[] = [];
   @property({ type: Number }) width = 600;

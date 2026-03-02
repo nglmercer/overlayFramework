@@ -23,6 +23,9 @@ import './MediaLibrary';
 
 import './editor';
 
+// Import editor styles
+import './editor/Editor.css';
+
 // Import editor sub-components
 import { EditorTopbar } from './editor/EditorTopbar';
 import { EditorLeftSidebar } from './editor/EditorLeftSidebar';
@@ -36,7 +39,7 @@ import tiktokGiftSample from '../../schemas/sample/tiktok_gift.json';
 import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
-import { CONFIG, COLORS, EVENTS } from '../lib/constants';
+import { CONFIG } from '../lib/constants';
 import { getBackendEndpoint } from '../lib/config';
 
 // =============================================================================
@@ -401,14 +404,10 @@ export class AppEditor extends LitElement {
   /**
    * Creates a new variant and adds it to local state immediately (optimistic update).
    */
-  handleCreateVariant = async (): Promise<void> => {
-    console.log('[Editor] handleCreateVariant called');
-
+  handleCreateVariant = async (_e?: CustomEvent): Promise<void> => {
     const type = this.expandedSection || 
       (this.schema && this.schema.length > 0 ? this.schema[0].id : '');
     const schemaDef = this.schema?.find(s => s.id === type) || this.schema?.[0];
-    
-    console.log('[Editor] handleCreateVariant - type:', type, 'schemaDef:', schemaDef);
     
     if (!schemaDef) {
       console.warn('[Editor] handleCreateVariant: no schemaDef found for type', type);
@@ -637,12 +636,12 @@ export class AppEditor extends LitElement {
           .selectedVariantId="${this.selectedVariantId}"
           .expandedSection="${this.expandedSection}"
           .randomize="${this.randomize}"
-          @${EVENTS.COMPONENT.SECTION_CHANGE}="${this._handleSectionChange}"
-          @${EVENTS.COMPONENT.VARIANT_SELECT}="${this._handleVariantSelect}"
-          @${EVENTS.COMPONENT.CREATE_VARIANT}="${this.handleCreateVariant}"
-          @${EVENTS.COMPONENT.DUPLICATE_VARIANT}="${this.handleDuplicateVariant}"
-          @${EVENTS.COMPONENT.DELETE_VARIANT}="${this.handleDeleteVariant}"
-          @${EVENTS.COMPONENT.RANDOMIZE_TOGGLE}="${this._handleRandomizeToggle}"
+          @section-change="${this._handleSectionChange}"
+          @variant-select="${this._handleVariantSelect}"
+          @create-variant="${(e: CustomEvent) => this.handleCreateVariant(e)}"
+          @duplicate-variant="${this.handleDuplicateVariant}"
+          @delete-variant="${this.handleDeleteVariant}"
+          @randomize-toggle="${this._handleRandomizeToggle}"
         ></editor-left-sidebar>
 
         <!-- Preview Area -->
@@ -653,24 +652,24 @@ export class AppEditor extends LitElement {
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
-          @${EVENTS.COMPONENT.PLAY_PREVIEW}="${this.handlePlayPreview}"
-          @${EVENTS.COMPONENT.SEND_TEST}="${this.handleSendTestAlert}"
-          @${EVENTS.COMPONENT.WIDTH_CHANGE}="${this._handlePreviewWidthChange}"
-          @${EVENTS.COMPONENT.HEIGHT_CHANGE}="${this._handlePreviewHeightChange}"
-          @${EVENTS.COMPONENT.BG_CHANGE}="${this._handlePreviewBgChange}"
-          @${EVENTS.COMPONENT.WS_ALERT}="${this._handleWsAlert}"
-          @${EVENTS.COMPONENT.WS_CONNECTION_CHANGE}="${this._handleWsConnectionChange}"
+          @play-preview="${this.handlePlayPreview}"
+          @send-test="${this.handleSendTestAlert}"
+          @width-change="${this._handlePreviewWidthChange}"
+          @height-change="${this._handlePreviewHeightChange}"
+          @bg-change="${this._handlePreviewBgChange}"
+          @ws-alert="${this._handleWsAlert}"
+          @ws-connection-change="${this._handleWsConnectionChange}"
         ></editor-preview>
 
         <!-- Right Sidebar -->
         <editor-right-sidebar
           .variant="${this.getSelectedVariant(variants)}"
           .activePanel="${this.rightExpandedSection}"
-          @${EVENTS.COMPONENT.PANEL_CHANGE}="${this._handleRightPanelChange}"
-          @${EVENTS.COMPONENT.PROPERTY_CHANGE}="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
-          @${EVENTS.COMPONENT.OPEN_MEDIA_LIBRARY}="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
-          @${EVENTS.COMPONENT.DELETE_VARIANT}="${this.handleDeleteVariant}"
-          @${EVENTS.COMPONENT.DUPLICATE_VARIANT}="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
+          @panel-change="${this._handleRightPanelChange}"
+          @property-change="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
+          @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
+          @delete-variant="${this.handleDeleteVariant}"
+          @duplicate-variant="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
         ></editor-right-sidebar>
       </div>
 
@@ -679,8 +678,8 @@ export class AppEditor extends LitElement {
         <media-library
           .type="${this.showMediaLibrary}"
           .selectedUrl="${this.getSelectedVariant(variants)?.imageUrl || this.getSelectedVariant(variants)?.soundUrl || null}"
-          @${EVENTS.COMPONENT.MEDIA_SELECT}="${this._handleMediaSelect}"
-          @${EVENTS.COMPONENT.MEDIA_CLOSE}="${this._handleMediaClose}"
+          @media-select="${this._handleMediaSelect}"
+          @media-close="${this._handleMediaClose}"
         ></media-library>
       ` : ''}
     `;
