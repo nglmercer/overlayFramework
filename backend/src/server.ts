@@ -23,6 +23,7 @@ import { parseClientMessage } from './schemas';
 import { wsManager, type WsClientData } from './ws-manager';
 import { handleHttpRequest } from './webhook';
 import { initializeStorage } from './storage';
+import { join } from 'path';
 
 // ============================================================================
 // CONFIGURATION
@@ -30,6 +31,7 @@ import { initializeStorage } from './storage';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 const HEARTBEAT_MS = parseInt(process.env.HEARTBEAT_MS ?? '30000', 10);
+const DIST_PATH = join(import.meta.dir, '../../dist');
 
 // ============================================================================
 // SERVER
@@ -42,7 +44,7 @@ const server = Bun.serve<WsClientData>({
    * HTTP request handler
    * Routes to webhook handler or upgrades to WebSocket
    */
-  fetch(req, server) {
+  async fetch(req, server) {
     const url = new URL(req.url);
 
     // Upgrade to WebSocket on /ws path
@@ -59,7 +61,22 @@ const server = Bun.serve<WsClientData>({
       return new Response('WebSocket upgrade failed', { status: 400 });
     }
 
-    // All other paths → HTTP webhook handler
+    // Try serving static files from /dist
+    const filePath = url.pathname === '/' ? '/index.html' : url.pathname;
+    const file = Bun.file(join(DIST_PATH, filePath));
+    if (await file.exists()) {
+      return new Response(file);
+    }
+
+    // SPA Fallback: Default to index.html for non-webhook paths that aren't files
+    if (!url.pathname.startsWith('/webhook')) {
+      const indexFile = Bun.file(join(DIST_PATH, 'index.html'));
+      if (await indexFile.exists()) {
+        return new Response(indexFile);
+      }
+    }
+
+    // All other paths → HTTP webhook handler (API)
     return handleHttpRequest(req);
   },
 
