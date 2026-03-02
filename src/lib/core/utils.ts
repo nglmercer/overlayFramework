@@ -213,7 +213,6 @@ export const AlertVariantSchema = z.object({
   textColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#ffffff'),
   highlightColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#ff0000'),
   textShadow: z.boolean().default(false),
-  ttsEnabled: z.boolean().default(false),
   
   // Media settings (scale and volume as 0-100 percentage)
   imageScale: z.number().min(0).max(100).default(50),

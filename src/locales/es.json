@@ -30,7 +30,12 @@
   "dashboard.rename": "Renombrar",
   "dashboard.duplicate": "Duplicado",
   "dashboard.delete": "Eliminar",
-  
+  "dashboard.urlCopied": "URL copiado!",
+  "dashboard.copyFailed": "Error al copiar URL.",
+  "dashboard.maxBoxesReached": "Se alcanzo el numero maximo de cajas de alerta.",
+  "dashboard.enterNewName": "Ingresa un nuevo nombre",
+  "dashboard.confirmDelete": "¿Estas seguro de que quieres eliminarlo?",
+
   "sidebar.variants": "VARIANTES",
   "sidebar.settings": "CONFIGURACIÓN",
   "sidebar.design": "DISEÑO",

@@ -105,12 +105,6 @@ export class PropertyPanelGeneral extends LitElement {
           .value="${this.variant.duration.toString()}" 
           @change="${(e: CustomEvent) => this._handleChange('duration', Number(e.detail))}"
         ></ui-input>
-
-        <ui-toggle 
-          label="${this._t('variant.customHtml')}" 
-          .checked="${!!this.variant.customHtmlEnabled}"
-          @change="${(e: CustomEvent) => this._handleChange('customHtmlEnabled', e.detail)}"
-        ></ui-toggle>
       </div>
     `;
   }

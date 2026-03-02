@@ -448,7 +448,6 @@ export class AppEditor extends LitElement {
       textColor: ALERT_DEFAULTS.COLORS.TEXT,
       highlightColor: ALERT_DEFAULTS.COLORS.HIGHLIGHT,
       textShadow: true,
-      ttsEnabled: false,
       imageScale: ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
       imageVolume: ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
       soundVolume: ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,

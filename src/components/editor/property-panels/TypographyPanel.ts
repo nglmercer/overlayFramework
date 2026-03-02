@@ -107,12 +107,6 @@ export class PropertyPanelTypography extends LitElement {
           .checked="${this.variant.textShadow}"
           @change="${(e: CustomEvent) => this._handleChange('textShadow', e.detail)}"
         ></ui-toggle>
-        
-        <ui-toggle 
-          label="${this._t('variant.ttsEnabled')}" 
-          .checked="${this.variant.ttsEnabled}"
-          @change="${(e: CustomEvent) => this._handleChange('ttsEnabled', e.detail)}"
-        ></ui-toggle>
       </div>
     `;
   }
