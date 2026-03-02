@@ -89,6 +89,8 @@
   "variant.anim.zoomIn": "Aumentar",
   "variant.anim.zoomOut": "Disminuir",
   "variant.anim.bounceIn": "Rebote",
+  "variant.anim.entrance": "Entrada",
+  "variant.anim.exit": "Salida",
   
   "event.seguimientos": "Seguimientos",
   "event.seguimientos.condition": "Cualquier nuevo seguimiento",
