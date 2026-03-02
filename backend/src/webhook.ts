@@ -26,6 +26,7 @@ import {
 } from './schemas';
 import type { WsAlertMessage } from './schemas';
 import { wsManager } from './ws-manager';
+import { initializeStorage, saveOverlayData, loadOverlayData, deleteOverlayData, listOverlayKeys, getAllOverlayData, generatePreviewUrl } from './storage';
 
 /** CORS headers for webhook responses */
 const CORS_HEADERS: Record<string, string> = {
@@ -75,6 +76,15 @@ export async function handleHttpRequest(req: Request): Promise<Response> {
       return await handleSchemaWebhook(req);
     }
 
+    // Storage endpoints
+    if (method === 'POST' && path === '/webhook/save') {
+      return await handleSaveWebhook(req);
+    }
+
+    if (method === 'POST' && path === '/webhook/delete') {
+      return await handleDeleteWebhook(req);
+    }
+
     // ==========================================
     // GET endpoints (status & info)
     // ==========================================
@@ -92,6 +102,16 @@ export async function handleHttpRequest(req: Request): Promise<Response> {
       return handleEventsEndpoint(limit);
     }
 
+    // Storage GET endpoints
+    if (method === 'GET' && path === '/webhook/overlays') {
+      return handleOverlaysEndpoint();
+    }
+
+    if (method === 'GET' && path.startsWith('/webhook/overlay/')) {
+      const key = path.replace('/webhook/overlay/', '');
+      return handleGetOverlayEndpoint(key);
+    }
+
     // Health check
     if (method === 'GET' && (path === '/' || path === '/health')) {
       return jsonResponse({ status: 'ok', uptime: process.uptime() });
@@ -107,6 +127,80 @@ export async function handleHttpRequest(req: Request): Promise<Response> {
 // ============================================================================
 // WEBHOOK HANDLERS
 // ============================================================================
+
+/**
+ * POST /webhook/save
+ * 
+ * Saves overlay data and generates a preview URL.
+ * 
+ * @example
+ * ```bash
+ * curl -X POST http://localhost:3001/webhook/save \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"key":"my-overlay","data":{"type":"alert","message":"Hello!"}}'
+ * ```
+ */
+async function handleSaveWebhook(req: Request): Promise<Response> {
+  const body = await req.json();
+  
+  const { key, data } = body as { key: string; data: unknown };
+  
+  if (!key || !data) {
+    return jsonResponse({
+      error: 'Invalid payload',
+      details: 'Required fields: key, data',
+    }, 400);
+  }
+
+  try {
+    const result = await saveOverlayData(key, data);
+    return jsonResponse({
+      ok: true,
+      key: result.key,
+      previewUrl: result.previewUrl,
+    });
+  } catch (error) {
+    console.error('[Storage] Save error:', error);
+    return jsonResponse({ error: 'Failed to save data' }, 500);
+  }
+}
+
+/**
+ * POST /webhook/delete
+ * 
+ * Deletes saved overlay data.
+ * 
+ * @example
+ * ```bash
+ * curl -X POST http://localhost:3001/webhook/delete \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"key":"my-overlay"}'
+ * ```
+ */
+async function handleDeleteWebhook(req: Request): Promise<Response> {
+  const body = await req.json();
+  
+  const { key } = body as { key: string };
+  
+  if (!key) {
+    return jsonResponse({
+      error: 'Invalid payload',
+      details: 'Required field: key',
+    }, 400);
+  }
+
+  try {
+    const existed = await deleteOverlayData(key);
+    return jsonResponse({
+      ok: true,
+      deleted: existed,
+      key,
+    });
+  } catch (error) {
+    console.error('[Storage] Delete error:', error);
+    return jsonResponse({ error: 'Failed to delete data' }, 500);
+  }
+}
 
 /**
  * POST /webhook/alert
@@ -266,6 +360,33 @@ function handleEventsEndpoint(limit: number): Response {
   return jsonResponse({
     events: wsManager.getEventLog(limit),
   });
+}
+
+// ============================================================================
+// STORAGE ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /webhook/overlays
+ * 
+ * List all saved overlay keys.
+ */
+async function handleOverlaysEndpoint(): Promise<Response> {
+  const keys = await listOverlayKeys();
+  return jsonResponse({ keys });
+}
+
+/**
+ * GET /webhook/overlay/:key
+ * 
+ * Get a specific overlay by key.
+ */
+async function handleGetOverlayEndpoint(key: string): Promise<Response> {
+  const data = await loadOverlayData(key);
+  if (!data) {
+    return jsonResponse({ error: 'Not found' }, 404);
+  }
+  return jsonResponse({ key, data, previewUrl: generatePreviewUrl(key) });
 }
 
 // ============================================================================

@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import { JsonObjManager, createManager, type StorageAdapter, type ManagerConfig } from 'json-obj-manager';
+import { JsonObjManager, createManager, FileAdapter, type StorageAdapter, type ManagerConfig } from 'json-obj-manager';
 import { readFile, writeFile, mkdir, readdir, rm } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
@@ -18,17 +18,18 @@ import { join, dirname, basename, extname } from 'path';
 // ============================================================================
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? './data';
+const STORAGE_FILE = process.env.STORAGE_FILE ?? './data/storage.json';
 const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:3000/preview';
 
 // ============================================================================
-// FILE ADAPTER
+// FILE ADAPTER (Per-key files)
 // ============================================================================
 
 /**
  * File-based storage adapter for JsonObjManager
  * Stores each key as a separate JSON file in the specified directory
  */
-class FileStorageAdapter<T = unknown> implements StorageAdapter<T> {
+class KeyFileStorageAdapter<T = unknown> implements StorageAdapter<T> {
   private dirPath: string;
   private extension: string;
 
@@ -86,9 +87,44 @@ class FileStorageAdapter<T = unknown> implements StorageAdapter<T> {
     }
   }
 
-  async has(key: string): Promise<boolean> {
-    const filePath = this.getFilePath(key);
-    return existsSync(filePath);
+  async clear(): Promise<void> {
+    try {
+      await this.ensureDir();
+      const files = await readdir(this.dirPath);
+      await Promise.all(
+        files
+          .filter(f => f.endsWith(this.extension))
+          .map(f => rm(join(this.dirPath, f)))
+      );
+    } catch (error) {
+      console.error('[Storage] Error clearing storage:', error);
+      throw error;
+    }
+  }
+
+  async getAll(): Promise<Record<string, T>> {
+    try {
+      await this.ensureDir();
+      const files = await readdir(this.dirPath);
+      const result: Record<string, T> = {};
+      
+      const jsonFiles = files.filter(f => f.endsWith(this.extension));
+      
+      for (const file of jsonFiles) {
+        try {
+          const content = await readFile(join(this.dirPath, file), 'utf-8');
+          const key = basename(file, this.extension);
+          result[key] = JSON.parse(content) as T;
+        } catch (e) {
+          // Skip invalid files
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('[Storage] Error getting all keys:', error);
+      return {};
+    }
   }
 
   async keys(): Promise<string[]> {
@@ -104,19 +140,9 @@ class FileStorageAdapter<T = unknown> implements StorageAdapter<T> {
     }
   }
 
-  async clear(): Promise<void> {
-    try {
-      await this.ensureDir();
-      const files = await readdir(this.dirPath);
-      await Promise.all(
-        files
-          .filter(f => f.endsWith(this.extension))
-          .map(f => rm(join(this.dirPath, f)))
-      );
-    } catch (error) {
-      console.error('[Storage] Error clearing storage:', error);
-      throw error;
-    }
+  async has(key: string): Promise<boolean> {
+    const filePath = this.getFilePath(key);
+    return existsSync(filePath);
   }
 }
 
@@ -137,20 +163,47 @@ let storageManager: JsonObjManager | null = null;
 
 /**
  * Initialize the storage manager with file adapter
+ * Uses single-file storage for simplicity
  */
-export function initializeStorage(dirPath: string = STORAGE_DIR): JsonObjManager {
+export function initializeStorage(filename: string = STORAGE_FILE): JsonObjManager {
   if (storageManager) {
     return storageManager;
   }
 
-  const adapter = new FileStorageAdapter(dirPath);
+  // Ensure directory exists
+  const dir = dirname(filename);
+  if (!existsSync(dir)) {
+    mkdir(dir, { recursive: true });
+  }
+
+  const adapter = new FileAdapter<unknown>(filename);
   
   storageManager = createManager({
     ...defaultConfig,
-    adapter,
+    adapter: adapter as StorageAdapter,
   });
 
-  console.log(`[Storage] Initialized at: ${dirPath}`);
+  console.log(`[Storage] Initialized at: ${filename}`);
+  return storageManager;
+}
+
+/**
+ * Initialize storage with per-key file storage
+ * More suitable for large datasets
+ */
+export function initializeKeyFileStorage(dirPath: string = STORAGE_DIR): JsonObjManager {
+  if (storageManager) {
+    return storageManager;
+  }
+
+  const adapter = new KeyFileStorageAdapter(dirPath);
+  
+  storageManager = createManager({
+    ...defaultConfig,
+    adapter: adapter as StorageAdapter,
+  });
+
+  console.log(`[Storage] Initialized with per-key files at: ${dirPath}`);
   return storageManager;
 }
 
@@ -253,7 +306,8 @@ export async function deleteOverlayData(key: string): Promise<boolean> {
  */
 export async function listOverlayKeys(): Promise<string[]> {
   const storage = getStorage();
-  return await storage.keys();
+  const all = await storage.getAll();
+  return Object.keys(all);
 }
 
 /**
@@ -261,12 +315,12 @@ export async function listOverlayKeys(): Promise<string[]> {
  */
 export async function getAllOverlayData(): Promise<Record<string, unknown>> {
   const storage = getStorage();
-  return await storage.all();
+  return await storage.getAll();
 }
 
 // ============================================================================
 // EXPORTS
 // ============================================================================
 
-export { FileStorageAdapter };
-export type { FileStorageAdapter as FileStorage };
+export { KeyFileStorageAdapter };
+export type { KeyFileStorageAdapter as KeyFileStorage };

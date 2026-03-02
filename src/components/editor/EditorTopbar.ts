@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { getLocale, setLocale, LocalizeController } from '../../locales/localization';
 
 @customElement('editor-topbar')
@@ -37,6 +37,60 @@ export class EditorTopbar extends LitElement {
     
     .btn-back:hover {
       background-color: #464649;
+    }
+
+    .btn-preview-url {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      background-color: #2563eb;
+      color: white;
+      padding: 0.375rem 0.75rem;
+      border-radius: 9999px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn-preview-url:hover {
+      background-color: #1d4ed8;
+    }
+
+    .btn-preview-url:disabled {
+      background-color: #4b5563;
+      cursor: not-allowed;
+    }
+
+    .preview-url-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .preview-url-input {
+      background: #3a3a3d;
+      color: white;
+      border: 1px solid #4b5563;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      width: 200px;
+    }
+
+    .btn-copy {
+      background: #4b5563;
+      color: white;
+      border: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .btn-copy:hover {
+      background-color: #6b7280;
     }
     
     .locale-select {
@@ -76,6 +130,10 @@ export class EditorTopbar extends LitElement {
   @property({ type: String }) title = '';
   @property({ type: String }) backLabel = '';
   @property({ type: Function }) onBack: () => void = () => {};
+  @property({ type: Function }) onGetPreviewUrl: () => Promise<string | null> = async () => null;
+  @property({ type: String }) boxId = '';
+  @state() private previewUrl = '';
+  @state() private showUrlInput = false;
 
   private _localize = new LocalizeController(this);
 

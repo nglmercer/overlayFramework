@@ -22,6 +22,7 @@
 import { parseClientMessage } from './schemas';
 import { wsManager, type WsClientData } from './ws-manager';
 import { handleHttpRequest } from './webhook';
+import { initializeStorage } from './storage';
 
 // ============================================================================
 // CONFIGURATION
@@ -110,6 +111,9 @@ const server = Bun.serve<WsClientData>({
   },
 });
 
+// Initialize storage
+initializeStorage();
+
 // ============================================================================
 // HEARTBEAT
 // ============================================================================
@@ -148,9 +152,13 @@ console.log('║  GET  /health            — Health check       ║');
 console.log('║  GET  /webhook/status    — Server status      ║');
 console.log('║  GET  /webhook/schemas   — List schemas       ║');
 console.log('║  GET  /webhook/events    — Recent events      ║');
+console.log('║  GET  /webhook/overlays  — List saved overlays║');
+console.log('║  GET  /webhook/overlay/:key — Get overlay     ║');
 console.log('║  POST /webhook/alert     — Trigger alert      ║');
 console.log('║  POST /webhook/control   — Control overlay    ║');
 console.log('║  POST /webhook/schema    — Register schema    ║');
+console.log('║  POST /webhook/save     — Save overlay data   ║');
+console.log('║  POST /webhook/delete    — Delete overlay     ║');
 console.log('║  WS   /ws               — Overlay connection  ║');
 console.log('╚══════════════════════════════════════════════╝');
 console.log('');
