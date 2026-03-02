@@ -8,16 +8,21 @@
  * - Built-in platform event definitions (seguimientos, suscripciones, bits)
  * - Custom event registration
  * - Event variable extraction and message formatting
+ * - Factory functions for creating platform events
  * 
  * @module lib/alertEvents
+ * @version 2.0.0
  */
 
+import { z } from 'zod';
 import { 
   PlatformEventDefinitionSchema, 
   PlatformEventDefinition,
   EventVariableSchema,
   EventVariable,
-  validatePlatformEvent
+  validatePlatformEvent,
+  createPlatformEvent,
+  makeValidator,
 } from './core';
 
 /**
@@ -29,9 +34,6 @@ import {
  * Each event has a unique ID, display label, condition label,
  * available variables, and a default message template.
  */
-
-// Use pre-built validator from core
-// Note: validatePlatformEvent is now exported from core/utils.ts
 
 /**
  * Built-in platform event definitions
@@ -86,17 +88,22 @@ let customPlatformEvents: PlatformEventDefinition[] = [];
  * These will be merged with built-in events
  * 
  * @param events - Array of platform event definitions to add
+ * @returns Array of successfully registered events
  */
-export function registerPlatformEvents(events: PlatformEventDefinition[]): void {
-  // Validate each event before adding
+export function registerPlatformEvents(events: PlatformEventDefinition[]): PlatformEventDefinition[] {
+  const registered: PlatformEventDefinition[] = [];
+  
   for (const event of events) {
     const result = validatePlatformEvent(event);
     if (!result.success) {
-      console.warn(`Invalid platform event:`, result);
+      console.warn(`Invalid platform event:`, (result as { success: false; errors: string[] }).errors);
       continue;
     }
-    customPlatformEvents.push(event);
+    customPlatformEvents.push(result.data);
+    registered.push(result.data);
   }
+  
+  return registered;
 }
 
 /**
@@ -104,6 +111,15 @@ export function registerPlatformEvents(events: PlatformEventDefinition[]): void 
  */
 export function clearCustomPlatformEvents(): void {
   customPlatformEvents = [];
+}
+
+/**
+ * Get count of custom platform events
+ * 
+ * @returns Number of custom events registered
+ */
+export function getCustomPlatformEventsCount(): number {
+  return customPlatformEvents.length;
 }
 
 /**
@@ -154,6 +170,28 @@ export function getDefaultMessage(eventType: string): string {
 }
 
 /**
+ * Get the label for an event type
+ * 
+ * @param eventType - The event type ID
+ * @returns The event label or empty string
+ */
+export function getEventLabel(eventType: string): string {
+  const event = getPlatformEventById(eventType);
+  return event?.label ?? '';
+}
+
+/**
+ * Get the condition label for an event type
+ * 
+ * @param eventType - The event type ID
+ * @returns The condition label or empty string
+ */
+export function getConditionLabel(eventType: string): string {
+  const event = getPlatformEventById(eventType);
+  return event?.conditionLabel ?? '';
+}
+
+/**
  * ============================================
  * EVENT VARIABLE HELPERS
  * ============================================
@@ -184,6 +222,85 @@ export function formatMessage(template: string, values: Record<string, unknown>)
 }
 
 /**
+ * Validates that all required variables are provided for an event
+ * 
+ * @param eventType - The event type ID
+ * @param values - Object mapping variable names to their values
+ * @returns Validation result with success status and any errors
+ */
+export function validateEventVariables(
+  eventType: string, 
+  values: Record<string, unknown>
+): { valid: boolean; missing: string[] } {
+  const variables = getEventVariables(eventType);
+  const missing = variables
+    .map(v => v.name)
+    .filter(name => !(name in values) || values[name] === undefined);
+  
+  return {
+    valid: missing.length === 0,
+    missing,
+  };
+}
+
+/**
+ * ============================================
+ * FACTORY FUNCTIONS
+ * ============================================
+ */
+
+/**
+ * Creates a new platform event definition with validation
+ * 
+ * @param data - Partial platform event data
+ * @returns Validated PlatformEventDefinition
+ * 
+ * @example
+ * ```typescript
+ * const customEvent = createPlatformEventSafe({
+ *   id: 'donations',
+ *   label: 'Donaciones',
+ *   conditionLabel: 'Cualquier nueva donación',
+ *   variables: [{ name: 'amount', description: 'Cantidad donada' }],
+ *   defaultMessage: '¡{amount} donado!'
+ * });
+ * ```
+ */
+export function createPlatformEventSafe(
+  data: Partial<PlatformEventDefinition>
+): PlatformEventDefinition {
+  return createPlatformEvent({ data, throwOnError: true });
+}
+
+/**
+ * ============================================
+ * TYPE GUARDS AND CHECKS
+ * ============================================
+ */
+
+/**
+ * Type guard to check if an object is a valid PlatformEventDefinition
+ * 
+ * @param value - Value to check
+ * @returns True if valid PlatformEventDefinition
+ */
+export function isPlatformEventDefinition(
+  value: unknown
+): value is PlatformEventDefinition {
+  return validatePlatformEvent(value).success;
+}
+
+/**
+ * Check if an event type exists
+ * 
+ * @param eventType - The event type ID to check
+ * @returns True if event type exists
+ */
+export function hasEventType(eventType: string): boolean {
+  return getPlatformEventById(eventType) !== undefined;
+}
+
+/**
  * ============================================
  * RE-EXPORTS FOR CONVENIENCE
  * ============================================
@@ -204,3 +321,21 @@ export {
 // Keep the old export for backward compatibility
 // This allows existing code that imports platformEventsSchema to continue working
 export const platformEventsSchema: PlatformEventDefinition[] = platformEvents;
+
+/**
+ * ============================================
+ * DEFAULT EXPORTS
+ * ============================================
+ */
+
+export default {
+  platformEvents,
+  registerPlatformEvents,
+  clearCustomPlatformEvents,
+  getAllPlatformEvents,
+  getPlatformEventById,
+  getEventVariables,
+  getDefaultMessage,
+  getVariableNames,
+  formatMessage,
+};

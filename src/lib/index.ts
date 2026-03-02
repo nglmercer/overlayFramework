@@ -49,6 +49,20 @@ export {
   getDefaultSchema,
   getSchemaDefaults,
   isValid,
+  
+  // Factory functions (from factories)
+  createAppConfig,
+  createAlertBox,
+  createAlertVariant,
+  createPlatformEvent,
+  createDialogOptions,
+  createDialog,
+  createTemplate,
+  duplicateAlertVariant,
+  getEnvironment,
+  isEnvironment,
+  extendSchema,
+  partialSchema,
 } from './core';
 
 // Core types
@@ -83,6 +97,7 @@ export {
   isTest,
   getMediaUrl,
   getCdnUrl,
+  reloadConfig,
 } from './config';
 
 // ============================================
@@ -108,6 +123,13 @@ export {
   getDefaultMessage,
   getVariableNames,
   formatMessage,
+  getEventLabel,
+  getConditionLabel,
+  validateEventVariables,
+  createPlatformEventSafe,
+  isPlatformEventDefinition,
+  hasEventType,
+  getCustomPlatformEventsCount,
 } from './alertEvents';
 
 // Backward compatibility

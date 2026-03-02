@@ -8,16 +8,20 @@
  * - Environment variable resolution (Vite and Node.js)
  * - Type-safe configuration with Zod schemas
  * - Helper functions for environment detection and URL building
+ * - Factory functions for creating configurations
  * 
  * @module lib/config
+ * @version 2.0.0
  */
 
-import { z } from 'zod';
 import { 
   AppConfigSchema, 
   AppConfig,
   EnvironmentSchema,
-  validateAppConfig
+  validateAppConfig,
+  createAppConfig,
+  getEnvironment,
+  isEnvironment,
 } from './core';
 
 /**
@@ -81,22 +85,14 @@ const validateConfig = validateAppConfig;
  * }
  * ```
  */
-export const appConfig: AppConfig = (() => {
-  const result = validateConfig({
+export const appConfig: AppConfig = createAppConfig({
+  data: {
     mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
     baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
     apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
-    environment: getEnvValue('NODE_ENV', 'development'),
-  });
-  
-  return result.success 
-    ? result.data 
-    : {
-        mediaUrl: 'http://localhost:3000/media',
-        baseMediaUrl: 'https://cdn.example.com',
-        environment: 'development',
-      };
-})();
+    environment: getEnvValue('NODE_ENV', 'development') as AppConfig['environment'],
+  },
+});
 
 /**
  * ============================================
@@ -110,7 +106,7 @@ export const appConfig: AppConfig = (() => {
  * @returns True if environment is 'development'
  */
 export function isDevelopment(): boolean {
-  return appConfig.environment === 'development';
+  return isEnvironment('development');
 }
 
 /**
@@ -119,7 +115,7 @@ export function isDevelopment(): boolean {
  * @returns True if environment is 'production'
  */
 export function isProduction(): boolean {
-  return appConfig.environment === 'production';
+  return isEnvironment('production');
 }
 
 /**
@@ -128,7 +124,7 @@ export function isProduction(): boolean {
  * @returns True if environment is 'test'
  */
 export function isTest(): boolean {
-  return appConfig.environment === 'test';
+  return isEnvironment('test');
 }
 
 /**
@@ -160,6 +156,23 @@ export function getCdnUrl(path?: string): string {
 }
 
 /**
+ * Reload configuration from environment
+ * Useful when environment variables change at runtime
+ * 
+ * @returns New AppConfig instance
+ */
+export function reloadConfig(): AppConfig {
+  return createAppConfig({
+    data: {
+      mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
+      baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
+      apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
+      environment: getEnvValue('NODE_ENV', 'development') as AppConfig['environment'],
+    },
+  });
+}
+
+/**
  * ============================================
  * RE-EXPORTS
  * ============================================
@@ -167,3 +180,6 @@ export function getCdnUrl(path?: string): string {
 
 export type { AppConfig } from './core';
 export { AppConfigSchema, EnvironmentSchema } from './core';
+
+// Re-export factory functions for convenience
+export { createAppConfig, getEnvironment, isEnvironment } from './core';

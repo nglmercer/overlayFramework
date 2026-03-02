@@ -4,6 +4,12 @@
  * Provides a clean interface for managing alert data in IndexedDB.
  * Handles persistence for alert boxes, variants, and templates.
  * 
+ * Features:
+ * - Type-safe CRUD operations with Zod validation
+ * - Automatic data validation before persistence
+ * - Batch operations for efficiency
+ * - Cascade delete support
+ * 
  * @module lib/db
  * @version 2.0.0
  */
@@ -18,6 +24,10 @@ import {
   validateAlertVariant,
   validateAlertBox,
   validateTemplate,
+  createAlertVariant,
+  createAlertBox,
+  createTemplate,
+  ValidationResult,
 } from './core';
 
 /**
@@ -78,6 +88,30 @@ export async function initDB(): Promise<IDBDatabase> {
 
 /**
  * ============================================
+ * VALIDATION HELPERS
+ * ============================================
+ */
+
+/**
+ * Type for validation error handling
+ */
+type ValidationError = { success: false; errors: string[] };
+
+/**
+ * Validates data and throws on failure
+ * 
+ * @param result - Validation result to check
+ * @param entityName - Name of the entity for error message
+ * @throws Error if validation fails
+ */
+function validateOrThrow(result: ValidationResult<any>, entityName: string): void {
+  if (!result.success) {
+    throw new Error(`Invalid ${entityName}: ${(result as ValidationError).errors.join(', ')}`);
+  }
+}
+
+/**
+ * ============================================
  * DATABASE MANAGER
  * ============================================
  * 
@@ -122,6 +156,23 @@ export const dbManager = {
   },
 
   /**
+   * Retrieves a single template by ID
+   * 
+   * @param id - The template ID
+   * @returns Promise resolving to the template or undefined
+   */
+  async getTemplateById(id: string): Promise<TemplateDB | undefined> {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('templates', 'readonly');
+      const store = transaction.objectStore('templates');
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  /**
    * Saves a template to the database
    * 
    * @param template - The template to save
@@ -129,9 +180,7 @@ export const dbManager = {
    */
   async saveTemplate(template: TemplateDB): Promise<void> {
     const result = validateTemplate(template);
-    if (!result.success) {
-      throw new Error(`Invalid template: ${(result as { success: false; errors: string[] }).errors.join(', ')}`);
-    }
+    validateOrThrow(result, 'template');
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
@@ -141,6 +190,21 @@ export const dbManager = {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
+  },
+
+  /**
+   * Creates and saves a new template
+   * 
+   * @param data - Template data (without id and updatedAt)
+   * @returns The created template with generated id and timestamp
+   */
+  async createTemplate(data: Omit<TemplateDB, 'id' | 'updatedAt'>): Promise<TemplateDB> {
+    const template = createTemplate({ 
+      data: { ...data },
+      throwOnError: true,
+    });
+    await this.saveTemplate(template);
+    return template;
   },
 
   /**
@@ -204,9 +268,7 @@ export const dbManager = {
    */
   async saveBox(box: AlertBox): Promise<void> {
     const result = validateAlertBox(box);
-    if (!result.success) {
-      throw new Error(`Invalid box: ${(result as { success: false; errors: string[] }).errors.join(', ')}`);
-    }
+    validateOrThrow(result, 'box');
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
@@ -219,11 +281,29 @@ export const dbManager = {
   },
 
   /**
+   * Creates and saves a new alert box
+   * 
+   * @param data - Box data (without id)
+   * @returns The created box with generated id
+   */
+  async createBox(data: Omit<AlertBox, 'id'>): Promise<AlertBox> {
+    const box = createAlertBox({
+      data: { ...data },
+      throwOnError: true,
+    });
+    await this.saveBox(box);
+    return box;
+  },
+
+  /**
    * Deletes an alert box from the database
    * 
    * @param id - The ID of the box to delete
    */
   async deleteBox(id: string): Promise<void> {
+    // First delete all variants associated with this box
+    await this.deleteVariantsByBoxId(id);
+    
     const db = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction('boxes', 'readwrite');
@@ -299,9 +379,7 @@ export const dbManager = {
    */
   async saveVariant(variant: AlertVariant): Promise<void> {
     const result = validateAlertVariant(variant);
-    if (!result.success) {
-      throw new Error(`Invalid variant: ${(result as { success: false; errors: string[] }).errors.join(', ')}`);
-    }
+    validateOrThrow(result, 'variant');
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
@@ -311,6 +389,22 @@ export const dbManager = {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
+  },
+
+  /**
+   * Creates and saves a new variant
+   * 
+   * @param data - Variant data including boxId
+   * @returns The created variant
+   */
+  async createVariant(data: Partial<AlertVariant> & { boxId: string }): Promise<AlertVariant> {
+    const variant = createAlertVariant({
+      boxId: data.boxId,
+      data,
+      throwOnError: true,
+    });
+    await this.saveVariant(variant);
+    return variant;
   },
 
   /**
@@ -365,7 +459,7 @@ export const dbManager = {
     for (const variant of variants) {
       const result = validateAlertVariant(variant);
       if (!result.success) {
-        throw new Error(`Invalid variant ${variant.id}: ${(result as { success: false; errors: string[] }).errors.join(', ')}`);
+        throw new Error(`Invalid variant ${variant.id}: ${(result as ValidationError).errors.join(', ')}`);
       }
     }
     
@@ -402,6 +496,32 @@ export const dbManager = {
       transaction.onerror = () => reject(transaction.error);
     });
   },
+
+  // ============================================
+  // UTILITY METHODS
+  // ============================================
+
+  /**
+   * Clears all data from the database
+   * Use with caution!
+   */
+  async clearAll(): Promise<void> {
+    const db = await initDB();
+    
+    const stores = ['boxes', 'variants', 'templates'];
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(stores, 'readwrite');
+      
+      for (const storeName of stores) {
+        const store = transaction.objectStore(storeName);
+        store.clear();
+      }
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  },
 };
 
 /**
@@ -414,3 +534,6 @@ export const dbManager = {
 
 export type { AlertVariant, AlertBox, TemplateDB } from './core';
 export { AlertVariantSchema, AlertBoxSchema, TemplateDBSchema } from './core';
+
+// Re-export factory functions for convenience
+export { createAlertVariant, createAlertBox, createTemplate } from './core';

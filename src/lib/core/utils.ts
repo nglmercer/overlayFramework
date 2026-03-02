@@ -8,10 +8,22 @@
  * new instances or when partial data is provided.
  * 
  * @module lib/core/utils
- * @version 2.0.0
+ * @version 2.1.0
  */
 
-import { z } from 'zod';
+import { z, ZodSchema, ZodError, ZodIssueCode } from 'zod';
+
+/**
+ * ============================================
+ * CUSTOM ZOD REFINEMENTS
+ * ============================================
+ * 
+ * Custom refinements for stricter validation rules.
+ */
+
+// Hex color validation refinement
+const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+const hexColorRefinement = (val: string) => hexColorRegex.test(val);
 
 /**
  * ============================================
@@ -84,18 +96,6 @@ export type EventVariable = z.infer<typeof EventVariableSchema>;
 /**
  * Platform event definition
  * 
- * Defines a complete alert event type with its variables and default message.
- * Used for configuring which events trigger alerts and how they're displayed.
- */
-export const PlatformEventDefinitionSchema = z.object({
-  id: z.string().min(1, 'Event ID is required'),
-  label: z.string().min(1, 'Event label is required'),
-  conditionLabel: z.string().min(1, 'Condition label is required'),
-  variables: z.array(EventVariableSchema).default([]),
-  defaultMessage: z.string().default(''),
-});
-
-export type PlatformEventDefinition = z.infer<typeof PlatformEventDefinitionSchema>;
 
 /**
  * ============================================
