@@ -234,11 +234,15 @@ export class EditorPreview extends LitElement {
   // Send variant update to iframe
   private _sendVariantToIframe() {
     if (this.iframeRef && this.iframeReady && this.variant) {
-      // Convert AlertVariant to Template format for the renderer
-      const template = this._convertVariantToTemplate(this.variant);
+      // Pass variant directly - preview.ts uses variantToAlertConfig internally
+      // Include eventData for variable substitution in the message
+      const eventData = { username: 'TestUser', amount: '100', months: '1' };
       this.iframeRef.contentWindow?.postMessage({ 
         type: 'UPDATE_VARIANT', 
-        payload: { variant: template } 
+        payload: { 
+          variant: this.variant,
+          eventData: eventData
+        } 
       }, '*');
     }
   }

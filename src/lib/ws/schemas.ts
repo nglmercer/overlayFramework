@@ -240,7 +240,6 @@ export function serializeWsMessage(message: WsOutgoingMessage): string | null {
  * ============================================
  * 
  * Converts validated event data into the Record<string, string>
- * format expected by the AlertView/AlertRenderer eventData prop.
  */
 
 /**

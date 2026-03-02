@@ -1,6 +1,12 @@
-import { Renderer } from './core/renderer';
-import { Template } from './core/types';
+import { 
+  AlertRenderer, 
+  AlertConfig, 
+  createAlertRenderer, 
+  variantToAlertConfig,
+  createAlertConfig,
+} from './core/alertRenderer';
 import { getWebSocketUrl } from './lib/config';
+import { CONFIG } from './lib/constants';
 
 // Types for messages
 interface AlertMessage {
@@ -17,18 +23,18 @@ interface WindowMessage {
 }
 
 interface VariantPayload {
-  variant: Template;
+  variant: Record<string, unknown>;
   eventData?: Record<string, string>;
 }
 
 const root = document.getElementById('render-root');
 
 if (root) {
-  const renderer = new Renderer(root);
-  console.log('[Preview] Renderer initialized');
+  const alertRenderer = createAlertRenderer(root);
+  console.log('[Preview] AlertRenderer initialized');
 
-  // Store current template for replay
-  let currentTemplate: Template | null = null;
+  // Store current variant and config for replay
+  let currentVariant: Record<string, unknown> | null = null;
   let currentEventData: Record<string, string> = {};
 
   // WebSocket service reference
@@ -178,24 +184,46 @@ if (root) {
   }
 
   /**
-   * Update the variant/template to render
+   * Update the variant to render using AlertRenderer
    */
-  function updateVariant(variant: Template, eventData?: Record<string, string>): void {
-    currentTemplate = variant;
+  function updateVariant(variant: Record<string, unknown>, eventData?: Record<string, string>): void {
+    currentVariant = variant;
     currentEventData = eventData || {};
-    renderer.render(variant);
-    console.log('[Preview] Variant updated');
+    
+    try {
+      // Convert variant to AlertConfig using the core library
+      const config = variantToAlertConfig(
+        variant as Parameters<typeof variantToAlertConfig>[0],
+        currentEventData,
+        { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
+      );
+      
+      alertRenderer.render(config);
+      console.log('[Preview] Variant rendered');
+    } catch (error) {
+      console.error('[Preview] Failed to render variant:', error);
+    }
   }
 
   /**
    * Play/render the current variant (replay animation)
    */
   function playPreview(): void {
-    if (currentTemplate) {
-      renderer.render(currentTemplate);
-      console.log('[Preview] Playing preview');
+    if (currentVariant) {
+      try {
+        const config = variantToAlertConfig(
+          currentVariant as Parameters<typeof variantToAlertConfig>[0],
+          currentEventData,
+          { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
+        );
+        
+        alertRenderer.playPreview(config);
+        console.log('[Preview] Playing preview');
+      } catch (error) {
+        console.error('[Preview] Failed to play preview:', error);
+      }
     } else {
-      console.warn('[Preview] No template to play');
+      console.warn('[Preview] No variant to play');
     }
   }
 
@@ -255,11 +283,11 @@ if (root) {
     }
     else if (type === 'UPDATE_TEMPLATE') {
       // Legacy support - treat as variant update
-      const template = payload as Template;
-      updateVariant(template);
+      // This expects Template format, but we need AlertVariant format
+      console.warn('[Preview] UPDATE_TEMPLATE is deprecated, use UPDATE_VARIANT');
     }
     else if (type === 'play-preview') {
-      // Trigger animation replay if we have a template
+      // Trigger animation replay if we have a variant
       playPreview();
     }
     else if (type === 'connect-ws') {
