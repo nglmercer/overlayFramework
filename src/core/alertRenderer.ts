@@ -8,6 +8,7 @@ import { Renderer } from './renderer';
 import { mediaRegistry } from './mediaRegistry';
 import { formatUnit } from './renderer/utils';
 import { AnimationConfig, AnimationType as NewAnimationType, Direction, Easing } from '../schemas/animation-schemas';
+import { processTemplate } from '../lib/core/template-processor';
 import { ALERT_DEFAULTS } from '../lib/constants';
 
 // Animation types supported by the system
@@ -299,15 +300,8 @@ export class AlertRenderer {
       containerHeight = 600,
     } = config;
 
-    // Replace variables in message
-    let processedMessage = message;
-    if (eventData) {
-      for (const [key, value] of Object.entries(eventData)) {
-        // Replace {variable} with highlighted value directly if we have it
-        const highlightedValue = `<span style="color: ${highlightColor || '#9146FF'}; font-weight: bold;">${value}</span>`;
-        processedMessage = processedMessage.replace(new RegExp(`\\{${key}\\}`, 'g'), highlightedValue);
-      }
-    }
+    // Process message with template variables and highlights
+    const processedContent = processTemplate(message, eventData || {}, highlightColor || '#9146FF');
 
     const elements: any[] = [];
     
@@ -384,8 +378,7 @@ export class AlertRenderer {
       });
     }
     
-    // Process message with highlight color
-    const processedContent = this.processMessageWithHighlight(processedMessage, highlightColor || '#9146FF');
+    // Add text element (processedContent is already built at line 304!)
     
     // Add text element
     elements.push({
@@ -450,9 +443,7 @@ export class AlertRenderer {
    * Process message to highlight {variables}
    */
   processMessageWithHighlight(message: string, highlightColor: string): string {
-    if (!message) return '';
-    // Replace {variable} with highlighted span
-    return message.replace(/\{(\w+)\}/g, `<span style="color: ${highlightColor}; font-weight: bold;">$1</span>`);
+    return processTemplate(message, {}, highlightColor);
   }
 
   /**

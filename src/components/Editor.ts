@@ -28,6 +28,12 @@ import { EditorLeftSidebar } from './editor/EditorLeftSidebar';
 import { EditorPreview } from './editor/EditorPreview';
 import { EditorRightSidebar } from './editor/EditorRightSidebar';
 
+// Import sample data for testing
+import kickChatSample from '../../schemas/sample/kick_ChatMessageEvent.json';
+import tiktokChatSample from '../../schemas/sample/tiktok_chat.json';
+import tiktokGiftSample from '../../schemas/sample/tiktok_gift.json';
+import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
+
 // Import constants
 import { CONFIG, ALERT_DEFAULTS, COLORS } from '../lib/constants';
 import { getBackendEndpoint } from '../lib/config';
@@ -363,13 +369,34 @@ export class AppEditor extends LitElement {
     
     const eventType = variant.type;
     
-    // Default test data based on event type
-    const testData: Record<string, string> = {
+    // Map sample JSON to test data based on event type
+    let testData: Record<string, string> = {
       username: 'TestUser',
-      amount: '100',
-      months: '1',
       message: 'Test Alert!',
     };
+
+    if (eventType === 'kick_chat') {
+      testData = {
+        username: kickChatSample.sender?.username || 'KickUser',
+        message: kickChatSample.content || 'Hello Kick!'
+      };
+    } else if (eventType === 'tiktok_chat') {
+      testData = {
+        username: tiktokChatSample.uniqueId || 'TikTokUser',
+        message: tiktokChatSample.comment || 'Hi TikTok!'
+      };
+    } else if (eventType === 'tiktok_gift') {
+      testData = {
+        username: tiktokGiftSample.uniqueId || 'Gifter',
+        giftName: tiktokGiftSample.giftName || 'Rose',
+        amount: String(tiktokGiftSample.repeatCount || 1)
+      };
+    } else if (eventType === 'tiktok_social') {
+      testData = {
+        username: tiktokSocialSample.uniqueId || 'Follower',
+        nickname: tiktokSocialSample.nickname || 'FollowerNick'
+      };
+    }
 
     // If WS is connected, prioritize sending via backend for real broadcast
     if (this.isWsConnected) {
