@@ -317,6 +317,7 @@ export class EditorLeftSidebar extends LitElement {
   }
 
   private _selectVariant(variantId: string) {
+    console.log('[EditorLeftSidebar] _selectVariant called:', variantId);
     this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.VARIANT_SELECT, {
       detail: variantId,
       bubbles: true,
@@ -333,6 +334,7 @@ export class EditorLeftSidebar extends LitElement {
 
   render() {
     const collapsed = this._collapsed;
+    console.log('[EditorLeftSidebar] render - schema:', this.schema, 'variants:', this.variants?.length);
     return html`
       <div class="sidebar-left ${collapsed ? 'collapsed' : ''}">
         <div class="sidebar-header">
@@ -349,7 +351,10 @@ export class EditorLeftSidebar extends LitElement {
           <button
             class="btn-add"
             title="${this._t('variant.new')}"
-            @click="${() => this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.CREATE_VARIANT, { bubbles: true, composed: true }))}"
+            @click="${() => {
+              console.log('[EditorLeftSidebar] + button clicked');
+              this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.CREATE_VARIANT, { bubbles: true, composed: true }));
+            }}"
           >+</button>
         </div>
 

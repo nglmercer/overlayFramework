@@ -16,8 +16,8 @@ import { platformSchemaContext } from '../context/schemaContext';
 import { Task } from '@lit/task';
 import { confirm } from '../lib/dialog';
 import { LocalizeController } from '../locales/localization';
-import { AnimationConfig, defaultAnimationConfig } from '../schemas/animation-schemas';
-import { duplicateAlertVariant } from '../lib/core';
+import { AnimationConfig } from '../schemas/animation-schemas';
+import { duplicateAlertVariant, createAlertVariant } from '../lib/core';
 import './FormControls';
 import './MediaLibrary';
 
@@ -36,7 +36,7 @@ import tiktokGiftSample from '../../schemas/sample/tiktok_gift.json';
 import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
-import { CONFIG, ALERT_DEFAULTS, COLORS, EVENTS } from '../lib/constants';
+import { CONFIG, COLORS, EVENTS } from '../lib/constants';
 import { getBackendEndpoint } from '../lib/config';
 
 // =============================================================================
@@ -45,7 +45,6 @@ import { getBackendEndpoint } from '../lib/config';
 
 /**
  * Supported background colors for the preview area.
- * Shared with EditorPreview component for consistency.
  */
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
@@ -66,24 +65,6 @@ interface AnimationConfigs {
 // Component Definition
 // =============================================================================
 
-/**
- * Main Editor component for the overlay framework.
- * 
- * This component serves as the central hub for editing alert variants.
- * It manages:
- * - Variant selection and CRUD operations
- * - Preview configuration (size, background)
- * - Communication between sub-components (sidebar, preview, property panels)
- * - Media library integration
- * 
- * @example
- * ```html
- * <app-editor
- *   .boxId="${boxId}"
- *   .onBack="${() => navigateBack()}"
- * ></app-editor>
- * ```
- */
 @Component('app-editor')
 export class AppEditor extends LitElement {
   // ---------------------------------------------------------------------------
@@ -149,7 +130,6 @@ export class AppEditor extends LitElement {
   
   /**
    * Task for loading variants from the database.
-   * Uses Lit's Task pattern for async data loading with loading/error states.
    */
   private _variantsTask = new Task(this, {
     task: async ([boxId], {signal}) => {
@@ -196,7 +176,6 @@ export class AppEditor extends LitElement {
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #3a3a3d; border-radius: 10px; }
 
-    /* ── Responsive Styles ── */
     @media (max-width: 1024px) {
       .workspace {
         flex-direction: row;
@@ -214,42 +193,34 @@ export class AppEditor extends LitElement {
   // Lifecycle Methods
   // ---------------------------------------------------------------------------
 
-  /**
-   * Called when the component is added to the DOM.
-   * Initializes the default expanded section based on available schema.
-   */
   async connectedCallback() {
     super.connectedCallback();
+    
+    console.log('[Editor] connectedCallback - boxId:', this.boxId, 'schema:', this.schema);
     
     if (this.schema && this.schema.length > 0 && !this.expandedSection) {
       this.expandedSection = this.schema[0].id;
     }
   }
 
-  /**
-   * Called when component properties change.
-   * Auto-generates preview URL when boxId changes.
-   */
   willUpdate(changedProperties: Map<string, unknown>) {
-    // Clear local cache BEFORE rendering when switching boxes — safe here, won't trigger extra cycle
     if (changedProperties.has('boxId') && this.boxId && this._localVariants.length > 0) {
       this._localVariants = [];
     }
   }
 
   updated(changedProperties: Map<string, unknown>) {
-    // Auto-generate preview URL after boxId changes and variants have loaded
     if (changedProperties.has('boxId') && this.boxId) {
-      // Small delay to ensure variants are loaded from DB first
       setTimeout(() => {
         this._autoGeneratePreviewUrl();
       }, 500);
     }
   }
 
-  /**
-   * Auto-generate preview URL and notify topbar
-   */
+  // =============================================================================
+  // Private Helpers
+  // =============================================================================
+
   private async _autoGeneratePreviewUrl() {
     const variants = (this._variantsTask?.value || this._localVariants || []);
     const variant = this.getSelectedVariant(variants);
@@ -259,7 +230,6 @@ export class AppEditor extends LitElement {
     try {
       const url = await this.handleGetPreviewUrl();
       if (url) {
-        // Get the topbar and update its preview URL
         const topbar = this.shadowRoot?.querySelector('editor-topbar') as any;
         if (topbar && topbar.previewUrl !== url) {
           topbar.previewUrl = url;
@@ -270,59 +240,53 @@ export class AppEditor extends LitElement {
     }
   }
 
-  // =============================================================================
-  // Public Helper Methods
-  // =============================================================================
-
-  /**
-   * Translates a localization key using the current locale.
-   * @param key - The localization key to translate
-   * @returns The translated string
-   */
   private t(key: string): string {
     return this._localize.t(key);
   }
 
-  /**
-   * Retrieves the currently selected variant from the variant list.
-   * @param variants - Array of all available variants
-   * @returns The selected variant or undefined if not found
-   */
   getSelectedVariant(variants: AlertVariant[]): AlertVariant | undefined {
     return variants.find(v => v.id === this.selectedVariantId);
   }
 
   /**
-   * Combined variants list: prioritizes local state over task value to avoid stale data.
+   * Combined variants list: prioritizes local state over task value.
    */
   private get variants(): AlertVariant[] {
-    // If we have local changes, use them. Otherwise use the task value.
     if (this._localVariants && this._localVariants.length > 0) {
       return this._localVariants;
     }
     return (this._variantsTask.value as AlertVariant[]) || [];
   }
 
+  /**
+   * Creates the data object for a new variant.
+   */
+  private createNewVariantData(type: string, schemaDef: PlatformEventDefinition): AlertVariant {
+    return createAlertVariant({
+      boxId: this.boxId,
+      eventType: type,
+      data: {
+        type,
+        name: schemaDef.label ? `${schemaDef.label} Variant` : 'Nueva variante',
+        condition: schemaDef.conditionLabel,
+        message: schemaDef.defaultMessage,
+      },
+    });
+  }
+
   // =============================================================================
-  // Preview Control Methods
+  // Preview Control Handlers (arrow functions for correct `this` binding)
   // =============================================================================
 
-  /**
-   * Triggers the preview component to play the current alert animation.
-   */
   handlePlayPreview = (): void => {
     if (this.editorPreview && this.editorPreview.playPreview) {
       this.editorPreview.playPreview();
     }
   }
 
-  /**
-   * Generates a preview URL for the current overlay by saving data to the backend.
-   */
   handleGetPreviewUrl = async (): Promise<string | null> => {
     if (!this.boxId) return null;
     
-    // Use the computed variants to avoid stale data
     const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
     
@@ -331,11 +295,6 @@ export class AppEditor extends LitElement {
       return null;
     }
 
-    console.log('[Editor] Saving all variants to backend for preview:', { 
-      boxId: this.boxId,
-      count: variants.length 
-    });
-    
     try {
       const response = await fetch(getBackendEndpoint('/webhook/save'), {
         method: 'POST',
@@ -343,8 +302,8 @@ export class AppEditor extends LitElement {
         body: JSON.stringify({
           key: this.boxId,
           data: {
-            variants: variants, // Save all variants instead of just one
-            variant: variant,   // Keep selected variant for backward compatibility
+            variants: variants,
+            variant: variant,
             preview: true
           }
         })
@@ -361,12 +320,7 @@ export class AppEditor extends LitElement {
     return null;
   }
 
-  /**
-   * Dispatches a test alert event to WebSocket and plays the preview.
-   * Sends to backend via WebSocket for real testing.
-   */
   handleSendTestAlert = async (): Promise<void> => {
-    // Use computed variants
     const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
     
@@ -378,7 +332,6 @@ export class AppEditor extends LitElement {
     
     const eventType = variant.type;
     
-    // Map sample JSON to test data based on event type
     let testData: Record<string, string> = {
       username: 'TestUser',
       message: 'Test Alert!',
@@ -407,7 +360,6 @@ export class AppEditor extends LitElement {
       };
     }
 
-    // If WS is connected, prioritize sending via backend for real broadcast
     if (this.isWsConnected) {
       try {
         const response = await fetch(getBackendEndpoint('/webhook/alert'), {
@@ -428,9 +380,7 @@ export class AppEditor extends LitElement {
       }
     }
     
-    // Fallback: Send test alert to preview iframe via postMessage for local testing
     if (this.editorPreview) {
-      // Access the iframe inside editor-preview and send message
       const iframe = this.editorPreview.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({
@@ -441,124 +391,114 @@ export class AppEditor extends LitElement {
       }
     }
     
-    // Also play local preview (in case WS is slow or as fallback)
     this.handlePlayPreview();
   }
 
   // =============================================================================
-  // Variant CRUD Operations
+  // Variant CRUD Operations (arrow functions for correct `this` binding)
   // =============================================================================
 
   /**
-   * Creates a new alert variant with default values.
-   * The variant is initialized based on the current schema type.
-   * 
-   * @returns The newly created variant object (not yet saved to DB)
+   * Creates a new variant and adds it to local state immediately (optimistic update).
    */
-  private createNewVariantData(type: string, schemaDef: PlatformEventDefinition): AlertVariant {
-    return {
-      id: crypto.randomUUID(),
-      boxId: this.boxId,
-      type,
-      name: ALERT_DEFAULTS.NAME,
-      condition: schemaDef.conditionLabel,
-      duration: ALERT_DEFAULTS.DURATION,
-      animationIn: ALERT_DEFAULTS.ANIMATION.IN,
-      animationOut: ALERT_DEFAULTS.ANIMATION.OUT,
-      animationInDuration: ALERT_DEFAULTS.ANIMATION_DURATION,
-      animationOutDuration: ALERT_DEFAULTS.ANIMATION_DURATION,
-      entranceAnimation: { ...defaultAnimationConfig },
-      exitAnimation: { ...defaultAnimationConfig },
-      layout: ALERT_DEFAULTS.LAYOUT,
-      bgColor: ALERT_DEFAULTS.COLORS.BG,
-      bgOpacity: ALERT_DEFAULTS.OPACITY.BG,
-      padding: ALERT_DEFAULTS.SPACING.PADDING,
-      spacing: ALERT_DEFAULTS.SPACING.ITEM,
-      rounded: ALERT_DEFAULTS.BOX.ROUNDED,
-      shadow: ALERT_DEFAULTS.BOX.SHADOW,
-      message: schemaDef.defaultMessage,
-      fontFamily: ALERT_DEFAULTS.TYPOGRAPHY.FONT_FAMILY,
-      fontWeight: ALERT_DEFAULTS.TYPOGRAPHY.FONT_WEIGHT,
-      fontSize: ALERT_DEFAULTS.TYPOGRAPHY.FONT_SIZE,
-      textAlign: ALERT_DEFAULTS.TYPOGRAPHY.TEXT_ALIGN as 'left' | 'center' | 'right' | 'justify',
-      textColor: ALERT_DEFAULTS.COLORS.TEXT,
-      highlightColor: ALERT_DEFAULTS.COLORS.HIGHLIGHT,
-      textShadow: true,
-      imageScale: ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
-      imageVolume: ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
-      soundVolume: ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,
-      active: true,
-    };
-  }
+  handleCreateVariant = async (): Promise<void> => {
+    console.log('[Editor] handleCreateVariant called');
 
-  /**
-   * Handles the creation of a new alert variant.
-   * Creates a new variant with defaults, saves to DB, and selects it.
-   */
-  async handleCreateVariant(): Promise<void> {
-    // Determine which alert type to create based on current selection or schema
     const type = this.expandedSection || 
       (this.schema && this.schema.length > 0 ? this.schema[0].id : '');
     const schemaDef = this.schema?.find(s => s.id === type) || this.schema?.[0];
     
-    if (!schemaDef) return;
+    console.log('[Editor] handleCreateVariant - type:', type, 'schemaDef:', schemaDef);
     
-    // Create and save the new variant
-    const newVariant: AlertVariant = this.createNewVariantData(type, schemaDef);
-    await dbManager.saveVariant(newVariant);
+    if (!schemaDef) {
+      console.warn('[Editor] handleCreateVariant: no schemaDef found for type', type);
+      return;
+    }
     
-    // Clear local cache and refresh the variants list
-    this._localVariants = [];
-    this._variantsTask.run();
-    this.selectedVariantId = newVariant.id;
+    try {
+      const newVariant: AlertVariant = this.createNewVariantData(type, schemaDef);
+      console.log('[Editor] handleCreateVariant - newVariant:', newVariant);
+      await dbManager.saveVariant(newVariant);
+      
+      // Optimistic update: show new variant immediately without waiting for task
+      const currentVariants = this.variants;
+      this._localVariants = [...currentVariants, newVariant];
+      this.selectedVariantId = newVariant.id;
+      
+      // Auto-expand the section so the new variant is visible
+      if (this.expandedSection !== type) {
+        this.expandedSection = type;
+      }
+      
+      // Refresh from DB in background
+      this._variantsTask.run();
+      dbManager.getVariants(this.boxId).then((freshVariants) => {
+        if (freshVariants && freshVariants.length > 0) {
+          this._localVariants = freshVariants;
+        }
+      }).catch(err => console.warn('[Editor] Background refresh failed:', err));
+    } catch (err) {
+      console.error('[Editor] handleCreateVariant failed:', err);
+    }
   }
 
   /**
    * Updates a variant's properties in the database.
-   * Maintains local state for immediate UI feedback.
-   * 
-   * @param updates - Partial variant object with properties to update
-   * @param variants - Current list of variants
    */
-  async handlePropertyChange(updates: Partial<AlertVariant>, _variants: AlertVariant[]): Promise<void> {
+  handlePropertyChange = async (updates: Partial<AlertVariant>, _variants: AlertVariant[]): Promise<void> => {
     if (!this.selectedVariantId) return;
     
-    // Use the computed variants list
     const variants = this.variants;
     const variant = variants.find(v => v.id === this.selectedVariantId);
     if (!variant) return;
     
     const updated = { ...variant, ...updates };
-    await dbManager.saveVariant(updated);
+
+    try {
+      await dbManager.saveVariant(updated);
+    } catch (err) {
+      console.error('[Editor] handlePropertyChange: saveVariant failed:', err);
+      return;
+    }
     
-    // Update local state - creates new array reference to trigger Lit reactivity
     this._localVariants = variants.map(v => v.id === this.selectedVariantId ? updated : v);
     
-    // Auto-save to backend to keep standalone preview up to date
     this.handleGetPreviewUrl().catch(err => console.error('Auto-save to backend failed:', err));
   }
 
   /**
-   * Creates a copy of an existing variant with a new ID and "(Copy)" suffix.
-   * 
-   * @param variant - The variant to duplicate
+   * Duplicates an existing variant.
    */
-  async handleDuplicateVariant(id: string): Promise<void> {
-    const variant = await dbManager.getVariantById(id);
-    if (!variant) return;
+  handleDuplicateVariant = async (id: string): Promise<void> => {
+    try {
+      const variant = await dbManager.getVariantById(id);
+      if (!variant) return;
 
-    const newVariant = duplicateAlertVariant(variant, { name: `${variant.name} (copy)` });
-    
-    await dbManager.saveVariant(newVariant);
-    this._localVariants = [];
-    this.selectedVariantId = newVariant.id;
-    this._variantsTask.run();
+      const newVariant = duplicateAlertVariant(variant, { name: `${variant.name} (copy)` });
+
+      await dbManager.saveVariant(newVariant);
+      
+      // Optimistic update
+      const currentVariants = this.variants;
+      this._localVariants = [...currentVariants, newVariant];
+      this.selectedVariantId = newVariant.id;
+      
+      // Refresh from DB in background
+      this._variantsTask.run();
+      dbManager.getVariants(this.boxId).then((freshVariants) => {
+        if (freshVariants && freshVariants.length > 0) {
+          this._localVariants = freshVariants;
+        }
+      }).catch(err => console.warn('[Editor] Background refresh after duplicate failed:', err));
+    } catch (err) {
+      console.error('[Editor] handleDuplicateVariant failed:', err);
+    }
   }
 
   /**
-   * Delete variant from IndexedDB
+   * Deletes a variant from the database.
    */
-  async handleDeleteVariant(idOrEvent: string | CustomEvent): Promise<void> {
+  handleDeleteVariant = async (idOrEvent: string | CustomEvent): Promise<void> => {
     const id = typeof idOrEvent === 'string' ? idOrEvent : idOrEvent.detail;
     if (!id) return;
 
@@ -576,87 +516,40 @@ export class AppEditor extends LitElement {
   }
 
   // =============================================================================
-  // Event Handlers - Section Change
+  // Event Handlers (arrow functions for correct `this` binding)
   // =============================================================================
 
-  /**
-   * Handles changes to the expanded section in the left sidebar.
-   * @param e - Custom event containing the new section ID
-   */
-  private _handleSectionChange(e: CustomEvent): void {
+  private _handleSectionChange = (e: CustomEvent): void => {
     this.expandedSection = e.detail;
   }
 
-  // =============================================================================
-  // Event Handlers - Variant Selection
-  // =============================================================================
-
-  /**
-   * Handles variant selection from the sidebar.
-   * @param e - Custom event containing the selected variant ID
-   */
-  private _handleVariantSelect(e: CustomEvent): void {
+  private _handleVariantSelect = (e: CustomEvent): void => {
     this.selectedVariantId = e.detail;
   }
 
-  /**
-   * Toggles the randomize mode for variant selection.
-   */
-  private _handleRandomizeToggle(): void {
+  private _handleRandomizeToggle = (): void => {
     this.randomize = !this.randomize;
   }
 
-  // =============================================================================
-  // Event Handlers - Preview Configuration
-  // =============================================================================
-
-  /**
-   * Handles changes to the preview width.
-   * @param e - Custom event containing the new width value
-   */
-  private _handlePreviewWidthChange(e: CustomEvent): void {
+  private _handlePreviewWidthChange = (e: CustomEvent): void => {
     this.previewWidth = e.detail;
   }
 
-  /**
-   * Handles changes to the preview height.
-   * @param e - Custom event containing the new height value
-   */
-  private _handlePreviewHeightChange(e: CustomEvent): void {
+  private _handlePreviewHeightChange = (e: CustomEvent): void => {
     this.previewHeight = e.detail;
   }
 
-  /**
-   * Handles changes to the preview background color.
-   * @param e - Custom event containing the new background color
-   */
-  private _handlePreviewBgChange(e: CustomEvent): void {
+  private _handlePreviewBgChange = (e: CustomEvent): void => {
     this.previewBgColor = e.detail;
   }
 
-  /**
-   * Handles WebSocket alert events from the preview iframe
-   */
-  private _handleWsAlert(e: CustomEvent): void {
+  private _handleWsAlert = (e: CustomEvent): void => {
     console.log('[Editor] WS Alert received:', e.detail);
-    // Potentially update UI or log based on alert
   }
 
-  // =============================================================================
-  // Event Handlers - Property Panel Changes
-  // =============================================================================
-
-  /**
-   * Handles property changes from the right sidebar panels.
-   * Processes both new animation config format and legacy single config fields.
-   * 
-   * @param e - Custom event containing the field name and new value
-   * @param variants - Current list of variants
-   */
-  private _handlePropertyPanelChange(e: CustomEvent, variants: AlertVariant[]): void {
+  private _handlePropertyPanelChange = (e: CustomEvent, variants: AlertVariant[]): void => {
     const { field, value } = e.detail;
     
-    // Handle combined animation configs (new format from AnimationPanel)
     if (field === 'animationConfigs' && value && typeof value === 'object') {
       const { entrance, exit } = value as AnimationConfigs;
       this.handlePropertyChange({ 
@@ -666,20 +559,15 @@ export class AppEditor extends LitElement {
       return;
     }
 
-    // Handle legacy animation fields
     if (field === 'animationIn' || field === 'animationOut') {
       this.handlePropertyChange({ [field]: value }, variants);
       return;
     }
     
-    // Handle simple field updates
     this.handlePropertyChange({ [field]: value }, variants);
   }
 
-  /**
-   * Handles WebSocket connection state changes from the preview iframe
-   */
-  private _handleWsConnectionChange(e: CustomEvent): void {
+  private _handleWsConnectionChange = (e: CustomEvent): void => {
     const { state, type } = e.detail;
     if (type === 'websocket') {
       this.isWsConnected = state === 'connected';
@@ -687,32 +575,19 @@ export class AppEditor extends LitElement {
     }
   }
 
-  // =============================================================================
-  // Event Handlers - Media Library
-  // =============================================================================
-
-  /**
-   * Opens the media library for a specific type.
-   * @param type - Which media library to show ('image' or 'sound')
-   */
-  private _handleOpenMediaLibrary(type: MediaLibraryType): void {
+  private _handleOpenMediaLibrary = (type: MediaLibraryType): void => {
     this.showMediaLibrary = type;
   }
 
-  /**
-   * Handles media selection from the media library.
-   * @param e - Custom event containing the selected media URL and name
-   */
-  private _handleMediaSelect(e: CustomEvent<{ url: string; name: string }>): void {
+  private _handleMediaSelect = (e: CustomEvent<{ url: string; name: string }>): void => {
     const { url, name } = e.detail;
     
-    // Get current variants
-    const variants = this._variantsTask.value || [];
+    // Use computed variants (not stale _variantsTask.value)
+    const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
     
     if (!variant) return;
     
-    // Update the appropriate field based on which library was open
     if (this.showMediaLibrary === 'image') {
       this.handlePropertyChange({ 
         imageUrl: url,
@@ -728,31 +603,19 @@ export class AppEditor extends LitElement {
     this.showMediaLibrary = null;
   }
 
-  /**
-   * Closes the media library without selecting.
-   */
-  private _handleMediaClose(): void {
+  private _handleMediaClose = (): void => {
     this.showMediaLibrary = null;
   }
 
-  // =============================================================================
-  // Event Handlers - Right Sidebar Panel
-  // =============================================================================
-
-  /**
-   * Handles panel changes in the right sidebar.
-   * @param e - Custom event containing the panel name
-   */
-  private _handleRightPanelChange(e: CustomEvent): void {
+  private _handleRightPanelChange = (e: CustomEvent): void => {
     this.rightExpandedSection = e.detail;
   }
 
   // =============================================================================
-  // Render Methods
+  // Render
   // =============================================================================
 
   render() {
-    // Use the computed variants list
     const variants = this.variants;
     
     return html`
