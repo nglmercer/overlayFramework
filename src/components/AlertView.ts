@@ -53,6 +53,9 @@ export class AppAlertView extends LitElement {
   /** Enable debug logging for WS (default: false) */
   @property({ type: Boolean }) wsDebug: boolean = false;
 
+  /** BroadcastChannel name for cross-tab communication */
+  @property({ type: String }) channelName?: string;
+
   /** Current WS connection state (reactive) */
   @state() private connectionState: WsConnectionState = 'disconnected';
 
@@ -67,6 +70,9 @@ export class AppAlertView extends LitElement {
 
   // WebSocket service instance
   private wsService?: WebSocketService;
+
+  // BroadcastChannel for cross-tab communication
+  private broadcastChannel?: BroadcastChannel;
 
   // Unsubscribe functions for WS listeners
   private wsUnsubscribers: (() => void)[] = [];
@@ -146,9 +152,92 @@ export class AppAlertView extends LitElement {
   firstUpdated() {
     this.updateContent();
     
-    // Auto-connect to WS if URL is provided
-    if (this.wsUrl && this.wsAutoConnect) {
+    // Initialize communication - prefer BroadcastChannel if available
+    if (this.channelName) {
+      this.initBroadcastChannel();
+    }
+    
+    // Fall back to WebSocket if no BroadcastChannel or if WS URL is explicitly provided
+    if (!this.broadcastChannel && this.wsUrl && this.wsAutoConnect) {
       this.initWebSocket();
+    }
+  }
+
+  /**
+   * Initialize BroadcastChannel for cross-tab communication
+   */
+  private initBroadcastChannel(): void {
+    if (!this.channelName) return;
+    
+    // Check if BroadcastChannel is supported
+    if (typeof BroadcastChannel === 'undefined') {
+      console.warn('[AlertView] BroadcastChannel not supported, falling back to WebSocket');
+      if (this.wsUrl) {
+        this.initWebSocket();
+      }
+      return;
+    }
+
+    // Cleanup existing channel
+    this.cleanupBroadcastChannel();
+
+    try {
+      this.broadcastChannel = new BroadcastChannel(this.channelName);
+      
+      this.broadcastChannel.onmessage = (event) => {
+        this.handleBroadcastMessage(event.data);
+      };
+      
+      this.connectionState = 'connected';
+      console.log('[AlertView] Connected to BroadcastChannel:', this.channelName);
+      
+      // Dispatch connection event
+      this.dispatchEvent(new CustomEvent('ws-connection-change', {
+        detail: { state: 'connected', type: 'broadcast' },
+        bubbles: true,
+        composed: true,
+      }));
+    } catch (error) {
+      console.error('[AlertView] Failed to create BroadcastChannel:', error);
+      // Fall back to WebSocket
+      if (this.wsUrl) {
+        this.initWebSocket();
+      }
+    }
+  }
+
+  /**
+   * Handle incoming BroadcastChannel message
+   */
+  private handleBroadcastMessage(data: { type: string; eventName?: string; data?: Record<string, string>; timestamp?: number }): void {
+    if (data.type === 'alert') {
+      const eventData = data.data || {};
+      const event = {
+        type: 'alert',
+        eventName: data.eventName || '',
+        data: eventData,
+        timestamp: data.timestamp || Date.now(),
+        id: `bc-${Date.now()}`
+      };
+      
+      this.handleWsAlert(event as WsAlertMessage, eventData);
+      
+      // Dispatch event for external listeners
+      this.dispatchEvent(new CustomEvent('ws-alert', {
+        detail: { event, eventData },
+        bubbles: true,
+        composed: true,
+      }));
+    }
+  }
+
+  /**
+   * Cleanup BroadcastChannel
+   */
+  private cleanupBroadcastChannel(): void {
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+      this.broadcastChannel = undefined;
     }
   }
 
@@ -169,6 +258,7 @@ export class AppAlertView extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.cleanupWebSocket();
+    this.cleanupBroadcastChannel();
     if (this.alertRenderer) {
       this.alertRenderer.destroy();
       this.alertRenderer = undefined;

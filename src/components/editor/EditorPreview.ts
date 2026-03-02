@@ -66,6 +66,13 @@ export class EditorPreview extends LitElement {
       transition: all 0.2s;
     }
     
+    .preview-iframe {
+      border: none;
+      background: transparent;
+      width: 100%;
+      height: 100%;
+    }
+    
     .bg-checker {
       background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%);
       background-size: 24px 24px;
@@ -171,8 +178,10 @@ export class EditorPreview extends LitElement {
   @property({ type: Number }) width = 600;
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
+  @property({ type: Boolean }) useIframe = true;
 
   @query('app-alert-view') private alertView!: AppAlertView;
+  @query('iframe') private iframeRef!: HTMLIFrameElement;
 
   private _localize = new LocalizeController(this);
 
@@ -216,9 +225,56 @@ export class EditorPreview extends LitElement {
 
   // Public method to trigger preview animation - called by parent Editor
   public async playPreview() {
-    if (this.alertView && this.alertView.playPreview) {
+    if (this.useIframe && this.iframeRef) {
+      // Send message to iframe to play preview
+      this.iframeRef.contentWindow?.postMessage({ type: 'play-preview' }, '*');
+    } else if (this.alertView && this.alertView.playPreview) {
       await this.alertView.playPreview();
     }
+  }
+
+  // Generate iframe srcdoc content
+  private _generateIframeContent(): string {
+    if (!this.variant) return '';
+    
+    const variantJson = JSON.stringify(this.variant).replace(/</g, '\\u003c');
+    const eventDataJson = JSON.stringify({ username: 'FlavioliRavioli', amount: '1000', months: '6' }).replace(/</g, '\\u003c');
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background: transparent;
+          }
+        </style>
+      </head>
+      <body>
+        <app-alert-view 
+          id="alertView"
+          .variant="${variantJson}"
+          .eventData="${eventDataJson}"
+        ></app-alert-view>
+        <script>
+          // Listen for messages from parent
+          window.addEventListener('message', async (event) => {
+            if (event.data.type === 'play-preview') {
+              const alertView = document.getElementById('alertView');
+              if (alertView && alertView.playPreview) {
+                await alertView.playPreview();
+              }
+            }
+          });
+        <\/script>
+      </body>
+      </html>
+    `;
   }
 
   render() {
@@ -237,10 +293,19 @@ export class EditorPreview extends LitElement {
               class="preview-canvas ${bgClass}" 
               style="width: ${this.width}px; height: ${this.height}px; background-color: ${bgStyle};"
             >
-              <app-alert-view 
-                .variant="${this.variant}" 
-                .eventData="${{ username: 'FlavioliRavioli', amount: '1000', months: '6' }}"
-              ></app-alert-view>
+              ${this.useIframe ? html`
+                <iframe
+                  class="preview-iframe"
+                  style="width: ${this.width}px; height: ${this.height}px;"
+                  .srcdoc="${this._generateIframeContent()}"
+                  sandbox="allow-scripts allow-same-origin"
+                ></iframe>
+              ` : html`
+                <app-alert-view 
+                  .variant="${this.variant}" 
+                  .eventData="${{ username: 'FlavioliRavioli', amount: '1000', months: '6' }}"
+                ></app-alert-view>
+              `}
             </div>
           </div>
           <div class="preview-footer">

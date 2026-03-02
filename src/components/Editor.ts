@@ -216,6 +216,43 @@ export class AppEditor extends LitElement {
     }
   }
 
+  /**
+   * Called when component properties change.
+   * Auto-generates preview URL when boxId changes.
+   */
+  updated(changedProperties: Map<string, unknown>) {
+    // Auto-generate preview URL when boxId changes or when variants are loaded
+    if (changedProperties.has('boxId') && this.boxId) {
+      // Small delay to ensure variants are loaded
+      setTimeout(() => {
+        this._autoGeneratePreviewUrl();
+      }, 500);
+    }
+  }
+
+  /**
+   * Auto-generate preview URL and notify topbar
+   */
+  private async _autoGeneratePreviewUrl() {
+    const variants = (this._variantsTask?.value || this._localVariants || []);
+    const variant = this.getSelectedVariant(variants);
+    
+    if (!variant) return;
+    
+    try {
+      const url = await this.handleGetPreviewUrl();
+      if (url) {
+        // Get the topbar and update its preview URL
+        const topbar = this.shadowRoot?.querySelector('editor-topbar') as any;
+        if (topbar && topbar.previewUrl !== url) {
+          topbar.previewUrl = url;
+        }
+      }
+    } catch (error) {
+      console.error('Auto-generate preview URL failed:', error);
+    }
+  }
+
   // =============================================================================
   // Public Helper Methods
   // =============================================================================
@@ -249,6 +286,42 @@ export class AppEditor extends LitElement {
     if (this.editorPreview && this.editorPreview.playPreview) {
       this.editorPreview.playPreview();
     }
+  }
+
+  /**
+   * Generates a preview URL for the current overlay by saving data to the backend.
+   */
+  async handleGetPreviewUrl(): Promise<string | null> {
+    if (!this.boxId) return null;
+    
+    // Use local variants state or task value
+    const variants = (this._variantsTask?.value || this._localVariants || []);
+    const variant = this.getSelectedVariant(variants);
+    
+    if (!variant) return null;
+    
+    try {
+      const response = await fetch('http://localhost:3001/webhook/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: this.boxId,
+          data: {
+            variant: variant,
+            preview: true
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        return result.previewUrl;
+      }
+    } catch (error) {
+      console.error('Failed to generate preview URL:', error);
+    }
+    
+    return null;
   }
 
   /**
@@ -558,6 +631,9 @@ export class AppEditor extends LitElement {
         .onBack="${this.onBack}"
         .onPlayPreview="${this.handlePlayPreview}"
         .onSendTestAlert="${this.handleSendTestAlert}"
+        .onGetPreviewUrl="${this.handleGetPreviewUrl}"
+        .boxId="${this.boxId}"
+        .autoPreview="${true}"
       ></editor-topbar>
 
       <div class="workspace custom-scrollbar">
@@ -583,6 +659,7 @@ export class AppEditor extends LitElement {
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
+          .useIframe="${true}"
           @play-preview="${this.handlePlayPreview}"
           @send-test="${this.handleSendTestAlert}"
           @width-change="${this._handlePreviewWidthChange}"

@@ -77,6 +77,13 @@ export class EditorTopbar extends LitElement {
       border-radius: 0.25rem;
       font-size: 0.75rem;
       width: 200px;
+      -webkit-text-security: disc;
+      text-security: disc;
+    }
+
+    .preview-url-input.visible {
+      -webkit-text-security: none;
+      text-security: none;
     }
 
     .btn-copy {
@@ -132,10 +139,21 @@ export class EditorTopbar extends LitElement {
   @property({ type: Function }) onBack: () => void = () => {};
   @property({ type: Function }) onGetPreviewUrl: () => Promise<string | null> = async () => null;
   @property({ type: String }) boxId = '';
+  @property({ type: Boolean }) autoPreview = false;
   @state() private previewUrl = '';
   @state() private showUrlInput = false;
+  @state() private urlVisible = false;
 
   private _localize = new LocalizeController(this);
+
+  firstUpdated() {
+    // Auto-generate preview URL if autoPreview is enabled and boxId is set
+    if (this.autoPreview && this.boxId && this.onGetPreviewUrl) {
+      setTimeout(() => {
+        this._handleGetPreviewUrl();
+      }, 1000); // Small delay to ensure parent is ready
+    }
+  }
 
   private _t(key: string): string {
     return this._localize.t(key);
@@ -147,6 +165,32 @@ export class EditorTopbar extends LitElement {
     this.requestUpdate();
   }
 
+  private async _handleGetPreviewUrl() {
+    try {
+      const url = await this.onGetPreviewUrl();
+      if (url) {
+        this.previewUrl = url;
+      }
+    } catch (error) {
+      console.error('Failed to get preview URL:', error);
+    }
+  }
+
+  private _handleCopyUrl() {
+    if (this.previewUrl) {
+      navigator.clipboard.writeText(this.previewUrl);
+    }
+  }
+
+  private _handleToggleVisibility() {
+    this.urlVisible = !this.urlVisible;
+  }
+
+  private _handleCloseUrl() {
+    this.previewUrl = '';
+    this.urlVisible = false;
+  }
+
   render() {
     return html`
       <div class="topbar">
@@ -155,6 +199,26 @@ export class EditorTopbar extends LitElement {
         </button>
         <div style="font-weight: 700;">${this.title || this._t('app.editor')}</div>
         <div style="display: flex; align-items: center; gap: 1rem;">
+          ${this.previewUrl ? html`
+            <div class="preview-url-container">
+              <input 
+                class="preview-url-input ${this.urlVisible ? 'visible' : ''}" 
+                type="text" 
+                .value="${this.previewUrl}" 
+                readonly
+              />
+              <button class="btn-copy" @click="${this._handleToggleVisibility}">${this.urlVisible ? '🙈' : '👁️'}</button>
+              <button class="btn-copy" @click="${this._handleCopyUrl}">Copy</button>
+              <button class="btn-copy" @click="${this._handleCloseUrl}">✕</button>
+            </div>
+          ` : html`
+            <input
+              class="preview-url-input ${this.urlVisible ? 'visible' : ''}"
+              type="text"
+              placeholder="Generate preview URL..."
+            />
+            <button class="btn-copy" @click="${this._handleToggleVisibility}">${this.urlVisible ? '🙈' : '👁️'}</button>
+          `}
           <select 
             class="locale-select"
             @change="${this._handleLocaleChange}"

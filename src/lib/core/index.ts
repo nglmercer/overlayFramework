@@ -7,6 +7,7 @@
  * The module is organized into:
  * - Schemas and types (from ./utils)
  * - Factory functions (from ./factories)
+ * - API module (from ./api)
  * - Pre-built validators
  * 
  * @module lib/core
@@ -28,6 +29,13 @@ export * from './utils';
 
 // Re-export all from factories
 export * from './factories';
+
+// ============================================================================
+// RE-EXPORT FROM API
+// ============================================================================
+
+// Re-export API module
+export * from './api';
 
 // ============================================================================
 // CONVENIENCE EXPORTS
