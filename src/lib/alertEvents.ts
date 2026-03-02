@@ -25,8 +25,8 @@ import {
   makeValidator,
 } from './core';
 
-// Import constants for default events
-import { PLATFORM_EVENTS } from './constants';
+// Import platform events from centralized registry
+import { PLATFORM_EVENTS } from './core/platform-events';
 
 /**
  * ============================================
@@ -42,7 +42,7 @@ import { PLATFORM_EVENTS } from './constants';
  * Built-in platform event definitions
  * These define the structure of alert events for different platforms
  */
-export const platformEvents: PlatformEventDefinition[] = PLATFORM_EVENTS as unknown as PlatformEventDefinition[];
+export const platformEvents: PlatformEventDefinition[] = Object.values(PLATFORM_EVENTS);
 
 /**
  * Array to hold additional platform-specific event schemas

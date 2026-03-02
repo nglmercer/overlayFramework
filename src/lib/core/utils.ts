@@ -12,6 +12,7 @@
  */
 
 import { z, ZodSchema, ZodError, ZodIssueCode } from 'zod';
+import { PLATFORM_EVENTS, PLATFORM_EVENTS as CENTRALIZED_EVENTS } from './platform-events';
 
 /**
  * ============================================
@@ -117,7 +118,15 @@ export type PlatformEventDefinition = z.infer<typeof PlatformEventDefinitionSche
  */
 
 // Supported event types in the system
-export const EventTypeSchema = z.enum(['seguimientos', 'suscripciones', 'bits']);
+export const EventTypeSchema = z.enum([
+  'seguimientos', 
+  'suscripciones', 
+  'bits',
+  'kick_chat',
+  'tiktok_chat',
+  'tiktok_gift',
+  'tiktok_social'
+]);
 export type EventType = z.infer<typeof EventTypeSchema>;
 
 /**
@@ -485,55 +494,21 @@ export function createPartialSchema<T extends z.ZodObject<z.ZodRawShape>>(
  */
 
 // Default schemas map for the framework
-export const defaultSchemas: Map<string, SchemaDefinition> = new Map([
-  [
-    'seguimientos',
+export const defaultSchemas: Map<EventType, SchemaDefinition> = new Map(
+  Object.entries(PLATFORM_EVENTS).map(([id, event]) => [
+    id as EventType,
     {
-      $id: '#seguimientos',
-      eventType: 'seguimientos',
-      label: 'Seguimientos',
-      conditionLabel: 'Cualquier nuevo seguimiento',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-      ],
-      defaultMessage: '¡{username} acaba de seguir!',
-      requiredFields: ['username'],
-      optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
+      $id: `#${id}`,
+      eventType: id as EventType,
+      label: event.label,
+      conditionLabel: event.conditionLabel,
+      variables: event.variables,
+      defaultMessage: event.defaultMessage,
+      requiredFields: event.requiredFields,
+      optionalFields: event.optionalFields,
     },
-  ],
-  [
-    'suscripciones',
-    {
-      $id: '#suscripciones',
-      eventType: 'suscripciones',
-      label: 'Suscripciones',
-      conditionLabel: 'Cualquier nueva suscripción',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'months', description: 'Meses suscrito' },
-      ],
-      defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-      requiredFields: ['username', 'months'],
-      optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
-    },
-  ],
-  [
-    'bits',
-    {
-      $id: '#bits',
-      eventType: 'bits',
-      label: 'Bits',
-      conditionLabel: 'Cualquier donación de bits',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'amount', description: 'Cantidad de bits' },
-      ],
-      defaultMessage: '¡{username} ha donado {amount} bits!',
-      requiredFields: ['username', 'amount'],
-      optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
-    },
-  ],
-]);
+  ])
+);
 
 /**
  * Get a default schema by event type
@@ -542,7 +517,7 @@ export const defaultSchemas: Map<string, SchemaDefinition> = new Map([
  * @returns Schema definition or undefined if not found
  */
 export function getDefaultSchema(eventType: string): SchemaDefinition | undefined {
-  return defaultSchemas.get(eventType);
+  return defaultSchemas.get(eventType as EventType);
 }
 
 /**

@@ -1,0 +1,19 @@
+{
+  "id": "9226d039-f734-4011-afbe-1c42ff341999",
+  "chatroom_id": 4398608,
+  "content": "se duplicó?",
+  "type": "message",
+  "created_at": "2026-02-27T05:03:28+00:00",
+  "sender": {
+    "id": 27778555,
+    "username": "Da_3z5",
+    "slug": "da-3z5",
+    "identity": {
+      "color": "#00CCB3",
+      "badges": []
+    }
+  },
+  "metadata": {
+    "message_ref": "1772168607226"
+  }
+}

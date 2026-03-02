@@ -1,0 +1,71 @@
+{
+  "giftId": 5655,
+  "repeatCount": 1,
+  "repeatEnd": true,
+  "groupId": "1770526291877",
+  "userIdentity": {
+    "isGiftGiverOfAnchor": true,
+    "isFollowerOfAnchor": true
+  },
+  "userId": "7016162964630668294",
+  "secUid": "MS4wLjABAAAAfBE-PMkRvz-bahuDrv0nbF9ekI6yk4ua9hcLCq3SgH3b78tjr_BSuCeEhZMYP77u",
+  "uniqueId": "al_x106",
+  "nickname": "Alex",
+  "profilePictureUrl": "https://picsum.photos/id/237/200/300",
+  "followRole": 0,
+  "userBadges": [
+    {
+      "type": "privilege",
+      "privilegeId": "7138381176787490596",
+      "level": 4,
+      "badgeSceneType": 8
+    },
+    {
+      "type": "privilege",
+      "privilegeId": "7196929090442513157",
+      "level": 1,
+      "badgeSceneType": 10
+    }
+  ],
+  "userSceneTypes": [
+    8,
+    10
+  ],
+  "userDetails": {
+    "createTime": "0",
+    "bioDescription": "",
+    "profilePictureUrls": [
+      "https://picsum.photos/200",
+      "https://picsum.photos/300"
+    ]
+  },
+  "followInfo": {
+    "followingCount": 145,
+    "followerCount": 77,
+    "followStatus": 0,
+    "pushStatus": 0
+  },
+  "isModerator": false,
+  "isNewGifter": false,
+  "isSubscriber": false,
+  "topGifterRank": null,
+  "gifterLevel": 4,
+  "teamMemberLevel": 1,
+  "msgId": "7604352102655707920",
+  "createTime": "1770526295728",
+  "displayType": "webcast_aweme_gift_send_messageNew",
+  "label": "{0:user} sent {1:gift} × {2:string}",
+  "gift": {
+    "gift_id": 5655,
+    "repeat_count": 1,
+    "repeat_end": 1,
+    "gift_type": 1
+  },
+  "describe": "Sent Rose",
+  "giftType": 1,
+  "diamondCount": 1,
+  "giftName": "Rose",
+  "giftPictureUrl": "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.png",
+  "timestamp": 1770526295728,
+  "receiverUserId": "6967462872889639941"
+}

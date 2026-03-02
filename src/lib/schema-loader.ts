@@ -1,5 +1,3 @@
-import variantSchemas from '../schemas/variant-schemas.json';
-
 /**
  * Schema Loader Module
  * 
@@ -19,6 +17,7 @@ import {
   EventType,
   SchemaDefinition,
   SchemaDefinitionSchema,
+  defaultSchemas,
 } from './core';
 
 export interface LifecycleHooks {
@@ -33,51 +32,7 @@ export type SchemaMap = Map<EventType, SchemaDefinition>;
  * Default schema definitions extracted from core
  * Uses the built-in schemas from lib/core/utils.ts
  */
-const defaultSchemas: SchemaMap = (() => {
-  const map = new Map<EventType, SchemaDefinition>();
-  
-  // Add default schemas from core
-  map.set('seguimientos', {
-    $id: '#seguimientos',
-    eventType: 'seguimientos',
-    label: 'Seguimientos',
-    conditionLabel: 'Cualquier nuevo seguimiento',
-    variables: [{ name: 'username', description: 'Nombre del usuario' }],
-    defaultMessage: '¡{username} acaba de seguir!',
-    requiredFields: ['username'],
-    optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
-  });
-  
-  map.set('suscripciones', {
-    $id: '#suscripciones',
-    eventType: 'suscripciones',
-    label: 'Suscripciones',
-    conditionLabel: 'Cualquier nueva suscripción',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'months', description: 'Meses suscrito' },
-    ],
-    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-    requiredFields: ['username', 'months'],
-    optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
-  });
-  
-  map.set('bits', {
-    $id: '#bits',
-    eventType: 'bits',
-    label: 'Bits',
-    conditionLabel: 'Cualquier donación de bits',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'amount', description: 'Cantidad de bits' },
-    ],
-    defaultMessage: '¡{username} ha donado {amount} bits!',
-    requiredFields: ['username', 'amount'],
-    optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
-  });
-  
-  return map;
-})();
+// Removed redundant defaultSchemas, using core/utils.ts exports
 
 class SchemaLoader {
   private schemas: SchemaMap = new Map();

@@ -8,6 +8,7 @@ import { Renderer } from './renderer';
 import { mediaRegistry } from './mediaRegistry';
 import { formatUnit } from './renderer/utils';
 import { AnimationConfig, AnimationType as NewAnimationType, Direction, Easing } from '../schemas/animation-schemas';
+import { ALERT_DEFAULTS } from '../lib/constants';
 
 // Animation types supported by the system
 export type AnimationType = 
@@ -101,46 +102,7 @@ export const defaultAlertConfig: AlertConfig = {
   containerHeight: 600,
 };
 
-// =============================================================================
-// ALERT DEFAULTS (imported from constants logic)
-// =============================================================================
-
-const ALERT_DEFAULTS = {
-  ANIMATION: {
-    IN: 'fade-in' as AnimationType,
-    OUT: 'fade-out' as AnimationType,
-  },
-  ANIMATION_DURATION: 1,
-  DURATION: 10,
-  LAYOUT: 'text-below' as AlertLayout,
-  COLORS: {
-    BG: '#000000',
-    TEXT: '#FFFFFF',
-    HIGHLIGHT: '#9146FF',
-  },
-  OPACITY: {
-    BG: 0,
-  },
-  SPACING: {
-    PADDING: 16,
-    ITEM: 16,
-  },
-  TYPOGRAPHY: {
-    FONT_FAMILY: 'Roboto, sans-serif',
-    FONT_WEIGHT: 'normal',
-    FONT_SIZE: 24,
-    TEXT_ALIGN: 'center' as const,
-  },
-  MEDIA: {
-    IMAGE_SCALE: 50,
-    IMAGE_VOLUME: 50,
-    SOUND_VOLUME: 50,
-  },
-  BOX: {
-    ROUNDED: true,
-    SHADOW: false,
-  },
-} as const;
+// ALERT_DEFAULTS are now imported from src/lib/constants.ts
 
 /**
  * Options for creating AlertConfig
@@ -578,7 +540,7 @@ export class AlertRenderer {
    * Generate CSS animation string from AnimationConfig
    */
   private _generateAnimationCSS(config: AnimationConfig): string {
-    const duration = (config.duration || 0.3);
+    const duration = (config.duration > 10 ? config.duration / 1000 : config.duration) || 0.3;
     const easing = this._convertEasing(config.easing);
     
     // Build the animation name based on type, direction, and effect

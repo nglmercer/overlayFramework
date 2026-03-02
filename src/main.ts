@@ -3,7 +3,7 @@ import { html, LitElement } from 'lit';
 import { Component, state } from './litcomponents';
 import { provide } from '@lit/context';
 import { platformSchemaContext } from './context/schemaContext';
-import { twitchEventsSchema } from './lib/twitchEvents';
+import { platformEvents } from './lib/alertEvents';
 import { loadSchemas, schemaLoader, SchemaMap, LifecycleHooks } from './lib/schema-loader';
 import { initializeFramework, cleanupFramework } from './lib/index';
 import { patchAllGlobals } from './lib/dialog';
@@ -12,53 +12,8 @@ import { getLocale, setLocale, LocalizeController } from './locales/localization
 import { discoverServices } from './lib/config';
 
 // Define custom schemas map
-const customSchemas: SchemaMap = new Map([
-  [
-    'seguimientos',
-    {
-      $id: '#seguimientos',
-      eventType: 'seguimientos',
-      label: 'Seguimientos',
-      conditionLabel: 'Cualquier nuevo seguimiento',
-      variables: [{ name: 'username', description: 'Nombre del usuario' }],
-      defaultMessage: '¡{username} acaba de seguir!',
-      requiredFields: ['username'],
-      optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
-    },
-  ],
-  [
-    'suscripciones',
-    {
-      $id: '#suscripciones',
-      eventType: 'suscripciones',
-      label: 'Suscripciones',
-      conditionLabel: 'Cualquier nueva suscripción',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'months', description: 'Meses suscrito' },
-      ],
-      defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-      requiredFields: ['username', 'months'],
-      optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
-    },
-  ],
-  [
-    'bits',
-    {
-      $id: '#bits',
-      eventType: 'bits',
-      label: 'Bits',
-      conditionLabel: 'Cualquier donación de bits',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'amount', description: 'Cantidad de bits' },
-      ],
-      defaultMessage: '¡{username} ha donado {amount} bits!',
-      requiredFields: ['username', 'amount'],
-      optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
-    },
-  ],
-]);
+// No custom schemas needed, using centralized PLATFORM_EVENTS from core
+const customSchemas: SchemaMap = new Map();
 
 // Define lifecycle hooks
 const lifecycleHooks: LifecycleHooks = {
@@ -79,7 +34,7 @@ export class MainApp extends LitElement {
   @state() private currentBoxId: string = '';
 
   @provide({ context: platformSchemaContext })
-  schema = twitchEventsSchema;
+  schema = platformEvents;
 
   protected createRenderRoot() {
     return this; // Disable shadow DOM so global CSS applies

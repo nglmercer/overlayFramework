@@ -97,14 +97,14 @@ export type {
 export {
   DB,
   ALERT_DEFAULTS,
-  EVENT_DEFAULTS,
-  PLATFORM_EVENTS,
   CONFIG,
   ENVIRONMENT,
   DIALOG,
   COLORS,
   FILE_TYPES,
 } from './constants';
+
+export { PLATFORM_EVENTS } from './core/platform-events';
 
 export type {
   FactoryOptions,
@@ -212,11 +212,7 @@ export {
   renderTask,
 } from './task-controllers';
 
-// ============================================
-// TWITCH EVENTS MODULE
-// ============================================
-
-export { twitchEventsSchema } from './twitchEvents';
+// All platform events are now centralized in core/platform-events
 
 // ============================================
 // CONTEXT EXPORTS

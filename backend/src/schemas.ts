@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import { PLATFORM_EVENTS } from '../../src/lib/core/platform-events';
 
 // ============================================================================
 // EVENT SCHEMA DEFINITIONS (dynamic registry)
@@ -40,41 +41,16 @@ export type EventSchemaDefinition = z.infer<typeof EventSchemaDefinition>;
 const eventSchemas = new Map<string, EventSchemaDefinition>();
 
 // Built-in event schemas
-const BUILTIN_EVENTS: EventSchemaDefinition[] = [
-  {
-    id: 'seguimientos',
-    label: 'Seguimientos',
-    conditionLabel: 'Cualquier nuevo seguimiento',
-    requiredFields: ['username'],
-    optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
-    defaultMessage: '¡{username} acaba de seguir!',
-    variables: [{ name: 'username', description: 'Nombre del usuario' }],
-  },
-  {
-    id: 'suscripciones',
-    label: 'Suscripciones',
-    conditionLabel: 'Cualquier nueva suscripción',
-    requiredFields: ['username', 'months'],
-    optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
-    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'months', description: 'Meses suscrito' },
-    ],
-  },
-  {
-    id: 'bits',
-    label: 'Bits',
-    conditionLabel: 'Cualquier donación de bits',
-    requiredFields: ['username', 'amount'],
-    optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
-    defaultMessage: '¡{username} ha donado {amount} bits!',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'amount', description: 'Cantidad de bits' },
-    ],
-  },
-];
+// Built-in event schemas derived from centralized registry
+const BUILTIN_EVENTS: EventSchemaDefinition[] = Object.values(PLATFORM_EVENTS).map(event => ({
+  id: event.id,
+  label: event.label,
+  conditionLabel: event.conditionLabel,
+  requiredFields: event.requiredFields,
+  optionalFields: event.optionalFields,
+  defaultMessage: event.defaultMessage,
+  variables: event.variables,
+}));
 
 // Initialize built-in schemas
 for (const schema of BUILTIN_EVENTS) {

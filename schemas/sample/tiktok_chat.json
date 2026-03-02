@@ -1,0 +1,35 @@
+{
+  "emotes": [],
+  "comment": "ola",
+  "userIdentity": {},
+  "userId": "7499695764282983432",
+  "secUid": "MS4wLjABAAAAYFYq-2zakOqy8LVyPozFir5AVktfRBsVh14jYRKuXhc8_tl06Ahpzq8AZa-C2miZ",
+  "uniqueId": "blizsd",
+  "nickname": "?",
+  "profilePictureUrl": "https://picsum.photos/200",
+  "followRole": 0,
+  "userBadges": [],
+  "userSceneTypes": [],
+  "userDetails": {
+    "createTime": "0",
+    "bioDescription": "",
+    "profilePictureUrls": [
+      "https://picsum.photos/200",
+      "https://picsum.photos/300"
+    ]
+  },
+  "followInfo": {
+    "followingCount": 9,
+    "followerCount": 14,
+    "followStatus": 0,
+    "pushStatus": 0
+  },
+  "isModerator": false,
+  "isNewGifter": false,
+  "isSubscriber": false,
+  "topGifterRank": null,
+  "gifterLevel": 0,
+  "teamMemberLevel": 0,
+  "msgId": "7604377608269318919",
+  "createTime": "1770532145400"
+}

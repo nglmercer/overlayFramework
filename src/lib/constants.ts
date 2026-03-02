@@ -115,37 +115,7 @@ export const ALERT_DEFAULTS = {
  * Default values by event type.
  */
 
-export const EVENT_DEFAULTS: Record<string, {
-  name: string;
-  message: string;
-  highlightColor: string;
-  variables: Array<{ name: string; description: string }>;
-}> = {
-  seguimientos: {
-    name: 'Seguimiento Variant',
-    message: '¡{username} acaba de seguir!',
-    highlightColor: '#9146FF',
-    variables: [{ name: 'username', description: 'Nombre del usuario' }],
-  },
-  suscripciones: {
-    name: 'Suscripción Variant',
-    message: '¡{username} se ha suscrito por {months} meses!',
-    highlightColor: '#00FF00',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'months', description: 'Meses suscrito' },
-    ],
-  },
-  bits: {
-    name: 'Bits Variant',
-    message: '¡{username} ha donado {amount} bits!',
-    highlightColor: '#FF0000',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'amount', description: 'Cantidad de bits' },
-    ],
-  },
-} as const;
+// Removed redundant EVENT_DEFAULTS, using centralized PLATFORM_EVENTS
 
 /**
  * ============================================
@@ -155,35 +125,7 @@ export const EVENT_DEFAULTS: Record<string, {
  * Built-in platform event definitions.
  */
 
-export const PLATFORM_EVENTS = [
-  {
-    id: 'seguimientos',
-    label: 'Seguimientos',
-    conditionLabel: 'Cualquier nuevo seguimiento',
-    variables: [{ name: 'username', description: 'Nombre del usuario' }],
-    defaultMessage: '¡{username} acaba de seguir!',
-  },
-  {
-    id: 'suscripciones',
-    label: 'Suscripciones',
-    conditionLabel: 'Cualquier nueva suscripción',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'months', description: 'Meses suscrito' },
-    ],
-    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-  },
-  {
-    id: 'bits',
-    label: 'Bits',
-    conditionLabel: 'Cualquier donación de bits',
-    variables: [
-      { name: 'username', description: 'Nombre del usuario' },
-      { name: 'amount', description: 'Cantidad de bits' },
-    ],
-    defaultMessage: '¡{username} ha donado {amount} bits!',
-  },
-] as const;
+// Removed redundant PLATFORM_EVENTS, using centralized PLATFORM_EVENTS
 
 /**
  * ============================================
@@ -354,8 +296,6 @@ export const FILE_TYPES = {
 export default {
   DB,
   ALERT_DEFAULTS,
-  EVENT_DEFAULTS,
-  PLATFORM_EVENTS,
   CONFIG,
   ENVIRONMENT,
   DIALOG,

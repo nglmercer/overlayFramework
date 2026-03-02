@@ -1,0 +1,44 @@
+{
+  "userId": "7569642671078654994",
+  "secUid": "MS4wLjABAAAA4RlD5GVCqzVbuVZgApifzYeGiZAGbi48S_If07ReZ-cJ8bBUSSRlkxtQcU0Ij--c",
+  "uniqueId": "springmc02",
+  "nickname": "Spring",
+  "profilePictureUrl": "https://picsum.photos/id/237/200/300",
+  "followRole": 0,
+  "userBadges": [
+    {
+      "type": "image",
+      "badgeSceneType": 6,
+      "displayType": 1,
+      "url": "https://picsum.photos/id/237/200/300"
+    }
+  ],
+  "userSceneTypes": [
+    6,
+    6
+  ],
+  "userDetails": {
+    "createTime": "0",
+    "bioDescription": "",
+    "profilePictureUrls": [
+      "https://picsum.photos/200",
+      "https://picsum.photos/300"
+    ]
+  },
+  "followInfo": {
+    "followingCount": 73,
+    "followerCount": 43,
+    "followStatus": 0,
+    "pushStatus": 0
+  },
+  "isModerator": false,
+  "isNewGifter": false,
+  "isSubscriber": false,
+  "topGifterRank": null,
+  "gifterLevel": 0,
+  "teamMemberLevel": 0,
+  "msgId": "7604355230310451975",
+  "createTime": "1770526923503",
+  "displayType": "pm_main_follow_message_viewer_2",
+  "label": "{0:user} followed the LIVE creator"
+}

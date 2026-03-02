@@ -39,9 +39,10 @@ import {
   makeValidator,
   mergeDefaults,
 } from './utils';
+import { PLATFORM_EVENTS } from './platform-events';
 
 // Import constants
-import { ALERT_DEFAULTS, EVENT_DEFAULTS, ENVIRONMENT } from '../constants';
+import { ALERT_DEFAULTS, ENVIRONMENT } from '../constants';
 
 /**
  * ============================================
@@ -182,8 +183,12 @@ export function createAlertVariant(options: VariantFactoryOptions): AlertVariant
   const { boxId, eventType, throwOnError, context } = options;
   const data = options.data || {};
   
-  // Start with event-type-specific defaults
-  const eventDefaults = eventType ? EVENT_DEFAULTS[eventType] || {} : {};
+  // Start with event-type-specific defaults from centralized registry
+  const platformEvent = eventType ? PLATFORM_EVENTS[eventType] : undefined;
+  const eventDefaults = platformEvent ? {
+    name: `${platformEvent.label} Variant`,
+    message: platformEvent.defaultMessage,
+  } : {};
   
   // Merge: explicit data > event defaults > schema defaults
   const mergedData = {
