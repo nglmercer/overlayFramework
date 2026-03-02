@@ -112,6 +112,55 @@ export const appConfig: AppConfig = createAppConfig({
   },
 });
 
+// Cache for discovered services
+let discoveredServicesCache: Record<string, string> = {};
+
+/**
+ * ============================================
+ * SERVICE DISCOVERY
+ * ============================================
+ */
+
+/**
+ * Fetches the list of known services from the backend discovery endpoint
+ */
+export async function discoverServices(): Promise<Record<string, string>> {
+  try {
+    const backendUrl = getBackendUrl();
+    const response = await fetch(`${backendUrl}/webhook/discovery`);
+    if (response.ok) {
+      const data = await response.json();
+      discoveredServicesCache = data.services || {};
+      return discoveredServicesCache;
+    }
+  } catch (err) {
+    console.warn('[Discovery] Failed to fetch services:', err);
+  }
+  return discoveredServicesCache;
+}
+
+/**
+ * Resolves a service URL by name
+ * Priority: 
+ * 1. Matching VITE_{NAME}_URL env var
+ * 2. Discovered service from backend
+ * 3. Default fallback (current backend)
+ */
+export function resolveServiceUrl(name: string, fallback?: string): string {
+  // Try environment variable first (e.g., VITE_MEDIA_SERVICE_URL)
+  const envKey = `VITE_${name.toUpperCase().replace(/-/g, '_')}_URL`;
+  const envValue = getEnvValue(envKey, '');
+  if (envValue) return envValue;
+
+  // Try discovered services
+  if (discoveredServicesCache[name]) {
+    return discoveredServicesCache[name];
+  }
+
+  // Fallback to provided default or backend URL
+  return fallback || getBackendUrl();
+}
+
 /**
  * ============================================
  * BACKEND URL HELPERS

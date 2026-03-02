@@ -10,8 +10,8 @@ import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 // Register sub-component
 import './media-library/MediaLibraryItem';
 import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
-import { getBackendUrl } from '../lib/config';
-const apiClient = createBrowserClient({ baseUrl: getBackendUrl() });
+import { resolveServiceUrl } from '../lib/config';
+import type { MediaUploadClient } from '../api/client';
 
 @Component('media-library')
 export class MediaLibrary extends LitElement {
@@ -42,6 +42,7 @@ export class MediaLibrary extends LitElement {
   @state() private error: string | null = null;
   @state() private quotaUsed = 0;
   @state() private quotaMax = 0;
+  private apiClient!: MediaUploadClient;
 
   /**
    * ID of the item whose audio is currently playing.
@@ -60,6 +61,8 @@ export class MediaLibrary extends LitElement {
   // ── Lifecycle ───────────────────────────────────────────────────────────
   connectedCallback() {
     super.connectedCallback();
+    const baseUrl = resolveServiceUrl('media-upload-api');
+    this.apiClient = createBrowserClient({ baseUrl });
     this.fetchFiles();
     this.fetchQuota();
   }
@@ -78,7 +81,7 @@ export class MediaLibrary extends LitElement {
   }
 
   private _syncSelectionFromUrl() {
-    const match = this.items.find(f => apiClient.files.getUrl(f) === this.selectedUrl);
+    const match = this.items.find(f => this.apiClient.files.getUrl(f) === this.selectedUrl);
     if (!match) return;
 
     this.selectedItem = match.id;
@@ -97,7 +100,7 @@ export class MediaLibrary extends LitElement {
     this.loading = true;
     this.error = null;
     try {
-      const result = await apiClient.files.list({ pageSize: 100 });
+      const result = await this.apiClient.files.list({ pageSize: 100 });
       this.items = result.files.filter(f => {
         if (!f.mimeType) return false;
         if (this.type === 'image') {
@@ -122,7 +125,7 @@ export class MediaLibrary extends LitElement {
 
   private async fetchQuota() {
     try {
-      const q = await apiClient.quota.get();
+      const q = await this.apiClient.quota.get();
       this.quotaUsed = q.usedStorage;
       this.quotaMax  = q.maxStorage;
     } catch {
@@ -143,7 +146,7 @@ export class MediaLibrary extends LitElement {
       else if (file.type.startsWith('video/')) category = FileCategory.VIDEO;
       else if (file.type.startsWith('audio/')) category = FileCategory.AUDIO;
 
-      await apiClient.files.upload(file, { category });
+      await this.apiClient.files.upload(file, { category });
       await Promise.all([this.fetchFiles(), this.fetchQuota()]);
     } catch (err: any) {
       alert('Error uploading: ' + err.message);
@@ -157,7 +160,7 @@ export class MediaLibrary extends LitElement {
     const confirmed = await confirm('Are you sure you want to delete this file?');
     if (!confirmed) return;
     try {
-      await apiClient.files.delete(e.detail.id);
+      await this.apiClient.files.delete(e.detail.id);
       if (this.selectedItem === e.detail.id) this.selectedItem = null;
       if (this.playingItemId === e.detail.id) this.playingItemId = null;
       await Promise.all([this.fetchFiles(), this.fetchQuota()]);
@@ -203,7 +206,7 @@ export class MediaLibrary extends LitElement {
     const selected = this.items.find(i => i.id === this.selectedItem);
     if (!selected) return;
 
-    const url  = apiClient.files.getUrl(selected);
+    const url  = this.apiClient.files.getUrl(selected);
     const name = selected.originalName;
 
     // Support both callback prop and event-based integration

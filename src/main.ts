@@ -9,6 +9,7 @@ import { initializeFramework, cleanupFramework } from './lib/index';
 import { patchAllGlobals } from './lib/dialog';
 import './components/index';
 import { getLocale, setLocale, LocalizeController } from './locales/localization';
+import { discoverServices } from './lib/config';
 
 // Define custom schemas map
 const customSchemas: SchemaMap = new Map([
@@ -88,6 +89,7 @@ export class MainApp extends LitElement {
     // Initialize framework and load schemas
     await initializeFramework();
     await loadSchemas(customSchemas, lifecycleHooks);
+    await discoverServices();
     
     // Patch global alert/confirm/prompt to use custom dialog
     patchAllGlobals();

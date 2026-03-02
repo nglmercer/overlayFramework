@@ -24,6 +24,7 @@ import { wsManager, type WsClientData } from './ws-manager';
 import { handleHttpRequest } from './webhook';
 import { initializeStorage } from './storage';
 import { join } from 'path';
+import { Discovery } from '../discover';
 
 // ============================================================================
 // CONFIGURATION
@@ -32,6 +33,10 @@ import { join } from 'path';
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 const HEARTBEAT_MS = parseInt(process.env.HEARTBEAT_MS ?? '30000', 10);
 const DIST_PATH = join(import.meta.dir, '../../dist');
+
+// Initialize Discovery
+const discovery = new Discovery({ name: 'overlay-service', version: '1.0.0' }, PORT);
+await discovery.start();
 
 // ============================================================================
 // SERVER
@@ -73,6 +78,46 @@ const server = Bun.serve<WsClientData>({
       const indexFile = Bun.file(join(DIST_PATH, 'index.html'));
       if (await indexFile.exists()) {
         return new Response(indexFile);
+      }
+    }
+
+    // Handle /webhook/discovery endpoint
+    if (url.pathname === '/webhook/discovery') {
+      const services = discovery.getInternalRegistry().getAll();
+      const serviceMap = services.reduce((acc, s) => {
+        if (s.name) {
+          acc[s.name] = `${s.schema}://${s.ip}:${s.port}`;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      
+      return new Response(JSON.stringify({
+        services: serviceMap,
+        self: { id: discovery.getServiceId(), name: 'overlay-service' }
+      }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    // Proxy /api requests to the media-upload-api if found
+    if (url.pathname.startsWith('/api')) {
+      const mediaServices = discovery.filter({ name: 'media-upload-api' });
+      if (mediaServices.length > 0) {
+        const target = mediaServices[0];
+        const proxyUrl = `${target.schema}://${target.ip}:${target.port}${url.pathname}${url.search}`;
+        console.log(`[Proxy] Routing ${url.pathname} to media-upload-api at ${target.ip}:${target.port}`);
+        
+        try {
+           const proxyResp = await fetch(proxyUrl, {
+             method: req.method,
+             headers: req.headers,
+             body: req.method !== 'GET' ? await req.blob() : undefined
+           });
+           return proxyResp;
+        } catch (err) {
+           console.error(`[Proxy] Failed to route to media-upload-api:`, err);
+           return new Response('Proxy Error', { status: 502 });
+        }
       }
     }
 

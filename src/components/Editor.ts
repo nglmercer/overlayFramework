@@ -643,17 +643,11 @@ export class AppEditor extends LitElement {
   // =============================================================================
 
   /**
-   * Opens the media library for image selection.
+   * Opens the media library for a specific type.
+   * @param type - Which media library to show ('image' or 'sound')
    */
-  private _handleOpenImageLibrary(): void {
-    this.showMediaLibrary = 'image';
-  }
-
-  /**
-   * Opens the media library for sound selection.
-   */
-  private _handleOpenSoundLibrary(): void {
-    this.showMediaLibrary = 'sound';
+  private _handleOpenMediaLibrary(type: MediaLibraryType): void {
+    this.showMediaLibrary = type;
   }
 
   /**
@@ -760,8 +754,7 @@ export class AppEditor extends LitElement {
           .activePanel="${this.rightExpandedSection}"
           @panel-change="${this._handleRightPanelChange}"
           @property-change="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
-          @open-image-library="${this._handleOpenImageLibrary}"
-          @open-sound-library="${this._handleOpenSoundLibrary}"
+          @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
         ></editor-right-sidebar>
       </div>
 
