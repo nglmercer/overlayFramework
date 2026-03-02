@@ -190,6 +190,13 @@ if (root) {
     currentVariant = variant;
     currentEventData = eventData || {};
     
+    console.log('[Preview] updateVariant called:', { 
+      variantType: variant?.type, 
+      message: variant?.message,
+      imageUrl: variant?.imageUrl,
+      eventData: currentEventData 
+    });
+    
     try {
       // Convert variant to AlertConfig using the core library
       const config = variantToAlertConfig(
@@ -197,6 +204,11 @@ if (root) {
         currentEventData,
         { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
       );
+      
+      console.log('[Preview] AlertConfig created:', { 
+        message: config.message, 
+        imageUrl: config.imageUrl 
+      });
       
       alertRenderer.render(config);
       console.log('[Preview] Variant rendered');
@@ -279,12 +291,8 @@ if (root) {
     if (type === 'UPDATE_VARIANT') {
       // Update variant and optional event data
       const { variant, eventData } = payload as VariantPayload;
+      console.log('[Preview] UPDATE_VARIANT received:', { variantType: variant?.type, eventData });
       updateVariant(variant, eventData);
-    }
-    else if (type === 'UPDATE_TEMPLATE') {
-      // Legacy support - treat as variant update
-      // This expects Template format, but we need AlertVariant format
-      console.warn('[Preview] UPDATE_TEMPLATE is deprecated, use UPDATE_VARIANT');
     }
     else if (type === 'play-preview') {
       // Trigger animation replay if we have a variant
