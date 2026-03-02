@@ -583,6 +583,8 @@ export class AppEditor extends LitElement {
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
+          @play-preview="${this.handlePlayPreview}"
+          @send-test="${this.handleSendTestAlert}"
           @width-change="${this._handlePreviewWidthChange}"
           @height-change="${this._handlePreviewHeightChange}"
           @bg-change="${this._handlePreviewBgChange}"

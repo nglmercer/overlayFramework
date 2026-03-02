@@ -14,7 +14,6 @@ import {
   AlertRenderer, 
   AlertConfig, 
   createAlertRenderer, 
-  injectAnimationStyles,
   variantToAlertConfig,
   createAlertConfig,
 } from '../core/alertRenderer';
@@ -46,11 +45,6 @@ export class AppAlertView extends LitElement {
 
     .hidden { opacity: 0; pointer-events: none; }
   `;
-
-  // Initialize animation styles on first load
-  static initializeStyles() {
-    injectAnimationStyles();
-  }
 
   // Method exposed to editor to trigger the preview logic
   public async playPreview() {
@@ -90,8 +84,6 @@ export class AppAlertView extends LitElement {
   }
 
   firstUpdated() {
-    // Initialize animation styles
-    (this.constructor as typeof AppAlertView).initializeStyles();
     this.updateContent();
   }
 
