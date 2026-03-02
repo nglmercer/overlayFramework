@@ -181,12 +181,26 @@ export const WsAckMessageSchema = z.object({
 export type WsAckMessage = z.infer<typeof WsAckMessageSchema>;
 
 /**
+ * Client → Server: alert message (sent by preview to broadcast to all clients)
+ */
+export const WsClientAlertMessageSchema = z.object({
+  type: z.literal('alert'),
+  eventName: z.string().min(1),
+  data: z.record(z.string(), z.string()).default({}),
+  timestamp: z.number().optional().default(() => Date.now()),
+  id: z.string().optional(),
+});
+
+export type WsClientAlertMessage = z.infer<typeof WsClientAlertMessageSchema>;
+
+/**
  * Union: all messages the server can RECEIVE from clients
  */
 export const WsClientMessageSchema = z.discriminatedUnion('type', [
   WsReadyMessageSchema,
   WsAckMessageSchema,
   WsPongSchema,
+  WsClientAlertMessageSchema,
 ]);
 
 export type WsClientMessage = z.infer<typeof WsClientMessageSchema>;

@@ -91,6 +91,18 @@ const server = Bun.serve<WsClientData>({
         case 'pong':
           wsManager.recordPong(ws);
           break;
+        
+        case 'alert':
+          // Client sent an alert - broadcast to all other clients
+          console.log(`[WS] Alert from ${ws.data.clientId ?? ws.data.id}: ${message.eventName}`);
+          wsManager.broadcastAlert({
+            type: 'alert',
+            eventName: message.eventName,
+            data: message.data,
+            timestamp: Date.now(),
+            id: message.id,
+          });
+          break;
       }
     },
 

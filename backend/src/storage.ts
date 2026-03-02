@@ -19,7 +19,7 @@ import { join, dirname, basename, extname } from 'path';
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? './data';
 const STORAGE_FILE = process.env.STORAGE_FILE ?? './data/storage.json';
-const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:3000/preview';
+const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:5173/preview.html';
 
 // ============================================================================
 // FILE ADAPTER (Per-key files)

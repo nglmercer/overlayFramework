@@ -5,7 +5,7 @@ import {
   variantToAlertConfig,
   createAlertConfig,
 } from './core/alertRenderer';
-import { getWebSocketUrl } from './lib/config';
+import { getWebSocketUrl, getBackendUrl } from './lib/config';
 import { CONFIG } from './lib/constants';
 
 // Types for messages
@@ -243,23 +243,34 @@ if (root) {
    * Send a test alert via BroadcastChannel (for cross-tab testing)
    */
   function sendTestAlert(eventName: string, data: Record<string, string>): void {
+    // Create alert message
+    const message: AlertMessage = {
+      type: 'alert',
+      eventName,
+      data,
+      timestamp: Date.now(),
+      id: `test-${Date.now()}`
+    };
+    
+    // Send via BroadcastChannel (same browser tabs)
     if (broadcastChannel) {
-      broadcastChannel.postMessage({
-        type: 'alert',
-        eventName,
-        data,
-        timestamp: Date.now(),
-      });
+      broadcastChannel.postMessage(message);
       console.log('[Preview] Test alert sent via BroadcastChannel:', eventName);
-    } else {
-      // Direct handling if no BroadcastChannel
-      handleAlertMessage({
+    }
+    
+    // Also handle locally
+    handleAlertMessage(message);
+    
+    // Send via WebSocket to backend for broadcasting to all clients
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
         type: 'alert',
         eventName,
         data,
         timestamp: Date.now(),
-        id: `test-${Date.now()}`
-      });
+        id: `ws-test-${Date.now()}`
+      }));
+      console.log('[Preview] Test alert sent via WebSocket:', eventName);
     }
   }
 
@@ -326,6 +337,35 @@ if (root) {
   // Initialize connections
   initBroadcastChannel();
   connectWebSocket();
+
+  // Check if opened standalone with overlay ID in query params
+  async function loadOverlayFromParams(): Promise<void> {
+    const urlParams = new URLSearchParams(window.location.search);
+    const overlayId = urlParams.get('id');
+    
+    if (overlayId) {
+      console.log('[Preview] Loading overlay from params:', overlayId);
+      try {
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/webhook/overlay/${overlayId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && data.data.variant) {
+            updateVariant(data.data.variant);
+            // Auto-play preview when loaded from params
+            setTimeout(() => playPreview(), 500);
+          }
+        } else {
+          console.error('[Preview] Failed to load overlay:', response.status);
+        }
+      } catch (error) {
+        console.error('[Preview] Error loading overlay:', error);
+      }
+    }
+  }
+
+  // Load overlay if ID provided in URL (for OBS/external usage)
+  loadOverlayFromParams();
 
   // Signal that we are ready
   window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');

@@ -186,10 +186,6 @@ export class EditorTopbar extends LitElement {
     this.urlVisible = !this.urlVisible;
   }
 
-  private _handleCloseUrl() {
-    this.previewUrl = '';
-    this.urlVisible = false;
-  }
 
   render() {
     return html`
@@ -209,7 +205,6 @@ export class EditorTopbar extends LitElement {
               />
               <button class="btn-copy" @click="${this._handleToggleVisibility}">${this.urlVisible ? '🙈' : '👁️'}</button>
               <button class="btn-copy" @click="${this._handleCopyUrl}">Copy</button>
-              <button class="btn-copy" @click="${this._handleCloseUrl}">✕</button>
             </div>
           ` : html`
             <input
