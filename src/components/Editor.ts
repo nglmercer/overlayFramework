@@ -1,3 +1,12 @@
+/**
+ * Editor Component
+ * 
+ * Main Editor component for the overlay framework.
+ * Manages variant selection, preview, and property editing.
+ * 
+ * @module components/Editor
+ */
+
 import { html, css, LitElement } from 'lit';
 import { Component, property, state, query } from '../litcomponents';
 import { dbManager, AlertVariant } from '../lib/db';
@@ -18,6 +27,9 @@ import { EditorTopbar } from './editor/EditorTopbar';
 import { EditorLeftSidebar } from './editor/EditorLeftSidebar';
 import { EditorPreview } from './editor/EditorPreview';
 import { EditorRightSidebar } from './editor/EditorRightSidebar';
+
+// Import constants
+import { CONFIG, ALERT_DEFAULTS, COLORS } from '../lib/constants';
 
 // =============================================================================
 // Type Definitions
@@ -40,49 +52,6 @@ type MediaLibraryType = 'image' | 'sound';
 interface AnimationConfigs {
   entrance: AnimationConfig;
   exit: AnimationConfig;
-}
-
-// =============================================================================
-// Constants - Magic values extracted for maintainability
-// =============================================================================
-
-namespace Constants {
-  /** Default panel to show on right sidebar */
-  export const DEFAULT_RIGHT_PANEL = 'general';
-  
-  /** Default variant name when creating new variants */
-  export const NEW_VARIANT_NAME = 'Nueva variante';
-  
-  /** Default animation durations in seconds */
-  export const DEFAULT_ANIMATION_DURATION = 1;
-  
-  /** Default variant properties */
-  export const DEFAULT_DURATION = 10;
-  export const DEFAULT_PADDING = 16;
-  export const DEFAULT_SPACING = 16;
-  export const DEFAULT_FONT_SIZE = 24;
-  export const DEFAULT_IMAGE_SCALE = 50;
-  export const DEFAULT_IMAGE_VOLUME = 50;
-  export const DEFAULT_SOUND_VOLUME = 50;
-  
-  /** Legacy animation preset names */
-  export const DEFAULT_ANIMATION_IN = 'fade-in';
-  export const DEFAULT_ANIMATION_OUT = 'fade-out';
-  
-  /** Default text and styling values */
-  export const DEFAULT_FONT_FAMILY = 'Roboto';
-  export const DEFAULT_FONT_WEIGHT = 'Normal';
-  export const DEFAULT_TEXT_ALIGN = 'center';
-  export const DEFAULT_TEXT_COLOR = '#FFFFFF';
-  export const DEFAULT_HIGHLIGHT_COLOR = '#9146FF';
-  export const DEFAULT_BG_COLOR = '#000000';
-  
-  /** Preview dimensions */
-  export const DEFAULT_PREVIEW_SIZE = 600;
-  
-  /** Responsive breakpoints */
-  export const BREAKPOINT_TABLET = 1024;
-  export const BREAKPOINT_MOBILE = 768;
 }
 
 // =============================================================================
@@ -137,7 +106,7 @@ export class AppEditor extends LitElement {
   @state() private expandedSection: string | null = null;
   
   /** Currently active panel in the right sidebar */
-  @state() private rightExpandedSection: string | null = Constants.DEFAULT_RIGHT_PANEL;
+  @state() private rightExpandedSection: string | null = 'general';
   
   /** Whether random variant selection is enabled */
   @state() private randomize = false;
@@ -152,10 +121,10 @@ export class AppEditor extends LitElement {
   @state() private _localVariants: AlertVariant[] = [];
   
   /** Preview canvas width in pixels */
-  @state() private previewWidth = Constants.DEFAULT_PREVIEW_SIZE;
+  @state() private previewWidth = CONFIG.PREVIEW.DEFAULT_SIZE;
   
   /** Preview canvas height in pixels */
-  @state() private previewHeight = Constants.DEFAULT_PREVIEW_SIZE;
+  @state() private previewHeight = CONFIG.PREVIEW.DEFAULT_SIZE;
   
   /** Preview canvas background color */
   @state() private previewBgColor: BgColor = 'transparent';
@@ -308,34 +277,34 @@ export class AppEditor extends LitElement {
       id: crypto.randomUUID(),
       boxId: this.boxId,
       type,
-      name: Constants.NEW_VARIANT_NAME,
+      name: ALERT_DEFAULTS.NAME,
       condition: schemaDef.conditionLabel,
-      duration: Constants.DEFAULT_DURATION,
-      animationIn: Constants.DEFAULT_ANIMATION_IN,
-      animationOut: Constants.DEFAULT_ANIMATION_OUT,
-      animationInDuration: Constants.DEFAULT_ANIMATION_DURATION,
-      animationOutDuration: Constants.DEFAULT_ANIMATION_DURATION,
+      duration: ALERT_DEFAULTS.DURATION,
+      animationIn: ALERT_DEFAULTS.ANIMATION.IN,
+      animationOut: ALERT_DEFAULTS.ANIMATION.OUT,
+      animationInDuration: ALERT_DEFAULTS.ANIMATION_DURATION,
+      animationOutDuration: ALERT_DEFAULTS.ANIMATION_DURATION,
       entranceAnimation: { ...defaultAnimationConfig },
       exitAnimation: { ...defaultAnimationConfig },
-      layout: 'text-below',
-      bgColor: Constants.DEFAULT_BG_COLOR,
-      bgOpacity: 0,
-      padding: Constants.DEFAULT_PADDING,
-      spacing: Constants.DEFAULT_SPACING,
-      rounded: true,
-      shadow: false,
+      layout: ALERT_DEFAULTS.LAYOUT,
+      bgColor: ALERT_DEFAULTS.COLORS.BG,
+      bgOpacity: ALERT_DEFAULTS.OPACITY.BG,
+      padding: ALERT_DEFAULTS.SPACING.PADDING,
+      spacing: ALERT_DEFAULTS.SPACING.ITEM,
+      rounded: ALERT_DEFAULTS.BOX.ROUNDED,
+      shadow: ALERT_DEFAULTS.BOX.SHADOW,
       message: schemaDef.defaultMessage,
-      fontFamily: Constants.DEFAULT_FONT_FAMILY,
-      fontWeight: Constants.DEFAULT_FONT_WEIGHT,
-      fontSize: Constants.DEFAULT_FONT_SIZE,
-      textAlign: Constants.DEFAULT_TEXT_ALIGN as 'left' | 'center' | 'right' | 'justify',
-      textColor: Constants.DEFAULT_TEXT_COLOR,
-      highlightColor: Constants.DEFAULT_HIGHLIGHT_COLOR,
+      fontFamily: ALERT_DEFAULTS.TYPOGRAPHY.FONT_FAMILY,
+      fontWeight: ALERT_DEFAULTS.TYPOGRAPHY.FONT_WEIGHT,
+      fontSize: ALERT_DEFAULTS.TYPOGRAPHY.FONT_SIZE,
+      textAlign: ALERT_DEFAULTS.TYPOGRAPHY.TEXT_ALIGN as 'left' | 'center' | 'right' | 'justify',
+      textColor: ALERT_DEFAULTS.COLORS.TEXT,
+      highlightColor: ALERT_DEFAULTS.COLORS.HIGHLIGHT,
       textShadow: true,
       ttsEnabled: false,
-      imageScale: Constants.DEFAULT_IMAGE_SCALE,
-      imageVolume: Constants.DEFAULT_IMAGE_VOLUME,
-      soundVolume: Constants.DEFAULT_SOUND_VOLUME,
+      imageScale: ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
+      imageVolume: ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
+      soundVolume: ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,
       active: true,
     };
   }
@@ -498,14 +467,14 @@ export class AppEditor extends LitElement {
       }, variants);
       return;
     }
-    
-    // Handle legacy single animation config
-    if (field === 'entranceAnimation' || field === 'exitAnimation') {
+
+    // Handle legacy animation fields
+    if (field === 'animationIn' || field === 'animationOut') {
       this.handlePropertyChange({ [field]: value }, variants);
       return;
     }
     
-    // Handle all other property changes
+    // Handle simple field updates
     this.handlePropertyChange({ [field]: value }, variants);
   }
 
@@ -514,137 +483,129 @@ export class AppEditor extends LitElement {
   // =============================================================================
 
   /**
-   * Opens the media library in the specified mode.
-   * @param type - The type of media to select (image or sound)
+   * Opens the media library for image selection.
    */
-  private _handleOpenMediaLibrary(type: MediaLibraryType): void {
-    this.showMediaLibrary = type;
+  private _handleOpenImageLibrary(): void {
+    this.showMediaLibrary = 'image';
+  }
+
+  /**
+   * Opens the media library for sound selection.
+   */
+  private _handleOpenSoundLibrary(): void {
+    this.showMediaLibrary = 'sound';
   }
 
   /**
    * Handles media selection from the media library.
-   * Updates the selected variant with the selected media URL.
-   * 
-   * @param url - The URL of the selected media
-   * @param name - The name/label of the selected media
+   * @param e - Custom event containing the selected media URL and name
    */
-  private async _handleMediaSelect(url: string, name: string): Promise<void> {
-    const variants = this._variantsTask.value ?? [];
+  private _handleMediaSelect(e: CustomEvent<{ url: string; name: string }>): void {
+    const { url, name } = e.detail;
     
+    // Get current variants
+    const variants = this._variantsTask.value || [];
+    const variant = this.getSelectedVariant(variants);
+    
+    if (!variant) return;
+    
+    // Update the appropriate field based on which library was open
     if (this.showMediaLibrary === 'image') {
-      await this.handlePropertyChange({ imageUrl: url, imageName: name }, variants);
-    } else {
-      await this.handlePropertyChange({ soundUrl: url, soundName: name }, variants);
+      this.handlePropertyChange({ 
+        imageUrl: url,
+        imageName: name 
+      }, variants);
+    } else if (this.showMediaLibrary === 'sound') {
+      this.handlePropertyChange({ 
+        soundUrl: url,
+        soundName: name 
+      }, variants);
     }
     
     this.showMediaLibrary = null;
   }
 
-  // =============================================================================
-  // Rendering Methods
-  // =============================================================================
-
   /**
-   * Main render method that handles the async variants loading state.
-   * Uses Lit's Task pattern to render different UI for loading/error states.
+   * Closes the media library without selecting.
    */
-  render() {
-    return this._variantsTask.render({
-      // Loading state
-      pending: () => html`
-        <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
-          ${this.t('preview.loading')}
-        </div>
-      `,
-      
-      // Success state - render the editor
-      complete: (variants) => {
-        // Sync local variants state on initial load
-        if (this._localVariants.length === 0 && variants.length > 0) {
-          this._localVariants = [...variants];
-        }
-        return this.renderEditor(variants);
-      },
-      
-      // Error state
-      error: (e) => html`
-        <div style="padding: 2rem;">
-          ${this.t('errors.loadFailed')}
-        </div>
-      `
-    });
+  private _handleMediaClose(): void {
+    this.showMediaLibrary = null;
   }
 
-  /**
-   * Renders the main editor layout with all sub-components.
-   * 
-   * @param variants - Array of all available alert variants
-   */
-  renderEditor(variants: AlertVariant[]) {
-    // Use local variants state if available for immediate updates
-    const currentVariants = this._localVariants.length > 0 ? this._localVariants : variants;
-    const variant = this.getSelectedVariant(currentVariants);
+  // =============================================================================
+  // Event Handlers - Right Sidebar Panel
+  // =============================================================================
 
+  /**
+   * Handles panel changes in the right sidebar.
+   * @param e - Custom event containing the panel name
+   */
+  private _handleRightPanelChange(e: CustomEvent): void {
+    this.rightExpandedSection = e.detail;
+  }
+
+  // =============================================================================
+  // Render Methods
+  // =============================================================================
+
+  render() {
+    // Get variants from task
+    const variants = this._variantsTask.value || [];
+    
     return html`
-      <!-- Top navigation bar -->
+      <!-- Top Bar -->
       <editor-topbar
-        .title="${this.t('app.editor')}"
         .onBack="${this.onBack}"
+        .onPlayPreview="${this.handlePlayPreview}"
+        .onSendTestAlert="${this.handleSendTestAlert}"
       ></editor-topbar>
 
-      <!-- Main workspace area -->
-      <div class="workspace">
-        
-        <!-- Left sidebar: Variant list and alert type selection -->
+      <div class="workspace custom-scrollbar">
+        <!-- Left Sidebar -->
         <editor-left-sidebar
-          class="custom-scrollbar"
-          .variants="${currentVariants}"
           .schema="${this.schema}"
+          .variants="${variants}"
           .selectedVariantId="${this.selectedVariantId}"
           .expandedSection="${this.expandedSection}"
           .randomize="${this.randomize}"
           @section-change="${this._handleSectionChange}"
           @variant-select="${this._handleVariantSelect}"
-          @randomize-toggle="${this._handleRandomizeToggle}"
           @create-variant="${this.handleCreateVariant}"
+          @duplicate-variant="${this.handleDuplicateVariant}"
+          @delete-variant="${this.handleDeleteVariant}"
+          @randomize-toggle="${this._handleRandomizeToggle}"
         ></editor-left-sidebar>
 
-        <!-- Center: Preview canvas -->
+        <!-- Preview Area -->
         <editor-preview
-          .variant="${variant}"
+          .variant="${this.getSelectedVariant(variants)}"
+          .eventData="${{ username: 'Test User', months: '1', amount: '100' }}"
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
-          @play-preview="${this.handlePlayPreview}"
-          @send-test="${this.handleSendTestAlert}"
           @width-change="${this._handlePreviewWidthChange}"
           @height-change="${this._handlePreviewHeightChange}"
           @bg-change="${this._handlePreviewBgChange}"
         ></editor-preview>
 
-        <!-- Right sidebar: Property panels for editing -->
+        <!-- Right Sidebar -->
         <editor-right-sidebar
-          class="custom-scrollbar"
-          .variant="${variant}"
-          .randomize="${this.randomize}"
+          .variant="${this.getSelectedVariant(variants)}"
+          .activePanel="${this.rightExpandedSection}"
+          @panel-change="${this._handleRightPanelChange}"
           @property-change="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
-          @duplicate-variant="${() => variant && this.handleDuplicateVariant(variant)}"
-          @delete-variant="${() => variant && this.handleDeleteVariant(variant.id)}"
-          @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
+          @open-image-library="${this._handleOpenImageLibrary}"
+          @open-sound-library="${this._handleOpenSoundLibrary}"
         ></editor-right-sidebar>
       </div>
 
-      <!-- Media library modal overlay -->
+      <!-- Media Library Modal -->
       ${this.showMediaLibrary ? html`
-        <media-library 
-          .type="${this.showMediaLibrary}"
-          .selectedUrl="${
-            this.showMediaLibrary === 'image'
-              ? (variant?.imageUrl ?? null)
-              : (variant?.soundUrl ?? null)
-          }"
-          .onClose="${() => this.showMediaLibrary = null}"
-          .onSelect="${(url: string, name: string) => this._handleMediaSelect(url, name)}"
+        <media-library
+          type="${this.showMediaLibrary}"
+          .selectedUrl="${this.getSelectedVariant(variants)?.imageUrl || this.getSelectedVariant(variants)?.soundUrl || null}"
+          @media-select="${this._handleMediaSelect}"
+          @media-close="${this._handleMediaClose}"
         ></media-library>
       ` : ''}
     `;

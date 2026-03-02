@@ -101,6 +101,196 @@ export const defaultAlertConfig: AlertConfig = {
   containerHeight: 600,
 };
 
+// =============================================================================
+// ALERT DEFAULTS (imported from constants logic)
+// =============================================================================
+
+const ALERT_DEFAULTS = {
+  ANIMATION: {
+    IN: 'fade-in' as AnimationType,
+    OUT: 'fade-out' as AnimationType,
+  },
+  ANIMATION_DURATION: 1,
+  DURATION: 10,
+  LAYOUT: 'text-below' as AlertLayout,
+  COLORS: {
+    BG: '#000000',
+    TEXT: '#FFFFFF',
+    HIGHLIGHT: '#9146FF',
+  },
+  OPACITY: {
+    BG: 0,
+  },
+  SPACING: {
+    PADDING: 16,
+    ITEM: 16,
+  },
+  TYPOGRAPHY: {
+    FONT_FAMILY: 'Roboto, sans-serif',
+    FONT_WEIGHT: 'normal',
+    FONT_SIZE: 24,
+    TEXT_ALIGN: 'center' as const,
+  },
+  MEDIA: {
+    IMAGE_SCALE: 50,
+    IMAGE_VOLUME: 50,
+    SOUND_VOLUME: 50,
+  },
+  BOX: {
+    ROUNDED: true,
+    SHADOW: false,
+  },
+} as const;
+
+/**
+ * Options for creating AlertConfig
+ */
+export interface AlertConfigOptions {
+  containerWidth?: number;
+  containerHeight?: number;
+}
+
+/**
+ * Create AlertConfig with defaults and optional overrides
+ */
+export function createAlertConfig(
+  overrides: Partial<AlertConfig> = {},
+  options: AlertConfigOptions = {}
+): AlertConfig {
+  return {
+    // Animation
+    animationIn: overrides.animationIn ?? defaultAlertConfig.animationIn,
+    animationOut: overrides.animationOut ?? defaultAlertConfig.animationOut,
+    animationInDuration: overrides.animationInDuration ?? defaultAlertConfig.animationInDuration,
+    animationOutDuration: overrides.animationOutDuration ?? defaultAlertConfig.animationOutDuration,
+    
+    // Animation Schema (new format)
+    entranceAnimation: overrides.entranceAnimation,
+    exitAnimation: overrides.exitAnimation,
+    
+    // Duration & Layout
+    duration: overrides.duration ?? defaultAlertConfig.duration,
+    layout: overrides.layout ?? defaultAlertConfig.layout,
+    
+    // Background
+    bgColor: overrides.bgColor ?? defaultAlertConfig.bgColor,
+    bgOpacity: overrides.bgOpacity ?? defaultAlertConfig.bgOpacity,
+    padding: overrides.padding ?? defaultAlertConfig.padding,
+    spacing: overrides.spacing ?? defaultAlertConfig.spacing,
+    rounded: overrides.rounded ?? defaultAlertConfig.rounded,
+    shadow: overrides.shadow ?? defaultAlertConfig.shadow,
+    
+    // Text
+    message: overrides.message ?? defaultAlertConfig.message,
+    fontFamily: overrides.fontFamily ?? defaultAlertConfig.fontFamily,
+    fontWeight: overrides.fontWeight ?? defaultAlertConfig.fontWeight,
+    fontSize: overrides.fontSize ?? defaultAlertConfig.fontSize,
+    textAlign: overrides.textAlign ?? defaultAlertConfig.textAlign,
+    textColor: overrides.textColor ?? defaultAlertConfig.textColor,
+    highlightColor: overrides.highlightColor ?? defaultAlertConfig.highlightColor,
+    textShadow: overrides.textShadow ?? defaultAlertConfig.textShadow,
+    
+    // Media
+    imageUrl: overrides.imageUrl,
+    imageScale: overrides.imageScale ?? defaultAlertConfig.imageScale,
+    imageVolume: overrides.imageVolume ?? defaultAlertConfig.imageVolume,
+    soundUrl: overrides.soundUrl,
+    soundVolume: overrides.soundVolume ?? defaultAlertConfig.soundVolume,
+    
+    // Event data
+    eventData: overrides.eventData,
+    
+    // Container dimensions
+    containerWidth: options.containerWidth ?? defaultAlertConfig.containerWidth,
+    containerHeight: options.containerHeight ?? defaultAlertConfig.containerHeight,
+  };
+}
+
+/**
+ * AlertVariant type from database (imported from lib/db)
+ * Minimal interface for mapping purposes
+ */
+interface AlertVariantData {
+  animationIn?: string;
+  animationOut?: string;
+  animationInDuration?: number;
+  animationOutDuration?: number;
+  duration?: number;
+  layout?: string;
+  bgColor?: string;
+  bgOpacity?: number;
+  padding?: number;
+  spacing?: number;
+  rounded?: boolean;
+  shadow?: boolean;
+  message?: string;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontSize?: number;
+  textAlign?: string;
+  textColor?: string;
+  highlightColor?: string;
+  textShadow?: boolean;
+  imageUrl?: string;
+  imageScale?: number;
+  imageVolume?: number;
+  soundUrl?: string;
+  soundVolume?: number;
+}
+
+/**
+ * Convert AlertVariant (DB model) to AlertConfig (core config)
+ * This is the canonical mapping function used by components
+ */
+export function variantToAlertConfig(
+  variant: AlertVariantData,
+  eventData: Record<string, string> = {},
+  options: AlertConfigOptions = {}
+): AlertConfig {
+  return createAlertConfig(
+    {
+      // Animation - cast to proper types
+      animationIn: (variant.animationIn as AnimationType) ?? ALERT_DEFAULTS.ANIMATION.IN,
+      animationOut: (variant.animationOut as AnimationType) ?? ALERT_DEFAULTS.ANIMATION.OUT,
+      animationInDuration: variant.animationInDuration ?? ALERT_DEFAULTS.ANIMATION_DURATION,
+      animationOutDuration: variant.animationOutDuration ?? ALERT_DEFAULTS.ANIMATION_DURATION,
+      
+      // Duration & Layout
+      duration: variant.duration ?? ALERT_DEFAULTS.DURATION,
+      layout: (variant.layout as AlertLayout) ?? ALERT_DEFAULTS.LAYOUT,
+      
+      // Background
+      bgColor: variant.bgColor ?? ALERT_DEFAULTS.COLORS.BG,
+      bgOpacity: variant.bgOpacity ?? ALERT_DEFAULTS.OPACITY.BG,
+      padding: variant.padding ?? ALERT_DEFAULTS.SPACING.PADDING,
+      spacing: variant.spacing ?? ALERT_DEFAULTS.SPACING.ITEM,
+      rounded: variant.rounded ?? ALERT_DEFAULTS.BOX.ROUNDED,
+      shadow: variant.shadow ?? ALERT_DEFAULTS.BOX.SHADOW,
+      
+      // Text
+      message: variant.message ?? '',
+      fontFamily: variant.fontFamily ?? ALERT_DEFAULTS.TYPOGRAPHY.FONT_FAMILY,
+      fontWeight: variant.fontWeight ?? ALERT_DEFAULTS.TYPOGRAPHY.FONT_WEIGHT,
+      fontSize: variant.fontSize ?? ALERT_DEFAULTS.TYPOGRAPHY.FONT_SIZE,
+      textAlign: (variant.textAlign as AlertConfig['textAlign']) ?? ALERT_DEFAULTS.TYPOGRAPHY.TEXT_ALIGN,
+      textColor: variant.textColor ?? ALERT_DEFAULTS.COLORS.TEXT,
+      highlightColor: variant.highlightColor ?? ALERT_DEFAULTS.COLORS.HIGHLIGHT,
+      textShadow: variant.textShadow ?? true,
+      
+      // Media
+      imageUrl: variant.imageUrl,
+      imageScale: variant.imageScale ?? ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
+      imageVolume: variant.imageVolume ?? ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
+      soundUrl: variant.soundUrl,
+      soundVolume: variant.soundVolume ?? ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,
+      
+      // Event data for variable replacement
+      eventData,
+    },
+    options
+  );
+}
+
 /**
  * AlertRenderer class - Core alert rendering logic
  * Can be used with any DOM element or framework
