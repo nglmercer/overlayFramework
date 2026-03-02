@@ -1,6 +1,10 @@
 /**
  * Core Module - Index File
- * Exports all core utilities and schemas
+ * 
+ * Exports all core utilities, schemas, and validation functions.
+ * This is the main entry point for accessing framework core functionality.
+ * 
+ * @module lib/core
  */
 
 // Re-export all schemas and types from utils
@@ -10,6 +14,7 @@ export * from './utils';
 export {
   AppConfigSchema,
   EnvironmentSchema,
+  FrameworkConfigSchema,
   EventVariableSchema,
   PlatformEventDefinitionSchema,
   EventTypeSchema,
@@ -22,8 +27,13 @@ export {
   DialogThemeSchema,
   DialogTypeSchema,
   DialogOptionsSchema,
-  FrameworkConfigSchema,
   defaultSchemas,
+  // Helper functions
+  createDefaultAlertVariant,
+  createDefaultAlertBox,
+  getDefaultSchema,
+  getSchemaDefaults,
+  isValid,
 } from './utils';
 
 // Export validation utilities
@@ -31,21 +41,14 @@ export {
   makeValidator,
   validateData,
   mergeDefaults,
-} from './utils';
-
-// Export inferred types
-export type {
-  AppConfig,
-  EventVariable,
-  PlatformEventDefinition,
-  EventType,
-  SchemaDefinition,
-  AlertVariant,
-  AlertBox,
-  TemplateDB,
-  DialogOptions,
-  DialogTheme,
-  DialogType,
-  DialogResult,
-  FrameworkConfig,
+  createPartialSchema,
+  // Pre-built validators
+  validateAppConfig,
+  validateAlertVariant,
+  validateAlertBox,
+  validateTemplate,
+  validatePlatformEvent,
+  validateDialogOptions,
+  // Types
+  type ValidationResult,
 } from './utils';

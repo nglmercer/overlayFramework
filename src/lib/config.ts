@@ -1,7 +1,13 @@
 /**
  * Configuration Module
+ * 
  * Handles application configuration with environment variable resolution
- * and Zod-based validation
+ * and Zod-based validation.
+ * 
+ * Provides:
+ * - Environment variable resolution (Vite and Node.js)
+ * - Type-safe configuration with Zod schemas
+ * - Helper functions for environment detection and URL building
  * 
  * @module lib/config
  */
@@ -11,8 +17,7 @@ import {
   AppConfigSchema, 
   AppConfig,
   EnvironmentSchema,
-  makeValidator,
-  validateData 
+  validateAppConfig
 } from './core';
 
 /**
@@ -57,8 +62,8 @@ function getEnvValue(key: string, fallback: string): string {
  * ============================================
  */
 
-// Pre-built validator
-const validateAppConfig = makeValidator(AppConfigSchema);
+// Use pre-built validator from core
+const validateConfig = validateAppConfig;
 
 /**
  * Application configuration object
@@ -76,20 +81,22 @@ const validateAppConfig = makeValidator(AppConfigSchema);
  * }
  * ```
  */
-const configResult = validateAppConfig({
-  mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
-  baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
-  apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
-  environment: getEnvValue('NODE_ENV', 'development'),
-});
-
-export const appConfig: AppConfig = configResult.success 
-  ? configResult.data 
-  : {
-      mediaUrl: 'http://localhost:3000/media',
-      baseMediaUrl: 'https://cdn.example.com',
-      environment: 'development',
-    };
+export const appConfig: AppConfig = (() => {
+  const result = validateConfig({
+    mediaUrl: getEnvValue('VITE_MEDIA_URL', 'http://localhost:3000/media'),
+    baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', 'https://cdn.example.com'),
+    apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
+    environment: getEnvValue('NODE_ENV', 'development'),
+  });
+  
+  return result.success 
+    ? result.data 
+    : {
+        mediaUrl: 'http://localhost:3000/media',
+        baseMediaUrl: 'https://cdn.example.com',
+        environment: 'development',
+      };
+})();
 
 /**
  * ============================================

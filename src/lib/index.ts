@@ -14,6 +14,7 @@ export {
   // Zod schemas
   AppConfigSchema,
   EnvironmentSchema,
+  FrameworkConfigSchema,
   EventVariableSchema,
   PlatformEventDefinitionSchema,
   EventTypeSchema,
@@ -26,18 +27,34 @@ export {
   DialogThemeSchema,
   DialogTypeSchema,
   DialogOptionsSchema,
-  FrameworkConfigSchema,
   defaultSchemas,
   
   // Validation utilities
   makeValidator,
   validateData,
   mergeDefaults,
+  createPartialSchema,
+  
+  // Pre-built validators
+  validateAppConfig,
+  validateAlertVariant,
+  validateAlertBox,
+  validateTemplate,
+  validatePlatformEvent,
+  validateDialogOptions,
+  
+  // Helper functions
+  createDefaultAlertVariant,
+  createDefaultAlertBox,
+  getDefaultSchema,
+  getSchemaDefaults,
+  isValid,
 } from './core';
 
 // Core types
 export type {
   AppConfig,
+  Environment,
   EventVariable,
   PlatformEventDefinition,
   EventType,
@@ -50,6 +67,9 @@ export type {
   DialogType,
   DialogResult,
   FrameworkConfig,
+  AlertLayout,
+  TextAlign,
+  ValidationResult,
 } from './core';
 
 // ============================================

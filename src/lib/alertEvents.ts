@@ -1,7 +1,13 @@
 /**
  * Alert Events Module
- * Defines platform event types and their variable schemas
- * Used for alert configurations and event handling
+ * 
+ * Defines platform event types and their variable schemas.
+ * Used for alert configurations and event handling.
+ * 
+ * This module provides:
+ * - Built-in platform event definitions (seguimientos, suscripciones, bits)
+ * - Custom event registration
+ * - Event variable extraction and message formatting
  * 
  * @module lib/alertEvents
  */
@@ -11,7 +17,7 @@ import {
   PlatformEventDefinition,
   EventVariableSchema,
   EventVariable,
-  makeValidator
+  validatePlatformEvent
 } from './core';
 
 /**
@@ -24,8 +30,8 @@ import {
  * available variables, and a default message template.
  */
 
-// Pre-built validation function for platform events
-const validatePlatformEvent = makeValidator(PlatformEventDefinitionSchema);
+// Use pre-built validator from core
+// Note: validatePlatformEvent is now exported from core/utils.ts
 
 /**
  * Built-in platform event definitions

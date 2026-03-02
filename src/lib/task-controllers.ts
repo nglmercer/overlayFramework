@@ -1,12 +1,22 @@
 import { Task, TaskStatus } from '@lit/task';
-import { ReactiveControllerHost } from '@lit/reactive-element';
 
 /**
- * @lit/task Integration Utilities
- * Provides async task helpers for use in Lit components
+ * Task Controllers Module
+ * 
+ * Provides async task helpers for use in Lit components.
+ * Built on top of @lit/task for reactive async data loading.
+ * 
+ * This module provides:
+ * - Task configuration helpers for common operations
+ * - Status checking utilities
+ * - Render helpers for task states
+ * 
+ * @module lib/task-controllers
  */
 
-// Re-export for convenience
+/**
+ * Re-export Lit Task for convenience
+ */
 export { Task, TaskStatus };
 
 /**

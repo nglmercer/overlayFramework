@@ -1,26 +1,25 @@
 import variantSchemas from '../schemas/variant-schemas.json';
 
 /**
- * Schema Loader with Lifecycle Hooks
- * Manages loading, reloading, and unloading of variant schemas
- * Supports dynamic schema registration with lifecycle callbacks
+ * Schema Loader Module
+ * 
+ * Manages loading, reloading, and unloading of variant schemas.
+ * Supports dynamic schema registration with lifecycle callbacks.
+ * 
+ * Provides:
+ * - Default schema definitions for built-in event types
+ * - Schema validation with required/optional fields
+ * - Lifecycle hooks for schema changes
+ * - Event data creation with defaults
+ * 
+ * @module lib/schema-loader
  */
 
-export type EventType = 'seguimientos' | 'suscripciones' | 'bits';
-
-export interface SchemaDefinition {
-  $id: string;
-  eventType: EventType;
-  label: string;
-  conditionLabel: string;
-  variables: Array<{
-    name: string;
-    description: string;
-  }>;
-  defaultMessage: string;
-  requiredFields: string[];
-  optionalFields: string[];
-}
+import {
+  EventType,
+  SchemaDefinition,
+  SchemaDefinitionSchema,
+} from './core';
 
 export interface LifecycleHooks {
   onLoad?: (schemas: SchemaMap) => void | Promise<void>;
@@ -31,55 +30,54 @@ export interface LifecycleHooks {
 export type SchemaMap = Map<EventType, SchemaDefinition>;
 
 /**
- * Default schema definitions extracted from JSON
+ * Default schema definitions extracted from core
+ * Uses the built-in schemas from lib/core/utils.ts
  */
-const defaultSchemas: SchemaMap = new Map([
-  [
-    'seguimientos',
-    {
-      $id: '#seguimientos',
-      eventType: 'seguimientos',
-      label: 'Seguimientos',
-      conditionLabel: 'Cualquier nuevo seguimiento',
-      variables: [{ name: 'username', description: 'Nombre del usuario' }],
-      defaultMessage: '¡{username} acaba de seguir!',
-      requiredFields: ['username'],
-      optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
-    },
-  ],
-  [
-    'suscripciones',
-    {
-      $id: '#suscripciones',
-      eventType: 'suscripciones',
-      label: 'Suscripciones',
-      conditionLabel: 'Cualquier nueva suscripción',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'months', description: 'Meses suscrito' },
-      ],
-      defaultMessage: '¡{username} se ha suscrito por {months} meses!',
-      requiredFields: ['username', 'months'],
-      optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
-    },
-  ],
-  [
-    'bits',
-    {
-      $id: '#bits',
-      eventType: 'bits',
-      label: 'Bits',
-      conditionLabel: 'Cualquier donación de bits',
-      variables: [
-        { name: 'username', description: 'Nombre del usuario' },
-        { name: 'amount', description: 'Cantidad de bits' },
-      ],
-      defaultMessage: '¡{username} ha donado {amount} bits!',
-      requiredFields: ['username', 'amount'],
-      optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
-    },
-  ],
-]);
+const defaultSchemas: SchemaMap = (() => {
+  const map = new Map<EventType, SchemaDefinition>();
+  
+  // Add default schemas from core
+  map.set('seguimientos', {
+    $id: '#seguimientos',
+    eventType: 'seguimientos',
+    label: 'Seguimientos',
+    conditionLabel: 'Cualquier nuevo seguimiento',
+    variables: [{ name: 'username', description: 'Nombre del usuario' }],
+    defaultMessage: '¡{username} acaba de seguir!',
+    requiredFields: ['username'],
+    optionalFields: ['followerName', 'isNewFollower', 'timestamp'],
+  });
+  
+  map.set('suscripciones', {
+    $id: '#suscripciones',
+    eventType: 'suscripciones',
+    label: 'Suscripciones',
+    conditionLabel: 'Cualquier nueva suscripción',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'months', description: 'Meses suscrito' },
+    ],
+    defaultMessage: '¡{username} se ha suscrito por {months} meses!',
+    requiredFields: ['username', 'months'],
+    optionalFields: ['tier', 'isGift', 'gifterName', 'message', 'timestamp'],
+  });
+  
+  map.set('bits', {
+    $id: '#bits',
+    eventType: 'bits',
+    label: 'Bits',
+    conditionLabel: 'Cualquier donación de bits',
+    variables: [
+      { name: 'username', description: 'Nombre del usuario' },
+      { name: 'amount', description: 'Cantidad de bits' },
+    ],
+    defaultMessage: '¡{username} ha donado {amount} bits!',
+    requiredFields: ['username', 'amount'],
+    optionalFields: ['totalAmount', 'message', 'isAnonymous', 'timestamp'],
+  });
+  
+  return map;
+})();
 
 class SchemaLoader {
   private schemas: SchemaMap = new Map();
