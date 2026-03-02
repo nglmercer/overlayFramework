@@ -52,8 +52,8 @@ html[data-theme="dark"] {
 }
 
 body {
-  background-color: transparent;
-  color: #fafafa;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   overflow: hidden;
 }

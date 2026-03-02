@@ -70,7 +70,7 @@ function getDialogElement(): import('../components/Dialog').AppDialog {
 export async function alert(
   message: string,
   options?: Partial<DialogOptions>
-): Promise<void> {
+) {
   const dialog = getDialogElement();
   const result = await dialog.open({
     message,
@@ -86,7 +86,7 @@ export async function alert(
   });
   
   // For alert, we just wait for it to close
-  return;
+  return result;
 }
 
 /**
