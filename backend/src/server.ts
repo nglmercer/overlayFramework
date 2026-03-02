@@ -24,7 +24,8 @@ import { wsManager, type WsClientData } from './ws-manager';
 import { handleHttpRequest } from './webhook';
 import { initializeStorage } from './storage';
 import { join } from 'path';
-import { Discovery } from '../discover';
+import { initDiscovery, createDiscoveryShutdownHandler, stopDiscovery } from './discover';
+import type { Discovery } from '../discover';
 
 // ============================================================================
 // CONFIGURATION
@@ -35,8 +36,8 @@ const HEARTBEAT_MS = parseInt(process.env.HEARTBEAT_MS ?? '30000', 10);
 const DIST_PATH = join(import.meta.dir, '../../dist');
 
 // Initialize Discovery
-const discovery = new Discovery({ name: 'overlay-service', version: '1.0.0' }, PORT);
-await discovery.start();
+const discovery = await initDiscovery(PORT);
+const discoveryShutdown = createDiscoveryShutdownHandler(discovery);
 
 // ============================================================================
 // SERVER
@@ -73,8 +74,8 @@ const server = Bun.serve<WsClientData>({
       return new Response(file);
     }
 
-    // SPA Fallback: Default to index.html for non-webhook paths that aren't files
-    if (!url.pathname.startsWith('/webhook')) {
+    // SPA Fallback: Default to index.html for non-webhook paths that aren't files or API
+    if (!url.pathname.startsWith('/webhook') && !url.pathname.startsWith('/api')) {
       const indexFile = Bun.file(join(DIST_PATH, 'index.html'));
       if (await indexFile.exists()) {
         return new Response(indexFile);
@@ -83,7 +84,7 @@ const server = Bun.serve<WsClientData>({
 
     // Handle /webhook/discovery endpoint
     if (url.pathname === '/webhook/discovery') {
-      const services = discovery.getInternalRegistry().getAll();
+      const services = discovery ? discovery.getInternalRegistry().getAll() : [];
       const serviceMap = services.reduce((acc, s) => {
         if (s.name) {
           acc[s.name] = `${s.schema}://${s.ip}:${s.port}`;
@@ -91,21 +92,38 @@ const server = Bun.serve<WsClientData>({
         return acc;
       }, {} as Record<string, string>);
       
+      console.log('[Discovery] Internal Registry:', serviceMap);
+      
+      // Add manually configured services as fallback/override
+      const manualMediaUrl = process.env.MEDIA_UPLOAD_API_URL;
+      if (manualMediaUrl) {
+         serviceMap['media-upload-api'] = manualMediaUrl;
+      }
+      
       return new Response(JSON.stringify({
         services: serviceMap,
-        self: { id: discovery.getServiceId(), name: 'overlay-service' }
+        self: { id: discovery?.getServiceId(), name: 'overlay-service' }
       }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache'
+        }
       });
     }
 
-    // Proxy /api requests to the media-upload-api if found
+    // Proxy /api requests to the media-upload-api
     if (url.pathname.startsWith('/api')) {
-      const mediaServices = discovery.filter({ name: 'media-upload-api' });
-      if (mediaServices.length > 0) {
-        const target = mediaServices[0];
-        const proxyUrl = `${target.schema}://${target.ip}:${target.port}${url.pathname}${url.search}`;
-        console.log(`[Proxy] Routing ${url.pathname} to media-upload-api at ${target.ip}:${target.port}`);
+      const mediaServices = discovery ? discovery.filter({ name: 'media-upload-api' }) : [];
+      const manualMediaUrl = process.env.MEDIA_UPLOAD_API_URL;
+      
+      if (mediaServices.length > 0 || manualMediaUrl) {
+        const target = mediaServices.length > 0 
+          ? `${mediaServices[0].schema}://${mediaServices[0].ip}:${mediaServices[0].port}`
+          : manualMediaUrl!;
+
+        const proxyUrl = `${target}${url.pathname}${url.search}`;
+        console.log(`[Proxy] Routing ${url.pathname} to media-upload-api at ${target}`);
         
         try {
            const proxyResp = await fetch(proxyUrl, {
@@ -116,8 +134,17 @@ const server = Bun.serve<WsClientData>({
            return proxyResp;
         } catch (err) {
            console.error(`[Proxy] Failed to route to media-upload-api:`, err);
-           return new Response('Proxy Error', { status: 502 });
+           return new Response(JSON.stringify({ error: 'Proxy Error', details: String(err) }), { 
+             status: 502,
+             headers: { 'Content-Type': 'application/json' }
+           });
         }
+      } else {
+        console.warn(`[Proxy] No media-upload-api discovered and no MEDIA_UPLOAD_API_URL set`);
+        return new Response(JSON.stringify({ error: 'Service not found', service: 'media-upload-api' }), { 
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
 
@@ -131,7 +158,7 @@ const server = Bun.serve<WsClientData>({
   websocket: {
     /** New client connected */
     open(ws) {
-      console.log("Client connected", ws)
+      console.log("Client connected", ws.data)
       wsManager.addClient(ws);
     },
 
@@ -201,12 +228,14 @@ const heartbeatInterval = setInterval(() => {
 process.on('SIGINT', () => {
   console.log('\n[Server] Shutting down...');
   clearInterval(heartbeatInterval);
+  discoveryShutdown();
   server.stop();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   clearInterval(heartbeatInterval);
+  discoveryShutdown();
   server.stop();
   process.exit(0);
 });
