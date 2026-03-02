@@ -19,7 +19,7 @@ import { LocalizeController } from '../locales/localization';
 import { AnimationConfig, defaultAnimationConfig } from '../schemas/animation-schemas';
 import './FormControls';
 import './MediaLibrary';
-import './AlertView';
+
 import './editor';
 
 // Import editor sub-components
@@ -30,6 +30,7 @@ import { EditorRightSidebar } from './editor/EditorRightSidebar';
 
 // Import constants
 import { CONFIG, ALERT_DEFAULTS, COLORS } from '../lib/constants';
+import { getBackendEndpoint } from '../lib/config';
 
 // =============================================================================
 // Type Definitions
@@ -158,7 +159,6 @@ export class AppEditor extends LitElement {
   
   @query('#file-input') private fileInput!: HTMLInputElement;
   @query('editor-preview') private editorPreview!: EditorPreview;
-  @query('app-alert-view') private alertView!: any;
 
   // ---------------------------------------------------------------------------
   // Styles
@@ -301,7 +301,7 @@ export class AppEditor extends LitElement {
     if (!variant) return null;
     
     try {
-      const response = await fetch('http://localhost:3001/webhook/save', {
+      const response = await fetch(getBackendEndpoint('/webhook/save'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -325,13 +325,44 @@ export class AppEditor extends LitElement {
   }
 
   /**
-   * Dispatches a test alert event and plays the preview.
-   * Used for testing alerts without triggering actual events.
+   * Dispatches a test alert event to WebSocket and plays the preview.
+   * Sends to backend via WebSocket for real testing.
    */
   handleSendTestAlert = (): void => {
-    window.dispatchEvent(new CustomEvent('test-alert', { 
-      detail: { type: 'test' }
-    }));
+    // Get the selected variant to know the event type
+    const variants = (this._variantsTask?.value || this._localVariants || []);
+    const variant = this.getSelectedVariant(variants);
+    
+    if (!variant) {
+      console.warn('[Editor] No variant selected for test alert');
+      this.handlePlayPreview();
+      return;
+    }
+    
+    const eventType = variant.type;
+    
+    // Default test data based on event type
+    const testData: Record<string, string> = {
+      username: 'TestUser',
+      amount: '100',
+      months: '1',
+      message: 'Test Alert!',
+    };
+    
+    // Send test alert to preview iframe via postMessage
+    if (this.editorPreview) {
+      // Access the iframe inside editor-preview and send message
+      const iframe = this.editorPreview.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'send-test-alert',
+          payload: { eventName: eventType, data: testData }
+        }, '*');
+        console.log('[Editor] Test alert sent via iframe:', eventType);
+      }
+    }
+    
+    // Also play local preview
     this.handlePlayPreview();
   }
 
@@ -659,7 +690,6 @@ export class AppEditor extends LitElement {
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
           .bgColor="${this.previewBgColor}"
-          .useIframe="${true}"
           @play-preview="${this.handlePlayPreview}"
           @send-test="${this.handleSendTestAlert}"
           @width-change="${this._handlePreviewWidthChange}"

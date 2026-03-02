@@ -9,9 +9,10 @@
  * - Type-safe configuration with Zod schemas
  * - Helper functions for environment detection and URL building
  * - Factory functions for creating configurations
+ * - Backend URL and WebSocket URL helpers
  * 
  * @module lib/config
- * @version 2.1.0
+ * @version 2.2.0
  */
 
 import { 
@@ -26,6 +27,21 @@ import {
 
 // Import constants
 import { ENVIRONMENT, CONFIG } from './constants';
+
+/**
+ * ============================================
+ * DEFAULT BACKEND CONFIGURATION
+ * ============================================
+ * 
+ * The backend server runs on port 3001 by default.
+ * All frontend requests should go through these URLs.
+ * 
+ * IMPORTANT: For local development, the backend is always at localhost:3001.
+ * for production deployments where the backend is on a different host.
+ */
+
+const DEFAULT_BACKEND_HOST = 'localhost';
+const DEFAULT_BACKEND_PORT = '3001';
 
 /**
  * ============================================
@@ -92,10 +108,60 @@ export const appConfig: AppConfig = createAppConfig({
   data: {
     mediaUrl: getEnvValue('VITE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.DEFAULT),
     baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.CDN),
-    apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
     environment: getEnvValue('NODE_ENV', ENVIRONMENT.DEFAULT) as AppConfig['environment'],
   },
 });
+
+/**
+ * ============================================
+ * BACKEND URL HELPERS
+ * ============================================
+ */
+
+/**
+ * Get the backend HTTP URL
+ * 
+ * Resolves the backend server URL with proper fallback:
+ * - Falls back to http://localhost:3001
+ * 
+ * @returns The backend HTTP URL
+ */
+export function getBackendUrl(): string {
+  // Try VITE_BACKEND_URL first (preferred)
+  let url = getEnvValue('VITE_BACKEND_URL', '');
+  if (url) return url;
+  
+  // Default to localhost:3001
+  return `http://localhost:${DEFAULT_BACKEND_PORT}`;
+}
+
+/**
+ * Get the WebSocket URL for real-time alerts
+ * 
+ * @returns The WebSocket URL (ws:// or wss://)
+ * @example
+ * ```typescript
+ * // For local development: ws://localhost:3001/ws
+ * // For production: wss://your-backend.com/ws
+ * ```
+ */
+export function getWebSocketUrl(): string {
+  const backendUrl = getBackendUrl();
+  // Convert http/https to ws/wss
+  return backendUrl.replace(/^http/, 'ws') + '/ws';
+}
+
+/**
+ * Get a full URL for a backend endpoint
+ * 
+ * @param path - The API path (e.g., '/webhook/save')
+ * @returns The full URL
+ */
+export function getBackendEndpoint(path: string): string {
+  const base = getBackendUrl();
+  const cleanPath = path.startsWith('/') ? path : '/' + path;
+  return `${base}${cleanPath}`;
+}
 
 /**
  * ============================================
@@ -169,7 +235,6 @@ export function reloadConfig(): AppConfig {
     data: {
       mediaUrl: getEnvValue('VITE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.DEFAULT),
       baseMediaUrl: getEnvValue('VITE_BASE_MEDIA_URL', ENVIRONMENT.MEDIA_URL.CDN),
-      apiEndpoint: getEnvValue('VITE_API_ENDPOINT', ''),
       environment: getEnvValue('NODE_ENV', ENVIRONMENT.DEFAULT) as AppConfig['environment'],
     },
   });

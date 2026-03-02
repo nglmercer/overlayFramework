@@ -2,7 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
-import { AppAlertView } from '../AlertView';
+import { getWebSocketUrl } from '../../lib/config';
 
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
@@ -178,12 +178,13 @@ export class EditorPreview extends LitElement {
   @property({ type: Number }) width = 600;
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
-  @property({ type: Boolean }) useIframe = true;
 
-  @query('app-alert-view') private alertView!: AppAlertView;
   @query('iframe') private iframeRef!: HTMLIFrameElement;
 
   private _localize = new LocalizeController(this);
+  
+  // Track if iframe is ready
+  @state() private iframeReady = false;
 
   private _t(key: string): string {
     return this._localize.t(key);
@@ -225,61 +226,127 @@ export class EditorPreview extends LitElement {
 
   // Public method to trigger preview animation - called by parent Editor
   public async playPreview() {
-    if (this.useIframe && this.iframeRef) {
-      // Send message to iframe to play preview
+    if (this.iframeRef && this.iframeReady) {
       this.iframeRef.contentWindow?.postMessage({ type: 'play-preview' }, '*');
-    } else if (this.alertView && this.alertView.playPreview) {
-      await this.alertView.playPreview();
     }
   }
 
-  // Generate iframe srcdoc content
-  private _generateIframeContent(): string {
-    if (!this.variant) return '';
-    
-    const variantJson = JSON.stringify(this.variant).replace(/</g, '\\u003c');
-    const eventDataJson = JSON.stringify({ username: 'FlavioliRavioli', amount: '1000', months: '6' }).replace(/</g, '\\u003c');
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { 
-            width: 100%; 
-            height: 100%; 
-            overflow: hidden; 
-            background: transparent;
-          }
-        </style>
-      </head>
-      <body>
-        <app-alert-view 
-          id="alertView"
-          .variant="${variantJson}"
-          .eventData="${eventDataJson}"
-        ></app-alert-view>
-        <script>
-          // Listen for messages from parent
-          window.addEventListener('message', async (event) => {
-            if (event.data.type === 'play-preview') {
-              const alertView = document.getElementById('alertView');
-              if (alertView && alertView.playPreview) {
-                await alertView.playPreview();
-              }
-            }
-          });
-        <\/script>
-      </body>
-      </html>
-    `;
+  // Send variant update to iframe
+  private _sendVariantToIframe() {
+    if (this.iframeRef && this.iframeReady && this.variant) {
+      // Convert AlertVariant to Template format for the renderer
+      const template = this._convertVariantToTemplate(this.variant);
+      this.iframeRef.contentWindow?.postMessage({ 
+        type: 'UPDATE_VARIANT', 
+        payload: { variant: template } 
+      }, '*');
+    }
+  }
+
+  // Convert AlertVariant to Template format
+  private _convertVariantToTemplate(variant: AlertVariant): Record<string, unknown> {
+    // Map the AlertVariant to the Template format expected by Renderer
+    return {
+      id: variant.id,
+      type: variant.type,
+      name: variant.name,
+      layout: variant.layout,
+      message: variant.message,
+      // Style properties
+      style: {
+        backgroundColor: variant.bgColor,
+        backgroundOpacity: variant.bgOpacity,
+        textColor: variant.textColor,
+        highlightColor: variant.highlightColor,
+        fontFamily: variant.fontFamily,
+        fontSize: variant.fontSize,
+        fontWeight: variant.fontWeight,
+        textAlign: variant.textAlign,
+        padding: variant.padding,
+        borderRadius: variant.rounded,
+        textShadow: variant.textShadow,
+      },
+      // Animation properties
+      animation: {
+        entrance: variant.animationIn,
+        exit: variant.animationOut,
+        entranceDuration: variant.animationInDuration,
+        exitDuration: variant.animationOutDuration,
+      },
+      // Media properties
+      media: {
+        imageUrl: variant.imageUrl,
+        imageScale: variant.imageScale,
+        soundUrl: variant.soundUrl,
+        soundVolume: variant.soundVolume,
+      },
+      // Event properties
+      event: {
+        condition: variant.condition,
+        duration: variant.duration,
+      },
+    };
+  }
+
+  // Handle messages from iframe
+  private _handleIframeMessage = (event: MessageEvent) => {
+    // Only handle messages from our iframe
+    if (this.iframeRef && event.source !== this.iframeRef.contentWindow) {
+      return;
+    }
+
+    const { type, payload } = event.data;
+
+    if (type === 'PREVIEW_READY') {
+      this.iframeReady = true;
+      console.log('[EditorPreview] Iframe ready');
+      // Send variant data once iframe is ready
+      this._sendVariantToIframe();
+    }
+    else if (type === 'connection-info') {
+      console.log('[EditorPreview] Connection info:', payload);
+    }
+    else if (type === 'alert') {
+      // Forward alert events to parent
+      this.dispatchEvent(new CustomEvent('ws-alert', {
+        detail: payload,
+        bubbles: true,
+        composed: true,
+      }));
+    }
+    else if (type === 'connection-change') {
+      // Forward connection changes to parent
+      this.dispatchEvent(new CustomEvent('ws-connection-change', {
+        detail: payload,
+        bubbles: true,
+        composed: true,
+      }));
+    }
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener('message', this._handleIframeMessage);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener('message', this._handleIframeMessage);
+  }
+
+  // Send variant to iframe when it changes
+  updated(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has('variant') && this.iframeReady) {
+      this._sendVariantToIframe();
+    }
   }
 
   render() {
     const bgClass = this.bgColor === 'transparent' ? 'bg-checker' : '';
     const bgStyle = this.bgColor === 'transparent' ? 'transparent' : this.bgColor;
+
+    // Get the preview HTML URL
+    const previewUrl = '/preview.html';
 
     return html`
       <div class="preview-area">
@@ -293,19 +360,11 @@ export class EditorPreview extends LitElement {
               class="preview-canvas ${bgClass}" 
               style="width: ${this.width}px; height: ${this.height}px; background-color: ${bgStyle};"
             >
-              ${this.useIframe ? html`
-                <iframe
-                  class="preview-iframe"
-                  style="width: ${this.width}px; height: ${this.height}px;"
-                  .srcdoc="${this._generateIframeContent()}"
-                  sandbox="allow-scripts allow-same-origin"
-                ></iframe>
-              ` : html`
-                <app-alert-view 
-                  .variant="${this.variant}" 
-                  .eventData="${{ username: 'FlavioliRavioli', amount: '1000', months: '6' }}"
-                ></app-alert-view>
-              `}
+              <iframe 
+                class="preview-iframe"
+                src="${previewUrl}"
+                sandbox="allow-scripts allow-same-origin"
+              ></iframe>
             </div>
           </div>
           <div class="preview-footer">

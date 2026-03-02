@@ -69,6 +69,7 @@ const server = Bun.serve<WsClientData>({
   websocket: {
     /** New client connected */
     open(ws) {
+      console.log("Client connected", ws)
       wsManager.addClient(ws);
     },
 
@@ -140,25 +141,18 @@ process.on('SIGTERM', () => {
 // STARTUP
 // ============================================================================
 
-console.log('');
-console.log('╔══════════════════════════════════════════════╗');
-console.log('║          🎬 Overlay Backend Server           ║');
-console.log('╠══════════════════════════════════════════════╣');
-console.log(`║  HTTP/WS   → http://localhost:${PORT}          ║`);
-console.log(`║  WebSocket → ws://localhost:${PORT}/ws          ║`);
-console.log('╠══════════════════════════════════════════════╣');
-console.log('║  Endpoints:                                  ║');
-console.log('║  GET  /health            — Health check       ║');
-console.log('║  GET  /webhook/status    — Server status      ║');
-console.log('║  GET  /webhook/schemas   — List schemas       ║');
-console.log('║  GET  /webhook/events    — Recent events      ║');
-console.log('║  GET  /webhook/overlays  — List saved overlays║');
-console.log('║  GET  /webhook/overlay/:key — Get overlay     ║');
-console.log('║  POST /webhook/alert     — Trigger alert      ║');
-console.log('║  POST /webhook/control   — Control overlay    ║');
-console.log('║  POST /webhook/schema    — Register schema    ║');
-console.log('║  POST /webhook/save     — Save overlay data   ║');
-console.log('║  POST /webhook/delete    — Delete overlay     ║');
-console.log('║  WS   /ws               — Overlay connection  ║');
-console.log('╚══════════════════════════════════════════════╝');
-console.log('');
+console.log(` HTTP/WS   → http://localhost:${PORT}         `);
+console.log(` WebSocket → ws://localhost:${PORT}/ws         `);
+console.log(' Endpoints:                                 ');
+console.log(' GET  /health            — Health check      ');
+console.log(' GET  /webhook/status    — Server status     ');
+console.log(' GET  /webhook/schemas   — List schemas      ');
+console.log(' GET  /webhook/events    — Recent events     ');
+console.log(' GET  /webhook/overlays  — List saved overlays');
+console.log(' GET  /webhook/overlay/:key — Get overlay    ');
+console.log(' POST /webhook/alert     — Trigger alert     ');
+console.log(' POST /webhook/control   — Control overlay   ');
+console.log(' POST /webhook/schema    — Register schema   ');
+console.log(' POST /webhook/save     — Save overlay data  ');
+console.log(' POST /webhook/delete    — Delete overlay    ');
+console.log(' WS   /ws               — Overlay connection ');

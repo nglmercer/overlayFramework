@@ -44,13 +44,11 @@ export type Environment = z.infer<typeof EnvironmentSchema>;
  * Provides type-safe configuration with sensible defaults:
  * - mediaUrl: Default media server URL
  * - baseMediaUrl: CDN base URL for assets
- * - apiEndpoint: Optional API endpoint
  * - environment: Current runtime environment
  */
 export const AppConfigSchema = z.object({
   mediaUrl: z.string().url().default('http://localhost:3000/media'),
   baseMediaUrl: z.string().url().default('https://cdn.example.com'),
-  apiEndpoint: z.string().url().optional(),
   environment: EnvironmentSchema.default('development'),
 });
 

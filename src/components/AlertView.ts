@@ -9,7 +9,7 @@
  * server and automatically plays alerts when matching events arrive.
  * 
  * @module components/AlertView
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { html, css, LitElement } from 'lit';
@@ -36,6 +36,9 @@ import { getPlatformEventById } from '../lib/alertEvents';
 // Import constants for default values
 import { CONFIG } from '../lib/constants';
 
+// Import config helpers
+import { getWebSocketUrl, getBackendUrl } from '../lib/config';
+
 @Component('app-alert-view')
 export class AppAlertView extends LitElement {
   /** The alert variant to render/preview */
@@ -46,6 +49,11 @@ export class AppAlertView extends LitElement {
 
   /** WebSocket server URL - set to enable live mode */
   @property({ type: String }) wsUrl?: string;
+
+  /** Get the effective WebSocket URL (defaults to backend URL if not specified) */
+  public get effectiveWsUrl(): string {
+    return this.wsUrl || getWebSocketUrl();
+  }
 
   /** Automatically connect to WS on mount (default: true) */
   @property({ type: Boolean }) wsAutoConnect: boolean = true;
@@ -58,6 +66,9 @@ export class AppAlertView extends LitElement {
 
   /** Current WS connection state (reactive) */
   @state() private connectionState: WsConnectionState = 'disconnected';
+
+  /** Current connection type: 'websocket' | 'broadcast' | 'none' */
+  @state() private connectionType: 'websocket' | 'broadcast' | 'none' = 'none';
 
   /** Current queue length */
   @state() private queueLength: number = 0;
@@ -123,6 +134,50 @@ export class AppAlertView extends LitElement {
   }
 
   /**
+   * Get current connection information
+   * 
+   * @returns Object with connection type, WebSocket state, and other diagnostics
+   */
+  public getConnectionInfo(): {
+    type: 'websocket' | 'broadcast' | 'none';
+    wsState: WsConnectionState;
+    wsUrl: string | null;
+    wsConnected: boolean;
+    broadcastConnected: boolean;
+    channelName: string | undefined;
+  } {
+    return {
+      type: this.connectionType,
+      wsState: this.connectionState,
+      wsUrl: this.wsService ? this.effectiveWsUrl : null,
+      wsConnected: this.connectionState === 'connected',
+      broadcastConnected: !!this.broadcastChannel,
+      channelName: this.channelName,
+    };
+  }
+
+  /**
+   * Check if connected to WebSocket
+   */
+  public get isWsConnected(): boolean {
+    return this.connectionState === 'connected';
+  }
+
+  /**
+   * Check if connected to BroadcastChannel
+   */
+  public get isBroadcastConnected(): boolean {
+    return !!this.broadcastChannel;
+  }
+
+  /**
+   * Check if any connection is active
+   */
+   public get isConnected(): boolean {
+    return this.connectionType !== 'none';
+  }
+
+  /**
    * Send a test alert event (useful for previewing from external code)
    * 
    * @param eventName - The event type (e.g., 'seguimientos', 'bits')
@@ -145,6 +200,30 @@ export class AppAlertView extends LitElement {
     this.wsService?.alertCompleted();
   }
 
+  /**
+   * Emit an alert via BroadcastChannel to notify other tabs
+   * 
+   * @param eventName - The event type (e.g., 'seguimientos', 'bits')
+   * @param data - Event variables (e.g., { username: 'viewer123' })
+   */
+  public emitAlert(eventName: string, data: Record<string, string>): void {
+    if (this.broadcastChannel) {
+      this.broadcastChannel.postMessage({
+        type: 'alert',
+        eventName,
+        data,
+        timestamp: Date.now(),
+      });
+      console.log('[AlertView] Alert emitted via BroadcastChannel:', eventName);
+    } else {
+      // Direct handling if no BroadcastChannel
+      this.handleWsAlert(
+        { type: 'alert', eventName, data, timestamp: Date.now(), id: `emit-${Date.now()}` },
+        data
+      );
+    }
+  }
+
   // ========================================
   // LIFECYCLE
   // ========================================
@@ -157,9 +236,11 @@ export class AppAlertView extends LitElement {
       this.initBroadcastChannel();
     }
     
-    // Fall back to WebSocket if no BroadcastChannel or if WS URL is explicitly provided
-    if (!this.broadcastChannel && this.wsUrl && this.wsAutoConnect) {
-      this.initWebSocket();
+    // Connect to WebSocket if URL is provided OR use default backend WebSocket
+    if (this.wsUrl || getWebSocketUrl()) {
+      if (!this.broadcastChannel && this.wsAutoConnect) {
+        this.initWebSocket();
+      }
     }
   }
 
@@ -172,7 +253,8 @@ export class AppAlertView extends LitElement {
     // Check if BroadcastChannel is supported
     if (typeof BroadcastChannel === 'undefined') {
       console.warn('[AlertView] BroadcastChannel not supported, falling back to WebSocket');
-      if (this.wsUrl) {
+      // Fall back to WebSocket if available
+      if (getWebSocketUrl()) {
         this.initWebSocket();
       }
       return;
@@ -189,6 +271,7 @@ export class AppAlertView extends LitElement {
       };
       
       this.connectionState = 'connected';
+      this.connectionType = 'broadcast';
       console.log('[AlertView] Connected to BroadcastChannel:', this.channelName);
       
       // Dispatch connection event
@@ -200,7 +283,7 @@ export class AppAlertView extends LitElement {
     } catch (error) {
       console.error('[AlertView] Failed to create BroadcastChannel:', error);
       // Fall back to WebSocket
-      if (this.wsUrl) {
+      if (getWebSocketUrl()) {
         this.initWebSocket();
       }
     }
@@ -246,10 +329,13 @@ export class AppAlertView extends LitElement {
       this.updateContent();
     }
     
-    // Handle wsUrl changes
+    // Handle wsUrl changes or auto-connect to default WebSocket
     if (changedProperties.has('wsUrl')) {
       this.cleanupWebSocket();
       if (this.wsUrl && this.wsAutoConnect) {
+        this.initWebSocket();
+      } else if (!this.wsUrl && getWebSocketUrl() && this.wsAutoConnect && !this.broadcastChannel) {
+        // Auto-connect to default WebSocket if no explicit URL provided
         this.initWebSocket();
       }
     }
@@ -273,13 +359,13 @@ export class AppAlertView extends LitElement {
    * Initialize WebSocket service and set up event listeners
    */
   private initWebSocket(): void {
-    if (!this.wsUrl) return;
+    if (!this.wsUrl && !getWebSocketUrl()) return;
 
     // Cleanup existing connection
     this.cleanupWebSocket();
 
     this.wsService = createWebSocketService({
-      url: this.wsUrl,
+      url: this.effectiveWsUrl,
       autoReconnect: true,
       enableQueue: true,
       debug: this.wsDebug,
@@ -297,6 +383,7 @@ export class AppAlertView extends LitElement {
     this.wsUnsubscribers.push(
       this.wsService.onConnection((state) => {
         this.connectionState = state;
+        this.connectionType = state === 'connected' ? 'websocket' : this.connectionType;
         this.dispatchEvent(new CustomEvent('ws-connection-change', {
           detail: { state },
           bubbles: true,
@@ -465,3 +552,4 @@ export class AppAlertView extends LitElement {
     `;
   }
 }
+
