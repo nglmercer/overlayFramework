@@ -282,7 +282,7 @@ export class AppEditor extends LitElement {
   /**
    * Triggers the preview component to play the current alert animation.
    */
-  handlePlayPreview(): void {
+  handlePlayPreview = (): void => {
     if (this.editorPreview && this.editorPreview.playPreview) {
       this.editorPreview.playPreview();
     }
@@ -291,7 +291,7 @@ export class AppEditor extends LitElement {
   /**
    * Generates a preview URL for the current overlay by saving data to the backend.
    */
-  async handleGetPreviewUrl(): Promise<string | null> {
+  handleGetPreviewUrl = async (): Promise<string | null> => {
     if (!this.boxId) return null;
     
     // Use local variants state or task value
@@ -328,7 +328,7 @@ export class AppEditor extends LitElement {
    * Dispatches a test alert event and plays the preview.
    * Used for testing alerts without triggering actual events.
    */
-  handleSendTestAlert(): void {
+  handleSendTestAlert = (): void => {
     window.dispatchEvent(new CustomEvent('test-alert', { 
       detail: { type: 'test' }
     }));
