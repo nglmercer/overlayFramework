@@ -188,6 +188,9 @@ export class EditorPreview extends LitElement {
   // Track if iframe is ready
   @state() private iframeReady = false;
 
+  // Polling retry handle so we can cancel on disconnect
+  private _sendRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+
   private _t(key: string): string {
     return this._localize.t(key);
   }
@@ -235,18 +238,61 @@ export class EditorPreview extends LitElement {
 
   // Send variant update to iframe
   private _sendVariantToIframe() {
-    if (this.iframeRef && this.iframeReady) {
-      // Pass both current variant and the collection of all variants
-      const eventData = { username: 'TestUser', amount: '100', months: '1' };
-      this.iframeRef.contentWindow?.postMessage({ 
-        type: EVENTS.WINDOW.UPDATE_VARIANT, 
-        payload: { 
-          variant: this.variant,
-          variants: this.variants,
-          eventData: eventData
-        } 
-      }, '*');
+    if (!this.iframeRef || !this.iframeReady) return;
+
+    const eventData = { username: 'TestUser', amount: '100', months: '1' };
+
+    const serializeVariant = (v: AlertVariant | null) => {
+      if (!v) return null;
+      return JSON.parse(JSON.stringify(v));
+    };
+
+    // Ensure variants is an array before mapping
+    const safeVariants = Array.isArray(this.variants) ? this.variants : [];
+    console.log('[EditorPreview] Sending variants to iframe:', safeVariants.length, 'variant:', this.variant?.id);
+
+    this.iframeRef.contentWindow?.postMessage({
+      type: EVENTS.WINDOW.UPDATE_VARIANT,
+      payload: {
+        variant: serializeVariant(this.variant),
+        variants: safeVariants.map(serializeVariant),
+        eventData: eventData
+      }
+    }, '*');
+  }
+
+  // Poll until we have real variant data, then send.
+  // Needed because the IndexedDB Task in Editor.ts resolves async—
+  // the iframe can fire PREVIEW_READY before the parent's variants arrive.
+  private _scheduleSendVariant() {
+    if (this._sendRetryTimeout) {
+      clearTimeout(this._sendRetryTimeout);
+      this._sendRetryTimeout = null;
     }
+
+    const MAX_ATTEMPTS = 30; // 30 × 100ms = 3 seconds max
+    let attempts = 0;
+
+    const tryNow = () => {
+      // If we have real data, send immediately
+      if (this.variant || (Array.isArray(this.variants) && this.variants.length > 0)) {
+        this._sendVariantToIframe();
+        return;
+      }
+
+      // No data yet — retry after 100ms
+      attempts++;
+      if (attempts < MAX_ATTEMPTS) {
+        this._sendRetryTimeout = setTimeout(tryNow, 100);
+      } else {
+        // Timed out — send whatever we have (even if empty)
+        console.warn('[EditorPreview] Timed out waiting for variants, sending empty payload');
+        this._sendVariantToIframe();
+      }
+    };
+
+    // Start on the next tick so Lit can flush any pending updates first
+    this._sendRetryTimeout = setTimeout(tryNow, 0);
   }
 
   // Handle messages from iframe
@@ -261,8 +307,8 @@ export class EditorPreview extends LitElement {
     if (type === EVENTS.WINDOW.PREVIEW_READY) {
       this.iframeReady = true;
       console.log('[EditorPreview] Iframe ready');
-      // Send variant data once iframe is ready
-      this._sendVariantToIframe();
+      // Delay send so Lit can finish flushing pending property updates
+      this._scheduleSendVariant();
     }
     else if (type === 'connection-info') {
       console.log('[EditorPreview] Connection info:', payload);
@@ -293,11 +339,22 @@ export class EditorPreview extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('message', this._handleIframeMessage);
+    if (this._sendRetryTimeout) {
+      clearTimeout(this._sendRetryTimeout);
+      this._sendRetryTimeout = null;
+    }
   }
 
-  // Send variant to iframe when it changes
+  // Send variant to iframe when relevant properties change
   updated(changedProperties: Map<string, unknown>) {
-    if ((changedProperties.has('variant') || changedProperties.has('variants')) && this.iframeReady) {
+    const variantChanged = changedProperties.has('variant') || changedProperties.has('variants');
+    const iframeJustReady = changedProperties.has('iframeReady') && this.iframeReady;
+
+    if (iframeJustReady) {
+      // iframeReady just flipped true — variants may or may not be here yet
+      this._scheduleSendVariant();
+    } else if (variantChanged && this.iframeReady) {
+      // Variants/variant updated while iframe was already ready — send immediately
       this._sendVariantToIframe();
     }
   }

@@ -230,13 +230,17 @@ export class AppEditor extends LitElement {
    * Called when component properties change.
    * Auto-generates preview URL when boxId changes.
    */
-  updated(changedProperties: Map<string, unknown>) {
-    // Auto-generate preview URL when boxId changes or when variants are loaded
-    if (changedProperties.has('boxId') && this.boxId) {
-      // Clear local cache when switching boxes
+  willUpdate(changedProperties: Map<string, unknown>) {
+    // Clear local cache BEFORE rendering when switching boxes — safe here, won't trigger extra cycle
+    if (changedProperties.has('boxId') && this.boxId && this._localVariants.length > 0) {
       this._localVariants = [];
-      
-      // Small delay to ensure variants are loaded
+    }
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    // Auto-generate preview URL after boxId changes and variants have loaded
+    if (changedProperties.has('boxId') && this.boxId) {
+      // Small delay to ensure variants are loaded from DB first
       setTimeout(() => {
         this._autoGeneratePreviewUrl();
       }, 500);

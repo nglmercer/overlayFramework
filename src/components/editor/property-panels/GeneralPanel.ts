@@ -102,7 +102,7 @@ export class PropertyPanelGeneral extends LitElement {
         <ui-input 
           label="${this._t('variant.duration')}" 
           type="number" 
-          .value="${this.variant.duration.toString()}" 
+          .value="${this.variant?.duration?.toString()}" 
           @change="${(e: CustomEvent) => this._handleChange('duration', Number(e.detail))}"
         ></ui-input>
       </div>

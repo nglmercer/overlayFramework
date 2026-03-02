@@ -270,7 +270,7 @@ export class EditorRightSidebar extends LitElement {
   }
 
   private _handlePropertyChange(e: CustomEvent) {
-    this.dispatchEvent(new CustomEvent('property-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.PROPERTY_CHANGE, {
       detail: e.detail,
       bubbles: true,
       composed: true
@@ -284,7 +284,7 @@ export class EditorRightSidebar extends LitElement {
     
     // Dispatch a single property-change event with both animation configs
     // This ensures atomic update of both animations
-    this.dispatchEvent(new CustomEvent('property-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.PROPERTY_CHANGE, {
       detail: { 
         field: 'animationConfigs', 
         value: { entrance, exit, updatedTab: activeTab } 
