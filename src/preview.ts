@@ -130,6 +130,10 @@ if (root) {
       broadcastChannel.onmessage = (event) => {
         if (event.data && event.data.type === 'alert') {
           handleAlertMessage(event.data as AlertMessage);
+        } else if (event.data && event.data.type === 'UPDATE_VARIANT') {
+          const { variant, eventData } = event.data.payload as VariantPayload;
+          console.log('[Preview] UPDATE_VARIANT received via BroadcastChannel:', { variantType: variant?.type });
+          updateVariant(variant, eventData);
         }
       };
       console.log('[Preview] BroadcastChannel connected:', CHANNEL_NAME);
@@ -321,6 +325,11 @@ if (root) {
       const { variant, eventData } = payload as VariantPayload;
       console.log('[Preview] UPDATE_VARIANT received:', { variantType: variant?.type, eventData });
       updateVariant(variant, eventData);
+
+      // Broadcast to other tabs (standalone preview)
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'UPDATE_VARIANT', payload });
+      }
     }
     else if (type === 'play-preview') {
       // Trigger animation replay if we have a variant

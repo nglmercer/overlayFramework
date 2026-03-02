@@ -509,6 +509,9 @@ export class AlertRenderer {
     // Stop any existing playback
     this.stop();
     
+    // Render the content first to ensure DOM is ready and updated with variables
+    this.render(config);
+    
     this.currentConfig = config;
     
     // Play sound if soundUrl exists and volume is > 0
