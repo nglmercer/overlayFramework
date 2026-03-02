@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@import "./styles/animations.css";
 
 @theme {
   --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -132,8 +133,6 @@ body:has(.dialog-overlay.open) {
   overflow: hidden;
 }
 
-/* Import standard library animations */
-@import "./styles/animations.css";
 
 /* Smooth transitions for theme switching */
 *, *::before, *::after {

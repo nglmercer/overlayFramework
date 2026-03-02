@@ -13,6 +13,7 @@
         "@tailwindcss/vite": "^4.1.14",
         "dotenv": "^17.2.3",
         "express": "^4.21.2",
+        "json-obj-manager": "^3.6.0",
         "lit": "^3.3.2",
         "motion": "^12.23.24",
         "vite": "^6.2.0",
@@ -351,6 +352,8 @@
     "is-number": ["is-number@7.0.0", "", {}, "sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng=="],
 
     "jiti": ["jiti@2.6.1", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
+
+    "json-obj-manager": ["json-obj-manager@3.6.0", "", { "dependencies": { "zod": "^4.3.6" } }, "sha512-ihrpkj5ueAaXEnNTudPu1yPfJf6BZdfF2+31L/w/rPxDRYmrM9RUb0ayBndfkyyHa9rhOR+W4Ylh6XUWC3gA3Q=="],
 
     "jsonfile": ["jsonfile@6.2.0", "", { "dependencies": { "universalify": "^2.0.0" }, "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg=="],
 
