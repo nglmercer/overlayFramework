@@ -3,13 +3,13 @@
  * This module provides a reusable, framework-agnostic alert rendering system
  */
 
-import { Template, TemplateSchema } from './schemas';
+import { Template } from './schemas';
 import { Renderer } from './renderer';
 import { mediaRegistry } from './mediaRegistry';
-import { formatUnit } from './renderer/utils';
 import { AnimationConfig, AnimationType as NewAnimationType, Direction, Easing } from '../schemas/animation-schemas';
 import { processTemplate } from '../lib/core/template-processor';
 import { ALERT_DEFAULTS } from '../lib/constants';
+import { AlertTemplateBuilder } from './builder';
 
 // Animation types supported by the system
 export type AnimationType = 
@@ -103,8 +103,6 @@ export const defaultAlertConfig: AlertConfig = {
   containerHeight: 600,
 };
 
-// ALERT_DEFAULTS are now imported from src/lib/constants.ts
-
 /**
  * Options for creating AlertConfig
  */
@@ -121,49 +119,8 @@ export function createAlertConfig(
   options: AlertConfigOptions = {}
 ): AlertConfig {
   return {
-    // Animation
-    animationIn: overrides.animationIn ?? defaultAlertConfig.animationIn,
-    animationOut: overrides.animationOut ?? defaultAlertConfig.animationOut,
-    animationInDuration: overrides.animationInDuration ?? defaultAlertConfig.animationInDuration,
-    animationOutDuration: overrides.animationOutDuration ?? defaultAlertConfig.animationOutDuration,
-    
-    // Animation Schema (new format)
-    entranceAnimation: overrides.entranceAnimation,
-    exitAnimation: overrides.exitAnimation,
-    
-    // Duration & Layout
-    duration: overrides.duration ?? defaultAlertConfig.duration,
-    layout: overrides.layout ?? defaultAlertConfig.layout,
-    
-    // Background
-    bgColor: overrides.bgColor ?? defaultAlertConfig.bgColor,
-    bgOpacity: overrides.bgOpacity ?? defaultAlertConfig.bgOpacity,
-    padding: overrides.padding ?? defaultAlertConfig.padding,
-    spacing: overrides.spacing ?? defaultAlertConfig.spacing,
-    rounded: overrides.rounded ?? defaultAlertConfig.rounded,
-    shadow: overrides.shadow ?? defaultAlertConfig.shadow,
-    
-    // Text
-    message: overrides.message ?? defaultAlertConfig.message,
-    fontFamily: overrides.fontFamily ?? defaultAlertConfig.fontFamily,
-    fontWeight: overrides.fontWeight ?? defaultAlertConfig.fontWeight,
-    fontSize: overrides.fontSize ?? defaultAlertConfig.fontSize,
-    textAlign: overrides.textAlign ?? defaultAlertConfig.textAlign,
-    textColor: overrides.textColor ?? defaultAlertConfig.textColor,
-    highlightColor: overrides.highlightColor ?? defaultAlertConfig.highlightColor,
-    textShadow: overrides.textShadow ?? defaultAlertConfig.textShadow,
-    
-    // Media
-    imageUrl: overrides.imageUrl,
-    imageScale: overrides.imageScale ?? defaultAlertConfig.imageScale,
-    imageVolume: overrides.imageVolume ?? defaultAlertConfig.imageVolume,
-    soundUrl: overrides.soundUrl,
-    soundVolume: overrides.soundVolume ?? defaultAlertConfig.soundVolume,
-    
-    // Event data
-    eventData: overrides.eventData,
-    
-    // Container dimensions
+    ...defaultAlertConfig,
+    ...overrides,
     containerWidth: options.containerWidth ?? defaultAlertConfig.containerWidth,
     containerHeight: options.containerHeight ?? defaultAlertConfig.containerHeight,
   };
@@ -171,7 +128,6 @@ export function createAlertConfig(
 
 /**
  * AlertVariant type from database (imported from lib/db)
- * Minimal interface for mapping purposes
  */
 interface AlertVariantData {
   animationIn?: string;
@@ -199,11 +155,12 @@ interface AlertVariantData {
   imageVolume?: number;
   soundUrl?: string;
   soundVolume?: number;
+  entranceAnimation?: AnimationConfig;
+  exitAnimation?: AnimationConfig;
 }
 
 /**
  * Convert AlertVariant (DB model) to AlertConfig (core config)
- * This is the canonical mapping function used by components
  */
 export function variantToAlertConfig(
   variant: AlertVariantData,
@@ -212,25 +169,20 @@ export function variantToAlertConfig(
 ): AlertConfig {
   return createAlertConfig(
     {
-      // Animation - cast to proper types
       animationIn: (variant.animationIn as AnimationType) ?? ALERT_DEFAULTS.ANIMATION.IN,
       animationOut: (variant.animationOut as AnimationType) ?? ALERT_DEFAULTS.ANIMATION.OUT,
       animationInDuration: variant.animationInDuration ?? ALERT_DEFAULTS.ANIMATION_DURATION,
       animationOutDuration: variant.animationOutDuration ?? ALERT_DEFAULTS.ANIMATION_DURATION,
-      
-      // Duration & Layout
+      entranceAnimation: variant.entranceAnimation,
+      exitAnimation: variant.exitAnimation,
       duration: variant.duration ?? ALERT_DEFAULTS.DURATION,
       layout: (variant.layout as AlertLayout) ?? ALERT_DEFAULTS.LAYOUT,
-      
-      // Background
       bgColor: variant.bgColor ?? ALERT_DEFAULTS.COLORS.BG,
       bgOpacity: variant.bgOpacity ?? ALERT_DEFAULTS.OPACITY.BG,
       padding: variant.padding ?? ALERT_DEFAULTS.SPACING.PADDING,
       spacing: variant.spacing ?? ALERT_DEFAULTS.SPACING.ITEM,
       rounded: variant.rounded ?? ALERT_DEFAULTS.BOX.ROUNDED,
       shadow: variant.shadow ?? ALERT_DEFAULTS.BOX.SHADOW,
-      
-      // Text
       message: variant.message ?? '',
       fontFamily: variant.fontFamily ?? ALERT_DEFAULTS.TYPOGRAPHY.FONT_FAMILY,
       fontWeight: variant.fontWeight ?? ALERT_DEFAULTS.TYPOGRAPHY.FONT_WEIGHT,
@@ -239,15 +191,11 @@ export function variantToAlertConfig(
       textColor: variant.textColor ?? ALERT_DEFAULTS.COLORS.TEXT,
       highlightColor: variant.highlightColor ?? ALERT_DEFAULTS.COLORS.HIGHLIGHT,
       textShadow: variant.textShadow ?? true,
-      
-      // Media
       imageUrl: variant.imageUrl,
       imageScale: variant.imageScale ?? ALERT_DEFAULTS.MEDIA.IMAGE_SCALE,
       imageVolume: variant.imageVolume ?? ALERT_DEFAULTS.MEDIA.IMAGE_VOLUME,
       soundUrl: variant.soundUrl,
       soundVolume: variant.soundVolume ?? ALERT_DEFAULTS.MEDIA.SOUND_VOLUME,
-      
-      // Event data for variable replacement
       eventData,
     },
     options
@@ -256,7 +204,6 @@ export function variantToAlertConfig(
 
 /**
  * AlertRenderer class - Core alert rendering logic
- * Can be used with any DOM element or framework
  */
 export class AlertRenderer {
   private container: HTMLElement;
@@ -272,207 +219,25 @@ export class AlertRenderer {
     this.renderer = new Renderer(container);
   }
 
-  /**
-   * Build template data from alert configuration
-   */
-  buildTemplateData(config: AlertConfig): Template {
-    const {
-      message,
-      layout,
-      bgColor,
-      bgOpacity,
-      padding,
-      spacing,
-      rounded,
-      shadow,
-      fontFamily,
-      fontWeight,
-      fontSize,
-      textAlign,
-      textColor,
-      highlightColor,
-      textShadow,
-      imageUrl,
-      imageScale,
-      imageVolume,
-      eventData,
-      containerWidth = 600,
-      containerHeight = 600,
-    } = config;
-
-    // Process message with template variables and highlights
-    const processedContent = processTemplate(message, eventData || {}, highlightColor || '#9146FF');
-
-    const elements: any[] = [];
-    
-    // Calculate dimensions
-    const effectivePadding = padding || 16;
-    const effectiveSpacing = spacing || 16;
-    
-    // Calculate image dimensions based on scale (scale is 0-100)
-    const effectiveImageWidth = imageScale ? (imageScale / 100) * (containerWidth - effectivePadding * 2) : 200;
-    const imageHeight = 'auto';
-    
-    // Determine layout positions
-    let imageX = effectivePadding;
-    let imageY = effectivePadding;
-    let textX = effectivePadding;
-    let textY = effectivePadding;
-    
-    // Container inner dimensions
-    const innerWidth = containerWidth - effectivePadding * 2;
-    const innerHeight = containerHeight - effectivePadding * 2;
-    
-    if (layout === 'text-right') {
-      // Image on left, text on right
-      imageX = effectivePadding;
-      imageY = effectivePadding + (innerHeight - effectiveImageWidth) / 2;
-      textX = effectivePadding + effectiveImageWidth + effectiveSpacing;
-      textY = effectivePadding + (innerHeight - (fontSize || 24) * 1.5) / 2;
-    } else if (layout === 'text-over') {
-      // Text over the image (centered)
-      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
-      imageY = effectivePadding + (innerHeight - effectiveImageWidth) / 3;
-      textX = effectivePadding + (innerWidth - (containerWidth - effectivePadding * 2)) / 2;
-      textY = effectivePadding + (innerHeight - effectiveImageWidth) / 3 - (fontSize || 24) * 1.5;
-    } else if (layout === 'center') {
-      // Both image and text centered in the middle
-      // First, calculate total content height
-      const totalContentHeight = effectiveImageWidth + effectiveSpacing + (fontSize || 24) * 1.5;
-      const startY = effectivePadding + (innerHeight - totalContentHeight) / 2;
-      
-      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
-      imageY = startY;
-      textX = effectivePadding;
-      textY = startY + effectiveImageWidth + effectiveSpacing;
-    } else {
-      // text-below (default) - image on top, text below centered
-      imageX = effectivePadding + (innerWidth - effectiveImageWidth) / 2;
-      imageY = effectivePadding;
-      textX = effectivePadding;
-      textY = effectivePadding + effectiveImageWidth + effectiveSpacing;
-    }
-    
-    // Add media element if imageUrl exists
-    // Note: Image field always mutes audio - for video with audio, use separate sound field
-    if (imageUrl) {
-      elements.push({
-        id: 'alert-media',
-        name: 'Alert Media',
-        type: 'multimedia' as const,
-        x: imageX,
-        y: imageY,
-        width: effectiveImageWidth,
-        height: imageHeight,
-        position: 'absolute' as const,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 2,
-        visible: true,
-        url: imageUrl,
-        autoPlay: true,
-        volume: imageVolume ?? 100,
-        loop: false,
-        muted: true, // Always mute - frames only, audio handled by sound field
-        objectFit: 'contain' as const,
-      });
-    }
-    
-    // Add text element (processedContent is already built at line 304!)
-    
-    // Add text element
-    elements.push({
-      id: 'alert-text',
-      name: 'Alert Text',
-      type: 'text' as const,
-      x: textX,
-      y: textY,
-      width: containerWidth - effectivePadding * 2,
-      height: 'auto',
-      position: 'absolute' as const,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 3,
-      visible: true,
-      content: processedContent,
-      fontSize: fontSize || 24,
-      fontFamily: fontFamily || 'Roboto',
-      fontWeight: fontWeight || 'Normal',
-      color: textColor || '#FFFFFF',
-      textAlign: textAlign || 'center',
-      textShadow: textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : undefined,
-    });
-
-    // Build background box style
-    const bgStyles = {
-      id: 'alert-background',
-      name: 'Alert Background',
-      type: 'box' as const,
-      x: 0,
-      y: 0,
-      width: '100%',
-      height: '100%',
-      position: 'absolute' as const,
-      rotation: 0,
-      opacity: (bgOpacity ?? 0) / 100,
-      zIndex: 0,
-      visible: bgOpacity > 0,
-      backgroundColor: bgColor || '#000000',
-      borderRadius: rounded ? '16px' : '0px',
-      borderWidth: 0,
-      borderColor: 'transparent',
-      boxShadow: shadow ? '0 4px 20px rgba(0,0,0,0.3)' : undefined,
-    };
-    
-    // Add background if there's opacity
-    if (bgOpacity > 0) {
-      elements.push(bgStyles);
-    }
-
-    return {
-      id: 'alert-template',
-      name: 'Alert Template',
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'transparent',
-      elements,
-    };
-  }
-
-  /**
-   * Process message to highlight {variables}
-   */
   processMessageWithHighlight(message: string, highlightColor: string): string {
     return processTemplate(message, {}, highlightColor);
   }
 
-  /**
-   * Render the alert with given configuration
-   */
   render(config: AlertConfig): void {
     this.currentConfig = config;
-    const templateData = this.buildTemplateData(config);
+    const templateData = AlertTemplateBuilder.build(config);
     this.renderer.render(templateData);
   }
 
-  /**
-   * Play the alert preview with animation and sound
-   */
   async playPreview(config: AlertConfig): Promise<void> {
-    // Stop any existing playback
     this.stop();
-    
-    // Render the content first to ensure DOM is ready and updated with variables
     this.render(config);
-    
     this.currentConfig = config;
     
-    // Play sound if soundUrl exists and volume is > 0
-    if (config.soundUrl && config.soundVolume !== undefined && config.soundVolume > 0) {
+    if (config.soundUrl && config.soundVolume && config.soundVolume > 0) {
       this.playSound(config.soundUrl, config.soundVolume / 100);
     }
 
-    // Reset and trigger In
     this.animationPhase = 'none';
     this.applyAnimationStyles('none');
     await new Promise(r => setTimeout(r, 50));
@@ -480,8 +245,6 @@ export class AlertRenderer {
     this.animationPhase = 'in';
     this.applyAnimationStyles('in');
 
-    // Trigger Out after duration
-    const inDuration = (config.animationInDuration || 1) * 1000;
     const duration = (config.duration || 10) * 1000;
     
     this.animationTimeoutId = window.setTimeout(() => {
@@ -489,13 +252,11 @@ export class AlertRenderer {
         this.animationPhase = 'out';
         this.applyAnimationStyles('out');
         
-        // Hide after out animation completes
         const outDuration = (config.animationOutDuration || 1) * 1000;
         this.outAnimationTimeoutId = window.setTimeout(() => {
           if (this.animationPhase === 'out') {
             this.animationPhase = 'none';
             this.applyAnimationStyles('none');
-            // Stop sound when animation ends
             this.stopSound();
           }
         }, outDuration + 100);
@@ -503,16 +264,12 @@ export class AlertRenderer {
     }, duration);
   }
 
-  /**
-   * Apply animation styles to the container
-   */
   private applyAnimationStyles(phase: 'in' | 'out' | 'none'): void {
     if (!this.currentConfig) return;
     
     let animStyle = '';
     const visibilityClass = phase === 'none' ? 'hidden' : '';
     
-    // Use new schema-based animation if available, otherwise fall back to legacy
     if (phase === 'in' && this.currentConfig.entranceAnimation) {
       animStyle = this._generateAnimationCSS(this.currentConfig.entranceAnimation);
     } else if (phase === 'out' && this.currentConfig.exitAnimation) {
@@ -527,22 +284,13 @@ export class AlertRenderer {
     this.container.style.cssText += animStyle;
   }
 
-  /**
-   * Generate CSS animation string from AnimationConfig
-   */
   private _generateAnimationCSS(config: AnimationConfig): string {
     const duration = (config.duration > 10 ? config.duration / 1000 : config.duration) || 0.3;
     const easing = this._convertEasing(config.easing);
-    
-    // Build the animation name based on type, direction, and effect
     const animName = this._buildAnimationName(config.type, config.direction, config);
-    
     return `animation: ${animName} ${duration}s ${easing} forwards; opacity: ${config.opacity};`;
   }
 
-  /**
-   * Convert our Easing type to CSS easing function
-   */
   private _convertEasing(easing: Easing): string {
     const easingMap: Record<Easing, string> = {
       linear: 'linear',
@@ -557,11 +305,7 @@ export class AlertRenderer {
     return easingMap[easing] || 'ease-out';
   }
 
-  /**
-   * Build CSS animation name based on type, direction, and config
-   */
   private _buildAnimationName(type: NewAnimationType, direction: Direction, config: AnimationConfig): string {
-    // Map our animation types to CSS animation keyframes
     const animationMap: Record<NewAnimationType, string> = {
       fade: 'anim-fade',
       slide: 'anim-slide',
@@ -573,39 +317,23 @@ export class AlertRenderer {
       zoom: 'anim-zoom',
       custom: 'anim-custom',
     };
-    
     const baseAnim = animationMap[type] || 'anim-fade';
     const dir = direction !== 'center' ? `-${direction}` : '';
-    
     return `${baseAnim}${dir}`;
   }
 
-  /**
-   * Play sound using HTMLAudioElement
-   */
   playSound(url: string, volume: number): void {
     try {
       this.audioElement = new Audio();
       this.audioElement.src = mediaRegistry.resolve(url);
       this.audioElement.volume = Math.max(0, Math.min(1, volume));
-      this.audioElement.loop = false;
-      
-      this.audioElement.play().catch(err => {
-        console.warn('[AlertRenderer] Failed to play sound:', err);
-      });
-      
-      // Stop sound when it ends
-      this.audioElement.onended = () => {
-        this.stopSound();
-      };
+      this.audioElement.onended = () => this.stopSound();
+      this.audioElement.play().catch(err => console.warn('[AlertRenderer] playSound failed:', err));
     } catch (err) {
-      console.error('[AlertRenderer] Error creating audio element:', err);
+      console.error('[AlertRenderer] Audio init failed:', err);
     }
   }
 
-  /**
-   * Stop currently playing sound
-   */
   stopSound(): void {
     if (this.audioElement) {
       this.audioElement.pause();
@@ -614,11 +342,7 @@ export class AlertRenderer {
     }
   }
 
-  /**
-   * Stop all animations and sound
-   */
   stop(): void {
-    // Clear timeouts
     if (this.animationTimeoutId) {
       clearTimeout(this.animationTimeoutId);
       this.animationTimeoutId = undefined;
@@ -627,51 +351,32 @@ export class AlertRenderer {
       clearTimeout(this.outAnimationTimeoutId);
       this.outAnimationTimeoutId = undefined;
     }
-    
-    // Stop sound
     this.stopSound();
     
-    // Clean up video elements
-    const videos = this.container.querySelectorAll('video');
-    videos.forEach(video => {
+    this.container.querySelectorAll('video').forEach(video => {
       video.pause();
       video.src = '';
       video.load();
     });
     
-    // Reset animation phase
     this.animationPhase = 'none';
     this.applyAnimationStyles('none');
   }
 
-  /**
-   * Get current animation phase
-   */
   getAnimationPhase(): 'in' | 'out' | 'none' {
     return this.animationPhase;
   }
 
-  /**
-   * Update a single element by ID
-   */
   updateElement(id: string, partialData: any): void {
     this.renderer.updateElement(id, partialData);
   }
 
-  /**
-   * Clean up resources
-   */
   destroy(): void {
     this.stop();
     this.container.innerHTML = '';
   }
 }
 
-/**
- * Helper to create an AlertRenderer from an element
- */
 export function createAlertRenderer(container: HTMLElement): AlertRenderer {
   return new AlertRenderer(container);
 }
-
-// getAnimationKeyframes and injectAnimationStyles were removed. Use css classes instead.

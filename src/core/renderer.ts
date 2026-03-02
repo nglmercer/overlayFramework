@@ -1,7 +1,11 @@
-import { Template, TemplateSchema } from './schemas';
+import { TemplateSchema } from './schemas';
 import { ElementFactory } from './renderer/factory';
-import { formatUnit } from './renderer/utils';
+import { formatUnit, applyStyles } from './renderer/utils';
 
+/**
+ * Renderer - Orchestrator for turning Template data into a living DOM tree.
+ * Handles validation, container management, and element lifecycle updates.
+ */
 export class Renderer {
   private container: HTMLElement;
 
@@ -10,122 +14,90 @@ export class Renderer {
     this.setupContainer();
   }
 
+  /**
+   * Basic CSS setup for the mount point
+   */
   private setupContainer() {
-    this.container.style.position = 'relative';
-    this.container.style.overflow = 'hidden';
-    // Ensure container can hold absolute elements properly
+    applyStyles(this.container, {
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'block'
+    });
+    
+    // Ensure relative positioning for child absolute coordinates
     if (getComputedStyle(this.container).position === 'static') {
       this.container.style.position = 'relative';
     }
   }
 
   /**
-   * Renders a template into the container.
-   * Validates the input data using Zod.
+   * Renders a full template into the container.
+   * Validates input data with Zod schema before processing.
    */
   render(data: any) {
-    // Validate data
     const result = TemplateSchema.safeParse(data);
     
     if (!result.success) {
-      console.error('Invalid template data:', result.error.format());
+      console.error('[Renderer] Invalid template data:', result.error.format());
       throw new Error('Invalid template data');
     }
 
     const template = result.data;
     
-    // Clear and setup
+    // 1. Clear previous content
     this.container.innerHTML = '';
-    this.container.style.width = formatUnit(template.width);
-    this.container.style.height = formatUnit(template.height);
-    this.container.style.backgroundColor = template.backgroundColor;
     
-    if (template.perspective) {
-      this.container.style.perspective = template.perspective;
-    }
+    // 2. Apply template-wide styles
+    applyStyles(this.container, {
+      width: formatUnit(template.width),
+      height: formatUnit(template.height),
+      backgroundColor: template.backgroundColor,
+      perspective: template.perspective
+    });
+    
+    // 3. Create and append elements
+    // Elements are already sorted by z-index in the builder, but we ensure it here too
+    const elements = [...template.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
-    // Sort by zIndex (though factory handles it for groups, we handle top level here)
-    const sortedElements = [...template.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
-    for (const element of sortedElements) {
-      if (element.visible === false) continue;
+    for (const data of elements) {
+      if (data.visible === false) continue;
       
-      const el = ElementFactory.create(element);
-      
-      // Apply positioning and base styles directly to element
-      this.applyElementStyles(el, element);
-      
+      const el = ElementFactory.create(data);
       this.container.appendChild(el);
     }
   }
 
   /**
-   * Apply element-specific positioning and styling
-   */
-  private applyElementStyles(el: HTMLElement, element: any) {
-    // Set position
-    el.style.position = element.position || 'absolute';
-    
-    // Set coordinates
-    if (element.x !== undefined && element.x !== 0) {
-      el.style.left = formatUnit(element.x);
-    }
-    if (element.y !== undefined && element.y !== 0) {
-      el.style.top = formatUnit(element.y);
-    }
-    
-    // Set dimensions
-    if (element.width !== undefined) {
-      el.style.width = formatUnit(element.width);
-    }
-    if (element.height !== undefined) {
-      el.style.height = formatUnit(element.height);
-    }
-    
-    // Set rotation
-    if (element.rotation !== undefined && element.rotation !== 0) {
-      el.style.transform = `rotate(${element.rotation}deg)`;
-    }
-    
-    // Set opacity
-    if (element.opacity !== undefined && element.opacity !== 1) {
-      el.style.opacity = String(element.opacity);
-    }
-    
-    // Set z-index
-    if (element.zIndex !== undefined) {
-      el.style.zIndex = String(element.zIndex);
-    }
-    
-    // Set data-id for querying
-    el.setAttribute('data-id', element.id);
-  }
-
-  /**
-   * Helper to update a single element by its ID without full re-render
+   * Helper to update specific element properties without a full re-render
    */
   updateElement(id: string, partialData: any) {
     const el = this.container.querySelector(`[data-id="${id}"]`) as HTMLElement;
     if (el) {
-      // Apply partial update styles
-      this.applyElementStyles(el, partialData);
+      // Direct property update on the DOM node using same logic as factory
+      const { type } = partialData;
+      // In a more complex system, we'd recalibrate the element here.
+      // For now, simple attribute/style updates suffice for simple edits.
+      if (partialData.style) applyStyles(el, partialData.style);
     }
   }
 }
 
 /**
- * Utility to mount the renderer into an iframe
+ * Utility to mount the renderer into an iframe specifically for sandboxing
  */
 export function createIframeRenderer(iframe: HTMLIFrameElement): Renderer {
   const doc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!doc) throw new Error('Iframe not ready');
+  if (!doc) throw new Error('Iframe source document not available');
   
-  // Basic reset for iframe
-  doc.body.style.margin = '0';
-  doc.body.style.padding = '0';
-  doc.body.style.overflow = 'hidden';
-  doc.body.style.width = '100%';
-  doc.body.style.height = '100%';
+  // Reset iframe body for clean viewport
+  applyStyles(doc.body, {
+    margin: '0',
+    padding: '0',
+    overflow: 'hidden',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent'
+  });
   
   return new Renderer(doc.body);
 }

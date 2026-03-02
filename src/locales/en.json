@@ -97,6 +97,7 @@
   
   "event.kick_chat": "Kick: Chat",
   "event.kick_chat.condition": "Any message on Kick",
+  "event.kick_reward_redeemed": "Kick: Reward redeemed",
   "event.tiktok_chat": "TikTok: Chat",
   "event.tiktok_chat.condition": "Any message on TikTok",
   "event.tiktok_gift": "TikTok: Gifts",

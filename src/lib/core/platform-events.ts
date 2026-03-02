@@ -54,6 +54,19 @@ export const PLATFORM_EVENTS: Record<string, PlatformEventDefinition> = {
       { name: 'message', description: 'Contenido del mensaje' },
     ],
   },
+  'kick_reward_redeemed': {
+    id: 'kick_reward_redeemed',
+    label: 'Kick: Recompensa Canjeada',
+    conditionLabel: 'Cuando un usuario canjea una recompensa del canal en Kick',
+    defaultMessage: '{username} canjeó {reward_title}!',
+    requiredFields: ['username', 'reward_title'],
+    optionalFields: ['user_id', 'channel_id', 'user_input', 'reward_background_color'],
+    variables: [
+      { name: 'username', description: 'Nombre del usuario que canjeó la recompensa' },
+      { name: 'reward_title', description: 'Título de la recompensa canjeada' },
+      { name: 'user_input', description: 'Entrada personalizada del usuario' },
+    ],
+  },
 
   // --- TIKTOK EVENTS ---
   'tiktok_chat': {
