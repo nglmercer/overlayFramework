@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { PlatformEventDefinition } from '../../lib/alertEvents';
 import { LocalizeController } from '../../locales/localization';
+import { EVENTS } from '../../lib/constants';
 
 @customElement('editor-left-sidebar')
 export class EditorLeftSidebar extends LitElement {
@@ -295,7 +296,7 @@ export class EditorLeftSidebar extends LitElement {
 
   private _toggleSection(sectionId: string) {
     const newSection = this.expandedSection === sectionId ? null : sectionId;
-    this.dispatchEvent(new CustomEvent('section-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.SECTION_CHANGE, {
       detail: newSection,
       bubbles: true,
       composed: true
@@ -316,7 +317,7 @@ export class EditorLeftSidebar extends LitElement {
   }
 
   private _selectVariant(variantId: string) {
-    this.dispatchEvent(new CustomEvent('variant-select', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.VARIANT_SELECT, {
       detail: variantId,
       bubbles: true,
       composed: true
@@ -324,7 +325,7 @@ export class EditorLeftSidebar extends LitElement {
   }
 
   private _toggleRandomize() {
-    this.dispatchEvent(new CustomEvent('randomize-toggle', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.RANDOMIZE_TOGGLE, {
       bubbles: true,
       composed: true
     }));
@@ -348,7 +349,7 @@ export class EditorLeftSidebar extends LitElement {
           <button
             class="btn-add"
             title="${this._t('variant.new')}"
-            @click="${() => this.dispatchEvent(new CustomEvent('create-variant', { bubbles: true, composed: true }))}"
+            @click="${() => this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.CREATE_VARIANT, { bubbles: true, composed: true }))}"
           >+</button>
         </div>
 

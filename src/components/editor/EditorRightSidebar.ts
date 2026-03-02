@@ -2,6 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
+import { EVENTS } from '../../lib/constants';
 import './property-panels';
 
 type PanelId = 'general' | 'typography' | 'animations' | 'design' | 'media';
@@ -294,11 +295,21 @@ export class EditorRightSidebar extends LitElement {
   }
 
   private _handleDuplicate() {
-    this.dispatchEvent(new CustomEvent('duplicate-variant', { bubbles: true, composed: true }));
+    if (!this.variant) return;
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.DUPLICATE_VARIANT, { 
+      detail: this.variant.id,
+      bubbles: true, 
+      composed: true 
+    }));
   }
 
   private _handleDelete() {
-    this.dispatchEvent(new CustomEvent('delete-variant', { bubbles: true, composed: true }));
+    if (!this.variant) return;
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.DELETE_VARIANT, { 
+      detail: this.variant.id,
+      bubbles: true, 
+      composed: true 
+    }));
   }
 
   private _handleOpenMediaLibrary(type: 'image' | 'sound') {

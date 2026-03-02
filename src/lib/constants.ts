@@ -289,6 +289,50 @@ export const FILE_TYPES = {
 
 /**
  * ============================================
+ * EVENT CONSTANTS
+ * ============================================
+ */
+
+export const EVENTS = {
+  /** Component Custom Events */
+  COMPONENT: {
+    VARIANT_SELECT: 'variant-select',
+    CREATE_VARIANT: 'create-variant',
+    DELETE_VARIANT: 'delete-variant',
+    DUPLICATE_VARIANT: 'duplicate-variant',
+    RANDOMIZE_TOGGLE: 'randomize-toggle',
+    SECTION_CHANGE: 'section-change',
+    PANEL_CHANGE: 'panel-change',
+    PROPERTY_CHANGE: 'property-change',
+    ANIMATION_CONFIG_CHANGE: 'animation-config-change',
+    OPEN_MEDIA_LIBRARY: 'open-media-library',
+    MEDIA_SELECT: 'media-select',
+    MEDIA_CLOSE: 'media-close',
+    WIDTH_CHANGE: 'width-change',
+    HEIGHT_CHANGE: 'height-change',
+    BG_CHANGE: 'bg-change',
+    PLAY_PREVIEW: 'play-preview',
+    SEND_TEST: 'send-test',
+    WS_ALERT: 'ws-alert',
+    WS_CONNECTION_CHANGE: 'ws-connection-change',
+    WS_CONNECTION_ERROR: 'ws-connection-error',
+  },
+  
+  /** Window PostMessage Events */
+  WINDOW: {
+    UPDATE_VARIANT: 'UPDATE_VARIANT',
+    PLAY_PREVIEW: 'play-preview',
+    CONNECT_WS: 'connect-ws',
+    DISCONNECT_WS: 'disconnect-ws',
+    SEND_TEST_ALERT: 'send-test-alert',
+    EMIT_ALERT: 'emit-alert',
+    GET_CONNECTION_INFO: 'get-connection-info',
+    PREVIEW_READY: 'PREVIEW_READY',
+  },
+} as const;
+
+/**
+ * ============================================
  * EXPORTS
  * ============================================
  */

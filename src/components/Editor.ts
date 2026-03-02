@@ -232,6 +232,9 @@ export class AppEditor extends LitElement {
   updated(changedProperties: Map<string, unknown>) {
     // Auto-generate preview URL when boxId changes or when variants are loaded
     if (changedProperties.has('boxId') && this.boxId) {
+      // Clear local cache when switching boxes
+      this._localVariants = [];
+      
       // Small delay to ensure variants are loaded
       setTimeout(() => {
         this._autoGeneratePreviewUrl();
@@ -323,9 +326,9 @@ export class AppEditor extends LitElement {
       return null;
     }
 
-    console.log('[Editor] Saving variant to backend for preview:', { 
-      id: variant.id, 
-      imageUrl: variant.imageUrl 
+    console.log('[Editor] Saving all variants to backend for preview:', { 
+      boxId: this.boxId,
+      count: variants.length 
     });
     
     try {
@@ -335,7 +338,8 @@ export class AppEditor extends LitElement {
         body: JSON.stringify({
           key: this.boxId,
           data: {
-            variant: variant,
+            variants: variants, // Save all variants instead of just one
+            variant: variant,   // Keep selected variant for backward compatibility
             preview: true
           }
         })
@@ -498,7 +502,8 @@ export class AppEditor extends LitElement {
     const newVariant: AlertVariant = this.createNewVariantData(type, schemaDef);
     await dbManager.saveVariant(newVariant);
     
-    // Refresh the variants list and select the new one
+    // Clear local cache and refresh the variants list
+    this._localVariants = [];
     this._variantsTask.run();
     this.selectedVariantId = newVariant.id;
   }
@@ -543,20 +548,27 @@ export class AppEditor extends LitElement {
     };
     
     await dbManager.saveVariant(duplicated);
+    this._localVariants = [];
     this.selectedVariantId = duplicated.id;
     this._variantsTask.run();
   }
 
   /**
-   * Deletes a variant after user confirmation.
-   * 
-   * @param id - The ID of the variant to delete
+   * Delete variant from IndexedDB
    */
-  async handleDeleteVariant(id: string): Promise<void> {
+  async handleDeleteVariant(idOrEvent: string | CustomEvent): Promise<void> {
+    const id = typeof idOrEvent === 'string' ? idOrEvent : idOrEvent.detail;
+    if (!id) return;
+
     const confirmResult = await confirm(this.t('variant.confirmDelete'));
     if (confirmResult) {
       await dbManager.deleteVariant(id);
-      this.selectedVariantId = null;
+      this._localVariants = [];
+      
+      if (this.selectedVariantId === id) {
+        this.selectedVariantId = null;
+      }
+      
       this._variantsTask.run();
     }
   }
@@ -763,6 +775,7 @@ export class AppEditor extends LitElement {
         <!-- Preview Area -->
         <editor-preview
           .variant="${this.getSelectedVariant(variants)}"
+          .variants="${variants}"
           .eventData="${{ username: 'Test User', months: '1', amount: '100' }}"
           .width="${this.previewWidth}"
           .height="${this.previewHeight}"
@@ -782,6 +795,8 @@ export class AppEditor extends LitElement {
           @panel-change="${this._handleRightPanelChange}"
           @property-change="${(e: CustomEvent) => this._handlePropertyPanelChange(e, variants)}"
           @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
+          @delete-variant="${this.handleDeleteVariant}"
+          @duplicate-variant="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
         ></editor-right-sidebar>
       </div>
 

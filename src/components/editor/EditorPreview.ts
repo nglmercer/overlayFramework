@@ -3,6 +3,7 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
 import { getWebSocketUrl } from '../../lib/config';
+import { EVENTS } from '../../lib/constants';
 
 type BgColor = 'transparent' | '#000000' | '#ffffff' | '#ff0000';
 
@@ -175,6 +176,7 @@ export class EditorPreview extends LitElement {
   `;
 
   @property({ type: Object }) variant: AlertVariant | null = null;
+  @property({ type: Array }) variants: AlertVariant[] = [];
   @property({ type: Number }) width = 600;
   @property({ type: Number }) height = 600;
   @property({ type: String }) bgColor: BgColor = 'transparent';
@@ -191,16 +193,16 @@ export class EditorPreview extends LitElement {
   }
 
   private _handlePlay() {
-    this.dispatchEvent(new CustomEvent('play-preview', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.PLAY_PREVIEW, { bubbles: true, composed: true }));
   }
 
   private _handleSendTest() {
-    this.dispatchEvent(new CustomEvent('send-test', { bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.SEND_TEST, { bubbles: true, composed: true }));
   }
 
   private _handleWidthChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.dispatchEvent(new CustomEvent('width-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.WIDTH_CHANGE, {
       detail: Number(input.value),
       bubbles: true,
       composed: true
@@ -209,7 +211,7 @@ export class EditorPreview extends LitElement {
 
   private _handleHeightChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.dispatchEvent(new CustomEvent('height-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.HEIGHT_CHANGE, {
       detail: Number(input.value),
       bubbles: true,
       composed: true
@@ -217,7 +219,7 @@ export class EditorPreview extends LitElement {
   }
 
   private _handleBgChange(color: BgColor) {
-    this.dispatchEvent(new CustomEvent('bg-change', {
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.BG_CHANGE, {
       detail: color,
       bubbles: true,
       composed: true
@@ -227,69 +229,24 @@ export class EditorPreview extends LitElement {
   // Public method to trigger preview animation - called by parent Editor
   public async playPreview() {
     if (this.iframeRef && this.iframeReady) {
-      this.iframeRef.contentWindow?.postMessage({ type: 'play-preview' }, '*');
+      this.iframeRef.contentWindow?.postMessage({ type: EVENTS.WINDOW.PLAY_PREVIEW }, '*');
     }
   }
 
   // Send variant update to iframe
   private _sendVariantToIframe() {
-    if (this.iframeRef && this.iframeReady && this.variant) {
-      // Pass variant directly - preview.ts uses variantToAlertConfig internally
-      // Include eventData for variable substitution in the message
+    if (this.iframeRef && this.iframeReady) {
+      // Pass both current variant and the collection of all variants
       const eventData = { username: 'TestUser', amount: '100', months: '1' };
       this.iframeRef.contentWindow?.postMessage({ 
-        type: 'UPDATE_VARIANT', 
+        type: EVENTS.WINDOW.UPDATE_VARIANT, 
         payload: { 
           variant: this.variant,
+          variants: this.variants,
           eventData: eventData
         } 
       }, '*');
     }
-  }
-
-  // Convert AlertVariant to Template format
-  private _convertVariantToTemplate(variant: AlertVariant): Record<string, unknown> {
-    // Map the AlertVariant to the Template format expected by Renderer
-    return {
-      id: variant.id,
-      type: variant.type,
-      name: variant.name,
-      layout: variant.layout,
-      message: variant.message,
-      // Style properties
-      style: {
-        backgroundColor: variant.bgColor,
-        backgroundOpacity: variant.bgOpacity,
-        textColor: variant.textColor,
-        highlightColor: variant.highlightColor,
-        fontFamily: variant.fontFamily,
-        fontSize: variant.fontSize,
-        fontWeight: variant.fontWeight,
-        textAlign: variant.textAlign,
-        padding: variant.padding,
-        borderRadius: variant.rounded,
-        textShadow: variant.textShadow,
-      },
-      // Animation properties
-      animation: {
-        entrance: variant.animationIn,
-        exit: variant.animationOut,
-        entranceDuration: variant.animationInDuration,
-        exitDuration: variant.animationOutDuration,
-      },
-      // Media properties
-      media: {
-        imageUrl: variant.imageUrl,
-        imageScale: variant.imageScale,
-        soundUrl: variant.soundUrl,
-        soundVolume: variant.soundVolume,
-      },
-      // Event properties
-      event: {
-        condition: variant.condition,
-        duration: variant.duration,
-      },
-    };
   }
 
   // Handle messages from iframe
@@ -301,7 +258,7 @@ export class EditorPreview extends LitElement {
 
     const { type, payload } = event.data;
 
-    if (type === 'PREVIEW_READY') {
+    if (type === EVENTS.WINDOW.PREVIEW_READY) {
       this.iframeReady = true;
       console.log('[EditorPreview] Iframe ready');
       // Send variant data once iframe is ready
@@ -312,7 +269,7 @@ export class EditorPreview extends LitElement {
     }
     else if (type === 'alert') {
       // Forward alert events to parent
-      this.dispatchEvent(new CustomEvent('ws-alert', {
+      this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.WS_ALERT, {
         detail: payload,
         bubbles: true,
         composed: true,
@@ -320,7 +277,7 @@ export class EditorPreview extends LitElement {
     }
     else if (type === 'connection-change') {
       // Forward connection changes to parent
-      this.dispatchEvent(new CustomEvent('ws-connection-change', {
+      this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.WS_CONNECTION_CHANGE, {
         detail: payload,
         bubbles: true,
         composed: true,
@@ -340,7 +297,7 @@ export class EditorPreview extends LitElement {
 
   // Send variant to iframe when it changes
   updated(changedProperties: Map<string, unknown>) {
-    if (changedProperties.has('variant') && this.iframeReady) {
+    if ((changedProperties.has('variant') || changedProperties.has('variants')) && this.iframeReady) {
       this._sendVariantToIframe();
     }
   }

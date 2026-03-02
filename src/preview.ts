@@ -33,7 +33,8 @@ if (root) {
   const alertRenderer = createAlertRenderer(root);
   console.log('[Preview] AlertRenderer initialized');
 
-  // Store current variant and config for replay
+  // Store all variants for matching against events
+  let allVariants: Record<string, unknown>[] = [];
   let currentVariant: Record<string, unknown> | null = null;
   let currentEventData: Record<string, string> = {};
 
@@ -131,9 +132,18 @@ if (root) {
         if (event.data && event.data.type === 'alert') {
           handleAlertMessage(event.data as AlertMessage);
         } else if (event.data && event.data.type === 'UPDATE_VARIANT') {
-          const { variant, eventData } = event.data.payload as VariantPayload;
-          console.log('[Preview] UPDATE_VARIANT received via BroadcastChannel:', { variantType: variant?.type });
-          updateVariant(variant, eventData);
+          const { variant, variants, eventData } = event.data.payload as any;
+          console.log('[Preview] UPDATE received via BroadcastChannel:', { 
+            variantType: variant?.type, 
+            variantsCount: variants?.length 
+          });
+          
+          if (variants) {
+            updateVariants(variants);
+          }
+          if (variant) {
+            updateVariant(variant, eventData);
+          }
         }
       };
       console.log('[Preview] BroadcastChannel connected:', CHANNEL_NAME);
@@ -164,21 +174,25 @@ if (root) {
   function handleAlertMessage(message: AlertMessage): void {
     console.log('[Preview] Alert received:', message.eventName, message.data);
 
-    // Re-render the variant with the new event data (for variable substitution)
-    if (currentVariant) {
+    // Match the incoming alert to one of our variants
+    const targetVariant = findMatchingVariant(message.eventName, message.data);
+    
+    if (targetVariant) {
       try {
         const config = variantToAlertConfig(
-          currentVariant as Parameters<typeof variantToAlertConfig>[0],
+          targetVariant as Parameters<typeof variantToAlertConfig>[0],
           message.data,
           { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
         );
         
         // Play the entrance animation
         alertRenderer.playPreview(config);
-        console.log('[Preview] Alert rendered with event data');
+        console.log(`[Preview] Alert rendered with variant: ${targetVariant.name || targetVariant.id}`);
       } catch (error) {
         console.error('[Preview] Failed to render alert:', error);
       }
+    } else {
+      console.warn(`[Preview] No matching variant found for event: ${message.eventName}`);
     }
 
     // Dispatch custom event for external listeners
@@ -205,16 +219,56 @@ if (root) {
   }
 
   /**
-   * Update the variant to render using AlertRenderer
+   * Find the best matching variant for an event
+   */
+  function findMatchingVariant(eventName: string, data: Record<string, string>): Record<string, unknown> | null {
+    // 1. Filter variants by event type
+    const potentialVariants = allVariants.filter(v => v.type === eventName);
+    
+    if (potentialVariants.length === 0) {
+      // If no variants for this type, fallback to currentVariant if it matches
+      if (currentVariant && currentVariant.type === eventName) return currentVariant;
+      return null;
+    }
+    
+    // 2. If only one variant for this type, use it
+    if (potentialVariants.length === 1) return potentialVariants[0];
+    
+    // 3. If multiple variants, matching logic could go here (condition checking etc.)
+    // For now, return the first active one or just the first one
+    return potentialVariants.find(v => v.active !== false) || potentialVariants[0];
+  }
+
+  /**
+   * Update the collection of all variants
+   */
+  function updateVariants(variants: Record<string, unknown>[]): void {
+    if (!Array.isArray(variants)) return;
+    allVariants = variants;
+    console.log('[Preview] updateVariants: Store updated with', variants.length, 'variants');
+  }
+
+  /**
+   * Update the variant to render (legacy/active selection)
    */
   function updateVariant(variant: Record<string, unknown>, eventData?: Record<string, string>): void {
     currentVariant = variant;
     currentEventData = eventData || {};
     
+    // Also add to allVariants if not present
+    if (variant && variant.id) {
+      const exists = allVariants.find(v => v.id === variant.id);
+      if (!exists) {
+        allVariants.push(variant);
+      } else {
+        // Update existing item in the collection
+        allVariants = allVariants.map(v => v.id === variant.id ? variant : v);
+      }
+    }
+    
     console.log('[Preview] updateVariant called:', { 
       variantType: variant?.type, 
       message: variant?.message,
-      imageUrl: variant?.imageUrl,
       eventData: currentEventData 
     });
     
@@ -226,13 +280,8 @@ if (root) {
         { containerWidth: CONFIG.PREVIEW.DEFAULT_SIZE, containerHeight: CONFIG.PREVIEW.DEFAULT_SIZE }
       );
       
-      console.log('[Preview] AlertConfig created:', { 
-        message: config.message, 
-        imageUrl: config.imageUrl 
-      });
-      
       alertRenderer.render(config);
-      console.log('[Preview] Variant rendered');
+      console.log('[Preview] Current variant rendered');
     } catch (error) {
       console.error('[Preview] Failed to render variant:', error);
     }
@@ -322,9 +371,19 @@ if (root) {
 
     if (type === 'UPDATE_VARIANT') {
       // Update variant and optional event data
-      const { variant, eventData } = payload as VariantPayload;
-      console.log('[Preview] UPDATE_VARIANT received:', { variantType: variant?.type, eventData });
-      updateVariant(variant, eventData);
+      const { variant, variants, eventData } = payload as any;
+      console.log('[Preview] UPDATE_VARIANT received:', { 
+        variantType: variant?.type, 
+        variantsCount: variants?.length 
+      });
+
+      if (variants) {
+        updateVariants(variants);
+      }
+      
+      if (variant) {
+        updateVariant(variant, eventData);
+      }
 
       // Broadcast to other tabs (standalone preview)
       if (broadcastChannel) {
@@ -375,19 +434,26 @@ if (root) {
         const backendUrl = getBackendUrl();
         const response = await fetch(`${backendUrl}/webhook/overlay/${overlayId}`);
         if (response.ok) {
-          const data = await response.json();
-          if (data.data && data.data.variant) {
-            // Provide default dummy data for initial render so it doesn't show raw variables
-            const defaultTestData = { 
-              username: 'Viewer', 
-              amount: '1000', 
-              months: '1', 
-              message: '¡Gracias por el apoyo!' 
-            };
-            
-            updateVariant(data.data.variant, defaultTestData);
-            // Auto-play preview when loaded from params
-            setTimeout(() => playPreview(), 500);
+          const result = await response.json();
+          if (result.data) {
+            // Load all variants if available
+            if (Array.isArray(result.data.variants)) {
+              updateVariants(result.data.variants);
+            }
+
+            if (result.data.variant) {
+              // Provide default dummy data for initial render
+              const defaultTestData = { 
+                username: 'Viewer', 
+                amount: '1000', 
+                months: '1', 
+                message: '¡Gracias por el apoyo!' 
+              };
+              
+              updateVariant(result.data.variant, defaultTestData);
+              // Auto-play preview when loaded from params
+              setTimeout(() => playPreview(), 500);
+            }
           }
         } else {
           console.error('[Preview] Failed to load overlay:', response.status);
