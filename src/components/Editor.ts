@@ -130,6 +130,9 @@ export class AppEditor extends LitElement {
   /** Preview canvas background color */
   @state() private previewBgColor: BgColor = 'transparent';
 
+  /** Whether the preview is connected to WebSocket */
+  @state() private isWsConnected = false;
+
   // ---------------------------------------------------------------------------
   // Controllers and Tasks
   // ---------------------------------------------------------------------------
@@ -347,7 +350,7 @@ export class AppEditor extends LitElement {
    * Dispatches a test alert event to WebSocket and plays the preview.
    * Sends to backend via WebSocket for real testing.
    */
-  handleSendTestAlert = (): void => {
+  handleSendTestAlert = async (): Promise<void> => {
     // Use computed variants
     const variants = this.variants;
     const variant = this.getSelectedVariant(variants);
@@ -367,8 +370,29 @@ export class AppEditor extends LitElement {
       months: '1',
       message: 'Test Alert!',
     };
+
+    // If WS is connected, prioritize sending via backend for real broadcast
+    if (this.isWsConnected) {
+      try {
+        const response = await fetch(getBackendEndpoint('/webhook/alert'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventName: eventType,
+            data: testData
+          })
+        });
+
+        if (response.ok) {
+          console.log('[Editor] Test alert sent via backend (WebSocket broadcast)');
+          return;
+        }
+      } catch (err) {
+        console.warn('[Editor] Failed to send alert via backend, falling back to postMessage', err);
+      }
+    }
     
-    // Send test alert to preview iframe via postMessage
+    // Fallback: Send test alert to preview iframe via postMessage for local testing
     if (this.editorPreview) {
       // Access the iframe inside editor-preview and send message
       const iframe = this.editorPreview.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
@@ -377,11 +401,11 @@ export class AppEditor extends LitElement {
           type: 'send-test-alert',
           payload: { eventName: eventType, data: testData }
         }, '*');
-        console.log('[Editor] Test alert sent via iframe:', eventType);
+        console.log('[Editor] Test alert sent via iframe fallback:', eventType);
       }
     }
     
-    // Also play local preview
+    // Also play local preview (in case WS is slow or as fallback)
     this.handlePlayPreview();
   }
 
@@ -604,6 +628,17 @@ export class AppEditor extends LitElement {
     this.handlePropertyChange({ [field]: value }, variants);
   }
 
+  /**
+   * Handles WebSocket connection state changes from the preview iframe
+   */
+  private _handleWsConnectionChange(e: CustomEvent): void {
+    const { state, type } = e.detail;
+    if (type === 'websocket') {
+      this.isWsConnected = state === 'connected';
+      console.log('[Editor] WS Connection state updated:', this.isWsConnected ? 'Connected' : 'Disconnected');
+    }
+  }
+
   // =============================================================================
   // Event Handlers - Media Library
   // =============================================================================
@@ -717,6 +752,7 @@ export class AppEditor extends LitElement {
           @width-change="${this._handlePreviewWidthChange}"
           @height-change="${this._handlePreviewHeightChange}"
           @bg-change="${this._handlePreviewBgChange}"
+          @ws-connection-change="${this._handleWsConnectionChange}"
         ></editor-preview>
 
         <!-- Right Sidebar -->
