@@ -7,6 +7,7 @@ import { Template, TemplateSchema } from './schemas';
 import { Renderer } from './renderer';
 import { mediaRegistry } from './mediaRegistry';
 import { formatUnit } from './renderer/utils';
+import { AnimationConfig, AnimationType as NewAnimationType, Direction, Easing } from '../schemas/animation-schemas';
 
 // Animation types supported by the system
 export type AnimationType = 
@@ -23,11 +24,16 @@ export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'center';
 
 // Alert configuration interface
 export interface AlertConfig {
-  // Animation
+  // Animation - Legacy (string-based)
   animationIn: AnimationType;
   animationOut: AnimationType;
   animationInDuration: number;
   animationOutDuration: number;
+  
+  // Animation - New Schema-based (preferred)
+  entranceAnimation?: AnimationConfig;
+  exitAnimation?: AnimationConfig;
+  
   duration: number;
   
   // Layout
@@ -358,7 +364,12 @@ export class AlertRenderer {
     let animStyle = '';
     const visibilityClass = phase === 'none' ? 'hidden' : '';
     
-    if (phase === 'in') {
+    // Use new schema-based animation if available, otherwise fall back to legacy
+    if (phase === 'in' && this.currentConfig.entranceAnimation) {
+      animStyle = this._generateAnimationCSS(this.currentConfig.entranceAnimation);
+    } else if (phase === 'out' && this.currentConfig.exitAnimation) {
+      animStyle = this._generateAnimationCSS(this.currentConfig.exitAnimation);
+    } else if (phase === 'in') {
       animStyle = `animation: ${this.currentConfig.animationIn || 'fade-in'} ${this.currentConfig.animationInDuration || 1}s ease-out forwards;`;
     } else if (phase === 'out') {
       animStyle = `animation: ${this.currentConfig.animationOut || 'fade-out'} ${this.currentConfig.animationOutDuration || 1}s ease-in forwards;`;
@@ -366,6 +377,59 @@ export class AlertRenderer {
     
     this.container.className = visibilityClass;
     this.container.style.cssText += animStyle;
+  }
+
+  /**
+   * Generate CSS animation string from AnimationConfig
+   */
+  private _generateAnimationCSS(config: AnimationConfig): string {
+    const duration = (config.duration || 0.3);
+    const easing = this._convertEasing(config.easing);
+    
+    // Build the animation name based on type, direction, and effect
+    const animName = this._buildAnimationName(config.type, config.direction, config);
+    
+    return `animation: ${animName} ${duration}s ${easing} forwards; opacity: ${config.opacity};`;
+  }
+
+  /**
+   * Convert our Easing type to CSS easing function
+   */
+  private _convertEasing(easing: Easing): string {
+    const easingMap: Record<Easing, string> = {
+      linear: 'linear',
+      easeIn: 'ease-in',
+      easeOut: 'ease-out',
+      easeInOut: 'ease-in-out',
+      backIn: 'cubic-bezier(0.36, 0, 0.66, -0.56)',
+      backOut: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      anticipate: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+      custom: 'ease-out',
+    };
+    return easingMap[easing] || 'ease-out';
+  }
+
+  /**
+   * Build CSS animation name based on type, direction, and config
+   */
+  private _buildAnimationName(type: NewAnimationType, direction: Direction, config: AnimationConfig): string {
+    // Map our animation types to CSS animation keyframes
+    const animationMap: Record<NewAnimationType, string> = {
+      fade: 'anim-fade',
+      slide: 'anim-slide',
+      scale: 'anim-scale',
+      rotate: 'anim-rotate',
+      blur: 'anim-blur',
+      flip: 'anim-flip',
+      bounce: 'anim-bounce',
+      zoom: 'anim-zoom',
+      custom: 'anim-custom',
+    };
+    
+    const baseAnim = animationMap[type] || 'anim-fade';
+    const dir = direction !== 'center' ? `-${direction}` : '';
+    
+    return `${baseAnim}${dir}`;
   }
 
   /**

@@ -14,6 +14,9 @@ export * from '../locales/localization';
 export * from './schema-loader';
 export * from './alertEvents';
 
+// Animation schemas export
+export * from '../schemas/animation-schemas';
+
 // Task exports
 export * from './task-controllers';
 

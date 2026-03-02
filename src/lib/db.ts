@@ -1,3 +1,5 @@
+import { AnimationConfig } from '../schemas/animation-schemas';
+
 export interface AlertVariant {
   id: string;
   boxId: string;
@@ -5,10 +7,16 @@ export interface AlertVariant {
   name: string;
   condition: string;
   duration: number;
+  
+  // Animation - Legacy fields (for backward compatibility)
   animationIn: string;
   animationOut: string;
   animationInDuration: number;
   animationOutDuration: number;
+  
+  // Animation - New schema-based config
+  entranceAnimation: AnimationConfig;
+  exitAnimation: AnimationConfig;
   
   // Design
   layout: 'text-below' | 'text-right' | 'text-over';

@@ -18,6 +18,8 @@ export class EditorRightSidebar extends LitElement {
     .sidebar-right {
       width: 20rem;
       min-width: 20rem;
+      height: 100%;
+      max-height: 100%;
       border-left: 1px solid rgba(255, 255, 255, 0.1);
       background-color: #18181b;
       display: flex;
@@ -274,6 +276,23 @@ export class EditorRightSidebar extends LitElement {
     }));
   }
 
+  private _handleAnimationConfigChange(e: CustomEvent) {
+    // Extract entrance and exit animation configs from the event detail
+    // The event now includes both configs in a single call
+    const { entrance, exit, activeTab } = e.detail;
+    
+    // Dispatch a single property-change event with both animation configs
+    // This ensures atomic update of both animations
+    this.dispatchEvent(new CustomEvent('property-change', {
+      detail: { 
+        field: 'animationConfigs', 
+        value: { entrance, exit, updatedTab: activeTab } 
+      },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
   private _handleDuplicate() {
     this.dispatchEvent(new CustomEvent('duplicate-variant', { bubbles: true, composed: true }));
   }
@@ -401,6 +420,7 @@ export class EditorRightSidebar extends LitElement {
           <property-panel-animation
             .variant="${this.variant}"
             @property-change="${this._handlePropertyChange}"
+            @animation-config-change="${this._handleAnimationConfigChange}"
           ></property-panel-animation>
         `;
       case 'design':
