@@ -23,6 +23,7 @@ import {
   registerEventSchema,
   getAllEventSchemas,
   getRegisteredEventIds,
+  WebhookTarget,
 } from './schemas';
 import type { WsAlertMessage } from './schemas';
 import { wsManager } from './ws-manager';
@@ -206,12 +207,30 @@ async function handleDeleteWebhook(req: Request): Promise<Response> {
  * POST /webhook/alert
  * 
  * Receives an alert event and broadcasts it to all connected overlays.
+ * Supports optional target filtering to select specific variants.
  * 
  * @example
  * ```bash
+ * # Simple alert (broadcasts to all)
  * curl -X POST http://localhost:3001/webhook/alert \
  *   -H "Content-Type: application/json" \
  *   -d '{"eventName":"seguimientos","data":{"username":"viewer123"}}'
+ * ```
+ * 
+ * @example
+ * ```bash
+ * # Alert with target ID (only selected variant receives it)
+ * curl -X POST http://localhost:3001/webhook/alert \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"eventName":"seguimientos","data":{"username":"viewer123"},"target":{"id":"variant-uuid-123"}}'
+ * ```
+ * 
+ * @example
+ * ```bash
+ * # Alert with random target (one random variant receives it)
+ * curl -X POST http://localhost:3001/webhook/alert \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"eventName":"seguimientos","data":{"username":"viewer123"},"target":{"random":true}}'
  * ```
  */
 async function handleAlertWebhook(req: Request): Promise<Response> {
@@ -226,7 +245,7 @@ async function handleAlertWebhook(req: Request): Promise<Response> {
     }, 400);
   }
 
-  const { eventName, data } = payloadResult.data;
+  const { eventName, data, target } = payloadResult.data;
 
   // Validate event data against registered schema
   const validation = validateEventData(eventName, data);
@@ -238,7 +257,7 @@ async function handleAlertWebhook(req: Request): Promise<Response> {
     }, 422);
   }
 
-  // Build WS alert message
+  // Build WS alert message with optional target info
   const alertMessage: WsAlertMessage = {
     type: 'alert',
     eventName,
@@ -247,6 +266,11 @@ async function handleAlertWebhook(req: Request): Promise<Response> {
     id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   };
 
+  // Add target filter if provided
+  if (target) {
+    (alertMessage as any).target = target;
+  }
+
   // Broadcast to all connected overlays
   wsManager.broadcastAlert(alertMessage);
 
@@ -254,6 +278,7 @@ async function handleAlertWebhook(req: Request): Promise<Response> {
     ok: true,
     eventId: alertMessage.id,
     clients: wsManager.getClientCount(),
+    target: target || 'all', // Report what was targeted
   });
 }
 
@@ -318,7 +343,7 @@ async function handleSchemaWebhook(req: Request): Promise<Response> {
   if (!result.success) {
     return jsonResponse({
       error: 'Invalid schema',
-      details: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
+      details: result.error.issues,
     }, 400);
   }
 

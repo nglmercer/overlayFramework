@@ -370,7 +370,11 @@ export class AppEditor extends LitElement {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             eventName: eventType,
-            data: testData
+            data: testData,
+            target: {
+              id: variant.id,
+              name: variant.name
+            }
           })
         });
 

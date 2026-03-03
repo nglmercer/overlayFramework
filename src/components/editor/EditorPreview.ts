@@ -2,7 +2,6 @@ import { html, css, LitElement,unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
-import { getWebSocketUrl } from '../../lib/config';
 import { EVENTS } from '../../lib/constants';
 import EditorPreviewCSS from './EditorPreview.css?inline';
 

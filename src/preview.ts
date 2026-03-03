@@ -15,6 +15,12 @@ interface AlertMessage {
   data: Record<string, string>;
   timestamp: number;
   id: string;
+  target?: {
+    id?: string;
+    name?: string;
+    random?: boolean;
+    first?: boolean;
+  };
 }
 
 interface WindowMessage {
@@ -169,10 +175,13 @@ if (root) {
    * Handle incoming alert message
    */
   function handleAlertMessage(message: AlertMessage): void {
-    console.log('[Preview] Alert received:', message.eventName, message.data);
+    console.log('[Preview] Alert received:', message.eventName, message.data, message.target);
 
+    // Extract target from message if present
+    const target = (message as any).target;
+    
     // Match the incoming alert to one of our variants
-    const targetVariant = findMatchingVariant(message.eventName, message.data);
+    const targetVariant = findMatchingVariant(message.eventName, message.data, target);
     
     if (targetVariant) {
       try {
@@ -217,10 +226,13 @@ if (root) {
 
   /**
    * Find the best matching variant for an event
+   * @param eventName - The event type to match
+   * @param data - The event data (may contain target info)
+   * @param target - Optional target filter (id, name, random, first)
    */
-  function findMatchingVariant(eventName: string, data: Record<string, string>): Record<string, unknown> | null {
+  function findMatchingVariant(eventName: string, data: Record<string, string>, target?: { id?: string; name?: string; random?: boolean; first?: boolean }): Record<string, unknown> | null {
     // 1. Filter variants by event type
-    const potentialVariants = allVariants.filter(v => v.type === eventName);
+    let potentialVariants = allVariants.filter(v => v.type === eventName);
     
     if (potentialVariants.length === 0) {
       // If no variants for this type, fallback to currentVariant if it matches
@@ -228,11 +240,38 @@ if (root) {
       return null;
     }
     
-    // 2. If only one variant for this type, use it
+    // 2. Apply target filter if provided
+    if (target) {
+      // Filter by ID
+      if (target.id) {
+        const found = potentialVariants.find(v => v.id === target.id);
+        if (found) return found;
+        console.warn(`[Preview] Target ID "${target.id}" not found in variants`);
+      }
+      
+      // Filter by name
+      if (target.name) {
+        const found = potentialVariants.find(v => v.name === target.name);
+        if (found) return found;
+        console.warn(`[Preview] Target name "${target.name}" not found in variants`);
+      }
+      
+      // Random selection
+      if (target.random && potentialVariants.length > 0) {
+        const randomIndex = Math.floor(Math.random() * potentialVariants.length);
+        return potentialVariants[randomIndex];
+      }
+      
+      // First variant
+      if (target.first && potentialVariants.length > 0) {
+        return potentialVariants[0];
+      }
+    }
+    
+    // 3. If only one variant for this type, use it
     if (potentialVariants.length === 1) return potentialVariants[0];
     
-    // 3. If multiple variants, matching logic could go here (condition checking etc.)
-    // For now, return the first active one or just the first one
+    // 4. If multiple variants and no target specified, return first active one or first one
     return potentialVariants.find(v => v.active !== false) || potentialVariants[0];
   }
 

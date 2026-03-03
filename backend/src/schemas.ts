@@ -78,6 +78,78 @@ export function getRegisteredEventIds(): string[] {
 }
 
 // ============================================================================
+// WEBHOOK SCHEMAS
+// ============================================================================
+
+/**
+ * Target filter for alert messages.
+ * Used to select specific variants by ID, name, or randomly.
+ */
+export const WebhookTargetSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  random: z.boolean().optional(),
+  first: z.boolean().optional(),
+});
+
+// Note: target is optional - when not provided, alert broadcasts to all
+
+export type WebhookTarget = z.infer<typeof WebhookTargetSchema>;
+
+/**
+ * Webhook payload: received via HTTP POST from external services.
+ * 
+ * @example POST /webhook/alert
+ * ```json
+ * {
+ *   "eventName": "seguimientos",
+ *   "data": { "username": "viewer123" }
+ * }
+ * ```
+ * 
+ * @example POST /webhook/alert with target filtering
+ * ```json
+ * {
+ *   "eventName": "seguimientos",
+ *   "data": { "username": "viewer123" },
+ *   "target": {
+ *     "id": "variant-uuid-123"      // OR
+ *     // "name": "My Variant Name"   // OR
+ *     // "random": true
+ *   }
+ * }
+ * ```
+ */
+export const WebhookAlertPayloadSchema = z.object({
+  eventName: z.string().min(1, 'eventName is required'),
+  data: z.record(z.string(), z.unknown()).default({}),
+  target: WebhookTargetSchema.optional(),
+});
+
+export type WebhookAlertPayload = z.infer<typeof WebhookAlertPayloadSchema>;
+
+/**
+ * Webhook schema payload - for registering new event schemas
+ */
+export const WebhookSchemaPayloadSchema = EventSchemaDefinition;
+
+export type WebhookSchemaPayload = z.infer<typeof WebhookSchemaPayloadSchema>;
+
+/**
+ * Webhook control payload
+ * 
+ * @example POST /webhook/control
+ * ```json
+ * { "action": "pause" }
+ * ```
+ */
+export const WebhookControlPayloadSchema = z.object({
+  action: z.enum(['pause', 'resume', 'clear', 'skip', 'mute', 'unmute']),
+});
+
+export type WebhookControlPayload = z.infer<typeof WebhookControlPayloadSchema>;
+
+// ============================================================================
 // WS MESSAGE SCHEMAS (Server ↔ Client)
 // ============================================================================
 
@@ -90,6 +162,7 @@ export const WsAlertMessageSchema = z.object({
   data: z.record(z.string(), z.unknown()).default({}),
   timestamp: z.number().optional().default(() => Date.now()),
   id: z.string().optional(),
+  target: WebhookTargetSchema.optional(),
 });
 
 export type WsAlertMessage = z.infer<typeof WsAlertMessageSchema>;
@@ -182,58 +255,6 @@ export const WsClientMessageSchema = z.discriminatedUnion('type', [
 export type WsClientMessage = z.infer<typeof WsClientMessageSchema>;
 
 // ============================================================================
-// WEBHOOK SCHEMAS
-// ============================================================================
-
-/**
- * Webhook payload: received via HTTP POST from external services.
- * 
- * @example POST /webhook/alert
- * ```json
- * {
- *   "eventName": "seguimientos",
- *   "data": { "username": "viewer123" }
- * }
- * ```
- */
-export const WebhookAlertPayloadSchema = z.object({
-  eventName: z.string().min(1, 'eventName is required'),
-  data: z.record(z.string(), z.unknown()).default({}),
-});
-
-export type WebhookAlertPayload = z.infer<typeof WebhookAlertPayloadSchema>;
-
-/**
- * Webhook control payload
- * 
- * @example POST /webhook/control
- * ```json
- * { "action": "pause" }
- * ```
- */
-export const WebhookControlPayloadSchema = z.object({
-  action: z.enum(['pause', 'resume', 'clear', 'skip', 'mute', 'unmute']),
-});
-
-export type WebhookControlPayload = z.infer<typeof WebhookControlPayloadSchema>;
-
-/**
- * Webhook for registering new event schemas at runtime
- * 
- * @example POST /webhook/schema
- * ```json
- * {
- *   "id": "donations",
- *   "label": "Donaciones",
- *   "requiredFields": ["username", "amount"],
- *   "defaultMessage": "¡{username} donó {amount}!"
- * }
- * ```
- */
-export const WebhookSchemaPayloadSchema = EventSchemaDefinition;
-export type WebhookSchemaPayload = EventSchemaDefinition;
-
-// ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
 
@@ -275,3 +296,4 @@ export function parseClientMessage(raw: string | Buffer): WsClientMessage | null
     return null;
   }
 }
+

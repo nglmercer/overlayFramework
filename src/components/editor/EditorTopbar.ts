@@ -140,11 +140,31 @@ export class EditorTopbar extends LitElement {
   @property({ type: Function }) onGetPreviewUrl: () => Promise<string | null> = async () => null;
   @property({ type: String }) boxId = '';
   @property({ type: Boolean }) autoPreview = false;
-  @state() private previewUrl = '';
-  @state() private showUrlInput = false;
+  @property({ type: String }) set previewUrl(value: string) {
+    const oldValue = this._previewUrl;
+    if (oldValue !== value) {
+      this._previewUrl = value;
+      this.requestUpdate('previewUrl', oldValue);
+    }
+  }
+  get previewUrl(): string {
+    return this._previewUrl;
+  }
+  @state() private _previewUrl = '';
+  @state() private isGeneratingUrl = false;
   @state() private urlVisible = false;
 
   private _localize = new LocalizeController(this);
+
+  // React to boxId changes to auto-generate preview URL
+  willUpdate(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has('boxId') && this.boxId && this.onGetPreviewUrl && !this._previewUrl) {
+      // Auto-generate when boxId is set and no URL exists yet
+      setTimeout(() => {
+        this._handleGetPreviewUrl();
+      }, 500);
+    }
+  }
 
   firstUpdated() {
     // Auto-generate preview URL if autoPreview is enabled and boxId is set
@@ -166,24 +186,37 @@ export class EditorTopbar extends LitElement {
   }
 
   private async _handleGetPreviewUrl() {
+    // Prevent multiple simultaneous requests
+    if (this.isGeneratingUrl || this._previewUrl) {
+      return;
+    }
+    
+    this.isGeneratingUrl = true;
     try {
       const url = await this.onGetPreviewUrl();
       if (url) {
-        this.previewUrl = url;
+        this._previewUrl = url;
       }
     } catch (error) {
       console.error('Failed to get preview URL:', error);
+    } finally {
+      this.isGeneratingUrl = false;
     }
   }
 
   private _handleCopyUrl() {
-    if (this.previewUrl) {
-      navigator.clipboard.writeText(this.previewUrl);
+    if (this._previewUrl) {
+      navigator.clipboard.writeText(this._previewUrl);
     }
   }
 
   private _handleToggleVisibility() {
     this.urlVisible = !this.urlVisible;
+  }
+
+  private _handleRefreshUrl() {
+    this._previewUrl = '';
+    this._handleGetPreviewUrl();
   }
 
 
