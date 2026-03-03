@@ -228,24 +228,26 @@ export class EditorTopbar extends LitElement {
         </button>
         <div style="font-weight: 700;">${this.title || this._t('app.editor')}</div>
         <div style="display: flex; align-items: center; gap: 1rem;">
-          ${this.previewUrl ? html`
+          ${this._previewUrl ? html`
             <div class="preview-url-container">
               <input 
                 class="preview-url-input ${this.urlVisible ? 'visible' : ''}" 
                 type="text" 
-                .value="${this.previewUrl}" 
+                .value="${this._previewUrl}" 
                 readonly
               />
               <button class="btn-copy" @click="${this._handleToggleVisibility}">${this.urlVisible ? '🙈' : '👁️'}</button>
               <button class="btn-copy" @click="${this._handleCopyUrl}">Copy</button>
+              <button class="btn-copy" @click="${this._handleRefreshUrl}" title="Regenerate">↻</button>
             </div>
           ` : html`
-            <input
-              class="preview-url-input ${this.urlVisible ? 'visible' : ''}"
-              type="text"
-              placeholder="Generate preview URL..."
-            />
-            <button class="btn-copy" @click="${this._handleToggleVisibility}">${this.urlVisible ? '🙈' : '👁️'}</button>
+            <button 
+              class="btn-preview-url" 
+              @click="${this._handleGetPreviewUrl}"
+              ?disabled="${this.isGeneratingUrl}"
+            >
+              ${this.isGeneratingUrl ? 'Generating...' : 'Get Preview URL'}
+            </button>
           `}
           <select 
             class="locale-select"

@@ -392,9 +392,16 @@ export class AppEditor extends LitElement {
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({
           type: 'send-test-alert',
-          payload: { eventName: eventType, data: testData }
+          payload: { 
+            eventName: eventType, 
+            data: testData,
+            target: {
+              id: variant.id,
+              name: variant.name
+            }
+          }
         }, '*');
-        console.log('[Editor] Test alert sent via iframe fallback:', eventType);
+        console.log('[Editor] Test alert sent via iframe fallback:', eventType, { target: { id: variant.id, name: variant.name } });
       }
     }
     

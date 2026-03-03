@@ -348,20 +348,21 @@ if (root) {
   /**
    * Send a test alert via BroadcastChannel (for cross-tab testing)
    */
-  function sendTestAlert(eventName: string, data: Record<string, string>): void {
+  function sendTestAlert(eventName: string, data: Record<string, string>, target?: { id?: string; name?: string; random?: boolean; first?: boolean }): void {
     // Create alert message
     const message: AlertMessage = {
       type: EVENTS.COMPONENT.ALERT,
       eventName,
       data,
       timestamp: Date.now(),
-      id: `test-${Date.now()}`
+      id: `test-${Date.now()}`,
+      target
     };
     
     // Send via BroadcastChannel (same browser tabs)
     if (broadcastChannel) {
       broadcastChannel.postMessage(message);
-      console.log('[Preview] Test alert sent via BroadcastChannel:', eventName);
+      console.log('[Preview] Test alert sent via BroadcastChannel:', eventName, { target });
     }
     
     // Also handle locally
@@ -374,9 +375,10 @@ if (root) {
         eventName,
         data,
         timestamp: Date.now(),
-        id: `ws-test-${Date.now()}`
+        id: `ws-test-${Date.now()}`,
+        target
       }));
-      console.log('[Preview] Test alert sent via WebSocket:', eventName);
+      console.log('[Preview] Test alert sent via WebSocket:', eventName, { target });
     }
   }
 
@@ -437,9 +439,9 @@ if (root) {
       disconnectWebSocket();
     }
     else if (type === EVENTS.WINDOW.SEND_TEST_ALERT) {
-      // Send test alert with event name and data
-      const { eventName, data } = payload as { eventName: string; data: Record<string, string> };
-      sendTestAlert(eventName, data);
+      // Send test alert with event name, data, and optional target
+      const { eventName, data, target } = payload as { eventName: string; data: Record<string, string>; target?: { id?: string; name?: string; random?: boolean; first?: boolean } };
+      sendTestAlert(eventName, data, target);
     }
     else if (type === EVENTS.WINDOW.EMIT_ALERT) {
       // Emit alert (alias)

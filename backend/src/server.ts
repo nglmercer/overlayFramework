@@ -190,6 +190,7 @@ const server = Bun.serve<WsClientData>({
             data: message.data,
             timestamp: Date.now(),
             id: message.id,
+            target: (message as any).target,
           });
           break;
       }

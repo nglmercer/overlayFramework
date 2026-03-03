@@ -238,6 +238,7 @@ export const WsClientAlertMessageSchema = z.object({
   data: z.record(z.string(), z.string()).default({}),
   timestamp: z.number().optional().default(() => Date.now()),
   id: z.string().optional(),
+  target: WebhookTargetSchema.optional(),
 });
 
 export type WsClientAlertMessage = z.infer<typeof WsClientAlertMessageSchema>;
