@@ -20,6 +20,7 @@ interface AlertMessage {
     name?: string;
     random?: boolean;
     first?: boolean;
+    instanceId?: string;
   };
 }
 
@@ -40,6 +41,11 @@ if (root) {
   let allVariants: Record<string, unknown>[] = [];
   let currentVariant: Record<string, unknown> | null = null;
   let currentEventData: Record<string, string> = {};
+
+  // Instance ID for this preview (persisted in localStorage)
+  let instanceId: string = localStorage.getItem('overlay-instance-id') || 
+    `overlay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  localStorage.setItem('overlay-instance-id', instanceId);
 
   // WebSocket service reference
   let ws: WebSocket | null = null;
@@ -64,6 +70,11 @@ if (root) {
 
       ws.onopen = () => {
         console.log('[Preview] WebSocket connected');
+        // Send ready message with clientId
+        ws?.send(JSON.stringify({
+          type: 'ready',
+          clientId: instanceId
+        }));
         // Notify parent of connection state change
         window.parent.postMessage({ 
           type: EVENTS.COMPONENT.WS_CONNECTION_CHANGE, 
@@ -230,7 +241,7 @@ if (root) {
    * @param data - The event data (may contain target info)
    * @param target - Optional target filter (id, name, random, first)
    */
-  function findMatchingVariant(eventName: string, data: Record<string, string>, target?: { id?: string; name?: string; random?: boolean; first?: boolean }): Record<string, unknown> | null {
+  function findMatchingVariant(eventName: string, data: Record<string, string>, target?: { id?: string; name?: string; random?: boolean; first?: boolean; instanceId?: string }): Record<string, unknown> | null {
     // 1. Filter variants by event type
     let potentialVariants = allVariants.filter(v => v.type === eventName);
     
@@ -266,6 +277,9 @@ if (root) {
       if (target.first && potentialVariants.length > 0) {
         return potentialVariants[0];
       }
+      
+      // Instance ID filtering is handled at server level, not needed here
+      // The server sends only to the targeted instance
     }
     
     // 3. If only one variant for this type, use it

@@ -4,6 +4,7 @@ import { dbManager, AlertBox } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
 import { alert, confirm, prompt } from '../../lib/dialog';
 import { CONFIG } from '../../lib/constants';
+import { getInstanceId } from '../../lib/config';
 
 // Import external styles
 import styles from './Dashboard.css?inline';
@@ -94,11 +95,44 @@ export class AppDashboard extends LitElement {
     }
   }
 
+  async handleCopyInstanceId() {
+    const instanceId = getInstanceId();
+    try {
+      await navigator.clipboard.writeText(instanceId);
+      await alert('Instance ID copied to clipboard!');
+    } catch (err) {
+      await alert('Failed to copy Instance ID.');
+    }
+  }
+
   render() {
+    const instanceId = getInstanceId();
     return html`
       <div class="max-w-3xl">
         <h1>${this._localize.t('dashboard.title')}</h1>
         <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/${CONFIG.MAX_BOXES}</p>
+
+        <!-- Instance ID Section -->
+        <div style="background: #18181b; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: #a1a1aa; font-size: 0.875rem;">Instance ID:</span>
+              <code style="background: #27272a; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; color: #9146FF;">${instanceId}</code>
+            </div>
+            <button 
+              @click="${this.handleCopyInstanceId}"
+              style="background: #27272a; border: 1px solid rgba(255,255,255,0.08); color: white; padding: 0.375rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem;"
+            >
+              <svg style="width: 0.875rem; height: 0.875rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Copy
+            </button>
+          </div>
+          <p style="color: #71717a; font-size: 0.75rem; margin-top: 0.5rem;">
+            Use this ID in webhooks to target this specific instance: <code style="background: #27272a; padding: 0.125rem 0.25rem; border-radius: 0.125rem;">{"target": {"instanceId": "${instanceId}"}}</code>
+          </p>
+        </div>
 
         <button 
           class="btn-create"

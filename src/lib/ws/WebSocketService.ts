@@ -141,7 +141,14 @@ export class WebSocketService {
   constructor(config: Partial<WsServiceConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     if (!this.config.clientId) {
-      this.config.clientId = `overlay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      // Try to get existing clientId from localStorage, or generate new one
+      const storedId = localStorage.getItem('overlay-instance-id');
+      if (storedId) {
+        this.config.clientId = storedId;
+      } else {
+        this.config.clientId = `overlay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        localStorage.setItem('overlay-instance-id', this.config.clientId);
+      }
     }
   }
 
@@ -192,6 +199,13 @@ export class WebSocketService {
    */
   isConnected(): boolean {
     return this.state === 'connected';
+  }
+
+  /**
+   * Get the client instance ID
+   */
+  getClientId(): string | undefined {
+    return this.config.clientId;
   }
 
   /**

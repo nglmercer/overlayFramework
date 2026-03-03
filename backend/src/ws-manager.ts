@@ -168,6 +168,32 @@ class WsManager {
   clearEventLog(): void {
     this.eventLog = [];
   }
+
+  /**
+   * Send alert to specific client(s) by instance ID
+   * @param message - The alert message to send
+   * @param instanceIds - Array of client IDs to send to (if empty, broadcasts to all)
+   */
+  sendAlertToInstance(message: WsAlertMessage, instanceIds: string[]): void {
+    const json = JSON.stringify(message);
+    let sent = 0;
+
+    for (const client of this.clients) {
+      // Skip if we have specific instanceIds and this client isn't in the list
+      if (instanceIds.length > 0 && !instanceIds.includes(client.data.clientId || client.data.id)) {
+        continue;
+      }
+
+      try {
+        client.send(json);
+        sent++;
+      } catch (err) {
+        console.error(`[WS] Failed to send to ${client.data.id}:`, err);
+      }
+    }
+
+    console.log(`[WS] Alert sent to ${sent} instance(s): ${message.eventName}`);
+  }
 }
 
 /** Singleton instance */

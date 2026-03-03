@@ -83,13 +83,14 @@ export function getRegisteredEventIds(): string[] {
 
 /**
  * Target filter for alert messages.
- * Used to select specific variants by ID, name, or randomly.
+ * Used to select specific variants by ID, name, or randomly, or by specific client instance.
  */
 export const WebhookTargetSchema = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
   random: z.boolean().optional(),
   first: z.boolean().optional(),
+  instanceId: z.string().optional(),
 });
 
 // Note: target is optional - when not provided, alert broadcasts to all

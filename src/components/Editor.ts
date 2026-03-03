@@ -40,7 +40,7 @@ import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
 import { CONFIG } from '../lib/constants';
-import { getBackendEndpoint } from '../lib/config';
+import { getBackendEndpoint, getInstanceId } from '../lib/config';
 
 // =============================================================================
 // Type Definitions
@@ -373,7 +373,8 @@ export class AppEditor extends LitElement {
             data: testData,
             target: {
               id: variant.id,
-              name: variant.name
+              name: variant.name,
+              instanceId: getInstanceId()
             }
           })
         });
@@ -397,11 +398,12 @@ export class AppEditor extends LitElement {
             data: testData,
             target: {
               id: variant.id,
-              name: variant.name
+              name: variant.name,
+              instanceId: getInstanceId()
             }
           }
         }, '*');
-        console.log('[Editor] Test alert sent via iframe fallback:', eventType, { target: { id: variant.id, name: variant.name } });
+        console.log('[Editor] Test alert sent via iframe fallback:', eventType, { target: { id: variant.id, name: variant.name, instanceId: getInstanceId() } });
       }
     }
     

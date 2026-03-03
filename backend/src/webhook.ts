@@ -271,8 +271,15 @@ async function handleAlertWebhook(req: Request): Promise<Response> {
     (alertMessage as any).target = target;
   }
 
-  // Broadcast to all connected overlays
-  wsManager.broadcastAlert(alertMessage);
+  // Send to specific instance(s) or broadcast to all
+  if (target?.instanceId) {
+    // Send to specific instance(s)
+    const instanceIds = Array.isArray(target.instanceId) ? target.instanceId : [target.instanceId];
+    wsManager.sendAlertToInstance(alertMessage, instanceIds);
+  } else {
+    // Broadcast to all connected overlays
+    wsManager.broadcastAlert(alertMessage);
+  }
 
   return jsonResponse({
     ok: true,

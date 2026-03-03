@@ -213,6 +213,20 @@ export function getBackendEndpoint(path: string): string {
 }
 
 /**
+ * Get the current instance ID (for targeting specific overlay instances)
+ * @returns The unique instance ID for this browser/tab
+ */
+export function getInstanceId(): string {
+  const STORAGE_KEY = 'overlay-instance-id';
+  let instanceId = localStorage.getItem(STORAGE_KEY);
+  if (!instanceId) {
+    instanceId = `overlay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem(STORAGE_KEY, instanceId);
+  }
+  return instanceId;
+}
+
+/**
  * ============================================
  * CONFIGURATION HELPERS
  * ============================================
