@@ -70,13 +70,13 @@ export const ALERT_DEFAULTS = {
   
   /** Default opacity values */
   OPACITY: {
-    BG: 0,
+    BG: 80,
   },
   
   /** Default spacing values (px) */
   SPACING: {
     PADDING: 16,
-    ITEM: 16,
+    ITEM: 8,
   },
   
   /** Default typography */

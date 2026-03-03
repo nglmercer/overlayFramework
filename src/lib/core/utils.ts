@@ -119,10 +119,8 @@ export type PlatformEventDefinition = z.infer<typeof PlatformEventDefinitionSche
 
 // Supported event types in the system
 export const EventTypeSchema = z.enum([
-  'seguimientos', 
-  'suscripciones', 
-  'bits',
   'kick_chat',
+  'kick_reward_redeemed',
   'tiktok_chat',
   'tiktok_gift',
   'tiktok_social'
@@ -156,7 +154,7 @@ export type SchemaDefinition = z.infer<typeof SchemaDefinitionSchema>;
  */
 
 // Layout options for alerts
-export const AlertLayoutSchema = z.enum(['text-below', 'text-right', 'text-over']);
+export const AlertLayoutSchema = z.enum(['text-below', 'text-right', 'text-over', 'center']);
 export type AlertLayout = z.infer<typeof AlertLayoutSchema>;
 
 // Text alignment options
@@ -192,13 +190,13 @@ export const AlertVariantSchema = z.object({
   condition: z.string().default(''),
   
   // Timing (in milliseconds)
-  duration: z.number().int().positive().default(5000),
+  duration: z.number().positive().default(10),
   
   // Legacy animation fields (backward compatibility)
   animationIn: z.string().default('fade-in'),
   animationOut: z.string().default('fade-out'),
-  animationInDuration: z.number().int().positive().default(300),
-  animationOutDuration: z.number().int().positive().default(300),
+  animationInDuration: z.number().positive().default(1),
+  animationOutDuration: z.number().positive().default(1),
   
   // New schema-based animation config (optional)
   entranceAnimation: z.any().optional(),
@@ -207,7 +205,7 @@ export const AlertVariantSchema = z.object({
   // Design options
   layout: AlertLayoutSchema.default('text-below'),
   bgColor: z.string().refine(hexColorRefinement, { message: 'Invalid hex color' }).default('#000000'),
-  bgOpacity: z.number().min(0).max(1).default(0.8),
+  bgOpacity: z.number().min(0).max(100).default(80),
   padding: z.number().int().nonnegative().default(16),
   spacing: z.number().int().nonnegative().default(8),
   rounded: z.boolean().default(true),
