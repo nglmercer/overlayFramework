@@ -154,7 +154,7 @@ export type SchemaDefinition = z.infer<typeof SchemaDefinitionSchema>;
  */
 
 // Layout options for alerts
-export const AlertLayoutSchema = z.enum(['text-below', 'text-right', 'text-over', 'center']);
+export const AlertLayoutSchema = z.enum(['text-below', 'text-right', 'text-over', 'text-left', 'center']);
 export type AlertLayout = z.infer<typeof AlertLayoutSchema>;
 
 // Text alignment options

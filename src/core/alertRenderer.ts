@@ -22,7 +22,7 @@ export type AnimationType =
   | 'bounce-in' | 'pulse-in';
 
 // Layout types for alert positioning
-export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'center';
+export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'text-left' | 'center';
 
 // Alert configuration interface
 export interface AlertConfig {

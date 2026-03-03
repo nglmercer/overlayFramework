@@ -39,6 +39,7 @@ export class PropertyPanelDesign extends LitElement {
       { value: 'text-below', label: this._t('variant.layout.textBelow') },
       { value: 'text-right', label: this._t('variant.layout.textRight') },
       { value: 'text-over', label: this._t('variant.layout.textOver') },
+      { value: 'text-left', label: this._t('variant.layout.textLeft') },
       { value: 'center', label: this._t('variant.layout.center') }
     ];
 

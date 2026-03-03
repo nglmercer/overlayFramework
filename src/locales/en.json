@@ -51,6 +51,7 @@
   "variant.layout.textBelow": "Text below",
   "variant.layout.textRight": "Text right",
   "variant.layout.textOver": "Text over",
+  "variant.layout.textLeft": "Text left",
   "variant.layout.center": "Center",
   "variant.bgColor": "Background color",
   "variant.bgOpacity": "Background opacity %",
