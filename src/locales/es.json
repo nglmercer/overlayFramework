@@ -35,6 +35,10 @@
   "dashboard.maxBoxesReached": "Se alcanzo el numero maximo de cajas de alerta.",
   "dashboard.enterNewName": "Ingresa un nuevo nombre",
   "dashboard.confirmDelete": "¿Estas seguro de que quieres eliminarlo?",
+  "dashboard.instanceIdCopied": "ID de Instancia copiado!",
+  "dashboard.instanceId": "ID de Instancia",
+  "dashboard.instanceIdHelp": "Use este ID en webhooks para apuntar a esta instancia específica:",
+  "dashboard.copy": "Copiar",
 
   "sidebar.variants": "VARIANTES",
   "sidebar.settings": "CONFIGURACIÓN",

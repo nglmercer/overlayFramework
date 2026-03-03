@@ -35,7 +35,11 @@
   "dashboard.maxBoxesReached": "Maximum number of alert boxes reached.",
   "dashboard.enterNewName": "Enter new name",
   "dashboard.confirmDelete": "confirm Delete?",
-
+  "dashboard.instanceId": "Instance ID",
+  "dashboard.instanceIdCopied": "Instance ID copied to clipboard!",
+  "dashboard.instanceIdHelp": "Use this ID in webhooks to target this specific instance:",
+  "dashboard.copy": "Copy",
+  
   "sidebar.variants": "VARIANTS",
   "sidebar.settings": "SETTINGS",
   "sidebar.design": "DESIGN",

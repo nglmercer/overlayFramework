@@ -12,14 +12,30 @@ const translations: Record<string, Record<string, string>> = {
 };
 
 // Configure Lit Localize Runtime Mode
-export const { getLocale, setLocale: setLitLocale } = configureLocalization({
+export const { getLocale: _getLitLocale, setLocale: setLitLocale } = configureLocalization({
   sourceLocale,
   targetLocales,
   // Using .ts extension for Vite Dev Server 
   loadLocale: (locale) => import(`../generated/locales/${locale}.ts`),
 });
 
+// Get locale - checks localStorage first, defaults to 'es'
+export function getLocale(): string {
+  return localStorage.getItem('overlay-locale') || 'es';
+}
+
+// Initialize locale on load (called from main.ts)
+export async function initLocale(): Promise<void> {
+  const savedLocale = localStorage.getItem('overlay-locale');
+  if (savedLocale) {
+    await setLitLocale(savedLocale);
+  }
+}
+
 export const setLocale = async (locale: any): Promise<void> => {
+  // Save to localStorage for persistence
+  localStorage.setItem('overlay-locale', locale);
+  
   // 1) Trigger native Lit localize
   await setLitLocale(locale);
   

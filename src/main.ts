@@ -8,7 +8,7 @@ import { loadSchemas, schemaLoader, SchemaMap, LifecycleHooks } from './lib/sche
 import { initializeFramework, cleanupFramework } from './lib/index';
 import { patchAllGlobals } from './lib/dialog';
 import './components/index';
-import { getLocale, setLocale, LocalizeController } from './locales/localization';
+import { getLocale, setLocale, LocalizeController, initLocale } from './locales/localization';
 import { discoverServices } from './lib/config';
 
 // Define custom schemas map
@@ -41,6 +41,9 @@ export class MainApp extends LitElement {
   }
 
   async firstUpdated() {
+    // Initialize locale from localStorage
+    await initLocale();
+    
     // Initialize framework and load schemas
     await initializeFramework();
     await loadSchemas(customSchemas, lifecycleHooks);
