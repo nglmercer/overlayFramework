@@ -22,7 +22,16 @@ export type AnimationType =
   | 'bounce-in' | 'pulse-in';
 
 // Layout types for alert positioning
-export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'text-left' | 'center';
+export type AlertLayout = 'text-below' | 'text-right' | 'text-over' | 'text-left' | 'center' | 'grid';
+
+// Text position in grid layout (9 positions)
+export type GridTextPosition = 
+  | '1' | '2' | '3'  // top-left, top-center, top-right
+  | '4' | '5' | '6'  // middle-left, middle-center, middle-right  
+  | '7' | '8' | '9'; // bottom-left, bottom-center, bottom-right
+
+// Default text position
+export const DEFAULT_TEXT_POSITION: GridTextPosition = '8';
 
 // Alert configuration interface
 export interface AlertConfig {
@@ -40,6 +49,9 @@ export interface AlertConfig {
   
   // Layout
   layout: AlertLayout;
+  
+  // Text position in grid layout (for 'grid' layout type)
+  textPosition?: GridTextPosition;
   
   // Background
   bgColor: string;
