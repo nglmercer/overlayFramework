@@ -240,6 +240,12 @@ export * from '../schemas/animation-schemas';
 export * from '../core/mediaRegistry';
 
 // ============================================
+// BROWSER UTILS EXPORTS
+// ============================================
+
+export * from './browser-utils';
+
+// ============================================
 // RENDERER EXPORTS
 // ============================================
 

@@ -14,10 +14,11 @@ import { platformEventsSchema, PlatformEventDefinition } from '../lib/alertEvent
 import { consume } from '@lit/context';
 import { platformSchemaContext } from '../context/schemaContext';
 import { Task } from '@lit/task';
-import { confirm } from '../lib/dialog';
+import { confirm, alert } from '../lib/dialog';
 import { LocalizeController } from '../locales/localization';
 import { AnimationConfig } from '../schemas/animation-schemas';
 import { duplicateAlertVariant, createAlertVariant } from '../lib/core';
+import { copyToClipboard } from '../lib/browser-utils';
 import './FormControls';
 import './MediaLibrary';
 
@@ -539,8 +540,13 @@ export class AppEditor extends LitElement {
       if (!variant) return;
 
       const jsonString = JSON.stringify(variant, null, 2);
-      await navigator.clipboard.writeText(jsonString);
-      console.log('[Editor] Variant JSON copied to clipboard:', id);
+      const success = await copyToClipboard(jsonString);
+      
+      if (success) {
+        await alert(this.t('variant.copySuccess') || 'Variant JSON copied to clipboard!', {
+          title: this.t('common.success') || 'Success',
+        });
+      }
     } catch (err) {
       console.error('[Editor] handleCopyVariant failed:', err);
     }

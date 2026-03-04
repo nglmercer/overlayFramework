@@ -9,6 +9,12 @@
   "app.delete": "Eliminar",
   "app.create": "Crear",
   
+  "common.success": "Éxito",
+  "common.error": "Error",
+  "common.ok": "Aceptar",
+  "common.cancel": "Cancelar",
+  "common.save": "Guardar",
+  
   "dialog.ok": "Aceptar",
   "dialog.cancel": "Cancelar",
   "dialog.confirm": "Confirmar",
@@ -74,6 +80,7 @@
   "variant.customHtml": "Personalizar HTML/CSS",
   "variant.delete": "Eliminar variante",
   "variant.copyJson": "Copiar JSON",
+  "variant.copySuccess": "JSON de la variante copiado al portapapeles!",
   "variant.confirmDelete": "¿Estás seguro de que deseas eliminar esta variante?",
   
   "variant.message": "Mensaje de la alerta",

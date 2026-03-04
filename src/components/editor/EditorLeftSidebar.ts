@@ -7,6 +7,8 @@ import { platformSchemaContext } from '../../context/schemaContext';
 import { LocalizeController } from '../../locales/localization';
 import { EVENTS } from '../../lib/constants';
 import { MenuItem } from '../ui/UIMenu';
+import { copyToClipboard } from '../../lib/browser-utils';
+import { alert } from '../../lib/dialog';
 
 // Import external CSS
 import styles from './EditorLeftSidebar.css?inline';
@@ -109,13 +111,20 @@ export class EditorLeftSidebar extends LitElement {
     }));
   }
 
-  private _handleCopyVariant(variantId: string) {
-    console.log('[EditorLeftSidebar] Copy variant JSON:', variantId);
-    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.COPY_VARIANT, {
-      detail: variantId,
-      bubbles: true,
-      composed: true
-    }));
+  private async _handleCopyVariant(variantId: string) {
+    const variant = this.variants.find(v => v.id === variantId);
+    if (!variant) return;
+
+    console.log('[EditorLeftSidebar] Copying variant JSON:', variantId);
+    const json = JSON.stringify(variant, null, 2);
+    const success = await copyToClipboard(json);
+    
+    if (success) {
+      await alert(this._t('variant.copySuccess') || 'Variant JSON copied to clipboard!', {
+        title: this._t('common.success') || 'Success',
+        confirmText: this._t('common.ok') || 'OK'
+      });
+    }
   }
 
   private _handleDeleteVariant(variantId: string) {
