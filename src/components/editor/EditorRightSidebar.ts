@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { AlertVariant } from '../../lib/db';
 import { LocalizeController } from '../../locales/localization';
 import { EVENTS } from '../../lib/constants';
+import { MenuItem } from '../ui/UIMenu';
 import './property-panels';
 import styles from './EditorRightSidebar.css?inline'
 type PanelId = 'general' | 'typography' | 'animations' | 'design' | 'media';
@@ -22,6 +23,7 @@ export class EditorRightSidebar extends LitElement {
 
   @state() private _expandedSection: PanelId | null = 'general';
   @state() private _collapsed = false;
+  @state() private _openMenu = false;
 
   private _localize = new LocalizeController(this);
 
@@ -87,6 +89,55 @@ export class EditorRightSidebar extends LitElement {
       bubbles: true, 
       composed: true 
     }));
+  }
+
+  private _handleCopyJson() {
+    if (!this.variant) return;
+    this.dispatchEvent(new CustomEvent(EVENTS.COMPONENT.COPY_VARIANT, { 
+      detail: this.variant.id,
+      bubbles: true, 
+      composed: true 
+    }));
+  }
+
+  private _handleMenuClick(menuItemId: string) {
+    switch (menuItemId) {
+      case 'duplicate':
+        this._handleDuplicate();
+        break;
+      case 'copy-json':
+        this._handleCopyJson();
+        break;
+      case 'delete':
+        this._handleDelete();
+        break;
+    }
+  }
+
+  private _getVariantMenuItems(): MenuItem[] {
+    if (!this.variant) return [];
+    return [
+      {
+        id: 'duplicate',
+        label: this._t('variant.duplicate'),
+        icon: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+        onClick: () => this._handleDuplicate()
+      },
+      {
+        id: 'copy-json',
+        label: this._t('variant.copyJson'),
+        icon: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>`,
+        onClick: () => this._handleCopyJson()
+      },
+      { id: 'divider-1', label: '', divider: true },
+      {
+        id: 'delete',
+        label: this._t('variant.delete'),
+        danger: true,
+        icon: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+        onClick: () => this._handleDelete()
+      }
+    ];
   }
 
   private _handleOpenMediaLibrary(type: 'image' | 'sound') {
@@ -172,13 +223,20 @@ export class EditorRightSidebar extends LitElement {
           })}
 
           <div style="margin-top: 1rem; padding: 0 1rem 2rem 1rem;">
-            <button class="btn-danger" @click="${this._handleDelete}">
-              <svg style="width: 1.1rem; height: 1.1rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              ${this._t('variant.delete')}
-            </button>
+            <ui-menu 
+              .items="${this._getVariantMenuItems()}"
+              @menu-click="${(e: CustomEvent) => this._handleMenuClick(e.detail)}"
+            >
+              <button 
+                slot="trigger"
+                class="btn-menu-trigger"
+                style="width: 100%; padding: 0.5rem; background: #3a3a3d; border: none; color: white; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+              >
+                <svg style="width: 1.1rem; height: 1.1rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+            </ui-menu>
           </div>
         </div>
       </div>

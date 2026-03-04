@@ -527,6 +527,25 @@ export class AppEditor extends LitElement {
     }
   }
 
+  /**
+   * Copies a variant's JSON to the clipboard.
+   */
+  handleCopyVariant = async (idOrEvent: string | CustomEvent): Promise<void> => {
+    const id = typeof idOrEvent === 'string' ? idOrEvent : idOrEvent.detail;
+    if (!id) return;
+
+    try {
+      const variant = await dbManager.getVariantById(id);
+      if (!variant) return;
+
+      const jsonString = JSON.stringify(variant, null, 2);
+      await navigator.clipboard.writeText(jsonString);
+      console.log('[Editor] Variant JSON copied to clipboard:', id);
+    } catch (err) {
+      console.error('[Editor] handleCopyVariant failed:', err);
+    }
+  }
+
   // =============================================================================
   // Event Handlers (arrow functions for correct `this` binding)
   // =============================================================================
@@ -683,6 +702,7 @@ export class AppEditor extends LitElement {
           @open-media-library="${(e: CustomEvent) => this._handleOpenMediaLibrary(e.detail)}"
           @delete-variant="${this.handleDeleteVariant}"
           @duplicate-variant="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
+          @copy-variant="${(e: CustomEvent) => this.handleCopyVariant(e.detail)}"
         ></editor-right-sidebar>
       </div>
 

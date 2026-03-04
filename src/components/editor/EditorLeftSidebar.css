@@ -14,8 +14,9 @@
   flex-direction: column;
   background-color: #18181b;
   overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-left.collapsed {
@@ -75,7 +76,7 @@
 }
 
 .btn-add:hover {
-  background-color: rgba(169,112,255,0.12);
+  background-color: rgba(169, 112, 255, 0.12);
 }
 
 .btn-collapse {
@@ -90,11 +91,13 @@
   cursor: pointer;
   border-radius: 0.25rem;
   flex-shrink: 0;
-  transition: color 0.2s, background-color 0.2s;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
 }
 
 .btn-collapse:hover {
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   color: #e5e7eb;
 }
 
@@ -129,7 +132,7 @@
 
 /* ── Accordion sections ── */
 .section {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .section-btn {
@@ -163,7 +166,9 @@
   display: flex;
   align-items: center;
   color: #6b7280;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), color 0.15s;
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.15s;
   flex-shrink: 0;
 }
 
@@ -185,8 +190,14 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Variant cards ── */
@@ -203,12 +214,44 @@
 }
 
 .variant-card.active {
-  background-color: #9146FF;
-  box-shadow: 0 4px 12px rgba(145,70,255,0.35);
+  background-color: #9146ff;
+  box-shadow: 0 4px 12px rgba(145, 70, 255, 0.35);
 }
 
 .variant-card:not(.active):hover {
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+.variant-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+  opacity: 0;
+}
+
+.variant-card:hover .variant-menu-trigger {
+  opacity: 1;
+}
+
+.variant-menu-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+}
+
+.variant-menu-trigger svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 /* ── Randomize toggle ── */
@@ -224,8 +267,12 @@
   flex-shrink: 0;
 }
 
-.toggle.on  { background-color: #9146FF; }
-.toggle.off { background-color: #4b5563; }
+.toggle.on {
+  background-color: #9146ff;
+}
+.toggle.off {
+  background-color: #4b5563;
+}
 
 .toggle-knob {
   width: 1rem;
@@ -235,7 +282,9 @@
   transition: transform 0.2s;
 }
 
-.toggle.on .toggle-knob { transform: translateX(1.25rem); }
+.toggle.on .toggle-knob {
+  transform: translateX(1.25rem);
+}
 
 /* ── Responsive Styles ── */
 @media (max-width: 1024px) {

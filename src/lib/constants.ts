@@ -300,6 +300,7 @@ export const EVENTS = {
     CREATE_VARIANT: 'create-variant',
     DELETE_VARIANT: 'delete-variant',
     DUPLICATE_VARIANT: 'duplicate-variant',
+    COPY_VARIANT: 'copy-variant',
     RANDOMIZE_TOGGLE: 'randomize-toggle',
     SECTION_CHANGE: 'section-change',
     PANEL_CHANGE: 'panel-change',

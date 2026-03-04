@@ -14,8 +14,8 @@ export interface MenuItem {
 @Component('ui-menu')
 export class UIMenu extends LitElement {
   @property({ type: Array }) items: MenuItem[] = [];
-  @state() private open = false;
-  @state() private menuPosition = { top: 0, left: 0 };
+  @property({ type: Boolean, reflect: true }) open = false;
+  @state() private menuPosition = { top: 0, left: 0, openToLeft: false, openUpward: false };
   @query('.trigger') private triggerElement!: HTMLButtonElement;
   private menuContainer: HTMLDivElement | null = null;
 
@@ -27,15 +27,57 @@ export class UIMenu extends LitElement {
     window.removeEventListener('click', this._closeMenu);
     window.removeEventListener('scroll', this._updatePosition, true);
     window.removeEventListener('resize', this._updatePosition);
+    window.removeEventListener('ui-menu-open', this._handleOtherMenuOpen);
     this._removeMenuFromDOM();
+  };
+
+  private _handleOtherMenuOpen = (e: any) => {
+    if (e.detail !== this) {
+      this._closeMenu();
+    }
   };
 
   private _updatePosition = () => {
     if (!this.open || !this.triggerElement) return;
     const rect = this.triggerElement.getBoundingClientRect();
+    
+    // Get the menu element for accurate width
+    const menuEl = this.menuContainer?.querySelector('.dropdown-menu-portal') as HTMLElement;
+    const menuWidth = menuEl?.offsetWidth || 180;
+    const menuHeight = menuEl?.offsetHeight || 200;
+    
+    // Calculate available space on both sides
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const spaceBottom = window.innerHeight - rect.bottom;
+    const spaceTop = rect.top;
+    
+    // Determine vertical position (above or below)
+    let top = rect.bottom;
+    let openUpward = false;
+    
+    // If not enough space below and more space above
+    if (spaceBottom < menuHeight && spaceTop > spaceBottom) {
+      openUpward = true;
+      top = rect.top;
+    }
+    
+    // Determine horizontal position
+    // Default: align left edge of menu with left edge of trigger
+    let openToLeft = false;
+    let left = rect.left;
+    
+    // If it doesn't fit on the right, align right edge of menu with right edge of trigger
+    if (spaceRight < menuWidth && spaceLeft > (menuWidth - rect.width)) {
+      openToLeft = true;
+      left = rect.right;
+    }
+    
     this.menuPosition = {
-      top: rect.bottom + window.scrollY,
-      left: rect.right + window.scrollX
+      top: top + window.scrollY,
+      left: left + window.scrollX,
+      openToLeft,
+      openUpward
     };
     this.requestUpdate();
   };
@@ -73,15 +115,29 @@ export class UIMenu extends LitElement {
     super.updated(changedProperties);
     if (this.open) {
       this._renderPortal();
+      
+      // If we just opened, we might need to re-calculate position with actual dimensions
+      // after the first render of the portal
+      if (changedProperties.has('open')) {
+        // Use requestAnimationFrame to ensure the DOM has been updated and sized
+        requestAnimationFrame(() => this._updatePosition());
+      }
     }
   }
 
   private _toggleMenu(e: Event) {
-    e.stopPropagation();
     this.open = !this.open;
     if (this.open) {
       this._updatePosition();
-      window.addEventListener('click', this._closeMenu);
+      
+      // Notify other menus to close
+      window.dispatchEvent(new CustomEvent('ui-menu-open', { detail: this }));
+      window.addEventListener('ui-menu-open', this._handleOtherMenuOpen);
+
+      // Delay adding the close listener to prevent immediate closure
+      setTimeout(() => {
+        window.addEventListener('click', this._closeMenu);
+      }, 0);
       window.addEventListener('scroll', this._updatePosition, true);
       window.addEventListener('resize', this._updatePosition);
     } else {
@@ -111,28 +167,50 @@ export class UIMenu extends LitElement {
       `;
     });
 
-    const menuStyles = `
-      position: absolute;
-      top: ${this.menuPosition.top}px;
-      left: ${this.menuPosition.left}px;
-      transform: translateX(-100%) translateY(0.5rem);
-      z-index: 9999;
-      pointer-events: auto;
-    `;
+    const baseTransform = `translateX(${this.menuPosition.openToLeft ? '-100%' : '0'}) translateY(${this.menuPosition.openUpward ? '-100%' : '0'}) translateY(${this.menuPosition.openUpward ? '-0.5rem' : '0.5rem'})`;
+    const enterOffset = this.menuPosition.openUpward ? '5px' : '-5px';
+    const transformOrigin = `${this.menuPosition.openToLeft ? 'right' : 'left'} ${this.menuPosition.openUpward ? 'bottom' : 'top'}`;
 
-    // We need to inject the styles since it's outside our shadow DOM
-    // For simplicity, we can render the same styles as the component
     render(html`
       <style>
         ${UIMenu.styles}
-        .dropdown-menu-portal {
-           display: block; opacity: 1; visibility: visible; transform: none;
-           position: static;
+        /* Use !important to ensure portal positioning overrides any base CSS */
+        div.dropdown-menu-portal {
+           display: block !important; 
+           opacity: 1 !important; 
+           visibility: visible !important; 
+           position: absolute !important;
+           top: ${this.menuPosition.top}px !important;
+           left: ${this.menuPosition.left}px !important;
+           right: auto !important;
+           margin: 0 !important;
+           z-index: 9999 !important;
+           pointer-events: auto !important;
+           transform-origin: ${transformOrigin} !important;
+           --base-transform: ${baseTransform};
+           --enter-offset: ${enterOffset};
+           animation: menuEnter 0.2s cubic-bezier(0.23, 1, 0.32, 1) forwards !important;
+        }
+        
+        @keyframes menuEnter {
+          from { 
+            opacity: 0; 
+            transform: var(--base-transform) scale(0.95) translateY(var(--enter-offset));
+          }
+          to { 
+            opacity: 1; 
+            transform: var(--base-transform) scale(1) translateY(0);
+          }
+        }
+
+        .menu-icon svg {
+          width: 100%;
+          height: 100%;
+          display: block;
         }
       </style>
       <div 
         class="dropdown-menu open dropdown-menu-portal" 
-        style="${menuStyles}"
         @click="${(e: Event) => e.stopPropagation()}"
       >
         ${menuItems}

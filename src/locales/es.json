@@ -73,6 +73,7 @@
   "variant.prob.epic": "Épica (5%)",
   "variant.customHtml": "Personalizar HTML/CSS",
   "variant.delete": "Eliminar variante",
+  "variant.copyJson": "Copiar JSON",
   "variant.confirmDelete": "¿Estás seguro de que deseas eliminar esta variante?",
   
   "variant.message": "Mensaje de la alerta",
