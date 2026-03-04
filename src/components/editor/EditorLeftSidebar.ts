@@ -126,9 +126,6 @@ export class EditorLeftSidebar extends LitElement {
       composed: true
     }));
   }
-
-  // Removed _toggleMenu as UIMenu handles its own state now
-
   private _chevron() {
     return html`
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -226,7 +223,6 @@ export class EditorLeftSidebar extends LitElement {
                           <button 
                             slot="trigger"
                             class="variant-menu-trigger"
-                            @click="${(e: Event) => e.stopPropagation()}"
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                               <circle cx="12" cy="12" r="1"></circle>
