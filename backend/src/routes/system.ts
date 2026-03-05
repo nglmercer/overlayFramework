@@ -19,6 +19,17 @@ import {
 } from '../constants';
 import { join } from 'path';
 
+// Optional import for embedded assets
+let embeddedAssets: any = {};
+try {
+  // @ts-ignore - may not exist during development
+  const assets = await import('../embedded-assets');
+  embeddedAssets = assets.embeddedAssets;
+} catch (e) {
+  // Fallback to empty if not built
+}
+
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -41,9 +52,17 @@ function buildDiscoveryServiceMap(config: any): Record<string, string> {
  */
 async function handleStaticFile(req: Request, distPath: string): Promise<Response | null> {
   const url = new URL(req.url);
-  
-  // 1. Service static frontend files
   const filePath = url.pathname === ApiPath.ROOT ? ApiPath.INDEX_HTML : url.pathname;
+
+  // 1. Check embedded assets (used when compiled)
+  if (embeddedAssets && embeddedAssets[filePath]) {
+    const asset = embeddedAssets[filePath];
+    return new Response(asset.content, {
+      headers: { [HttpHeader.CONTENT_TYPE]: asset.type }
+    });
+  }
+
+  // 2. Service static frontend files from disk (development)
   const fullPath = join(distPath, filePath);
   const file = Bun.file(fullPath);
   
@@ -51,10 +70,18 @@ async function handleStaticFile(req: Request, distPath: string): Promise<Respons
     return new Response(file);
   }
 
-  // 2. SPA Fallback
+  // 3. SPA Fallback
   const isHtmlRequest = req.headers.get('accept')?.includes('text/html');
   const hasExtension = url.pathname.includes('.');
   if (isHtmlRequest || !hasExtension) {
+    // Check embedded index first
+    if (embeddedAssets && embeddedAssets[ApiPath.INDEX_HTML]) {
+      const asset = embeddedAssets[ApiPath.INDEX_HTML];
+      return new Response(asset.content, {
+        headers: { [HttpHeader.CONTENT_TYPE]: asset.type }
+      });
+    }
+
     const indexFile = Bun.file(join(distPath, ApiPath.INDEX_HTML));
     if (await indexFile.exists()) {
       return new Response(indexFile, {
