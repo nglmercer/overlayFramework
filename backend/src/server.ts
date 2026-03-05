@@ -33,7 +33,7 @@ import {
   ApiPath,
   WsMessageType,
 } from './constants';
-import { routeRequest, generateClientId } from './router';
+import { routeRequest, generateClientId, router, registerRoutes } from './router';
 
 // ============================================================================
 // CONFIGURATION
@@ -46,6 +46,9 @@ const DIST_PATH = join(import.meta.dir, '../../dist');
 // Initialize Discovery
 const discovery = await initDiscovery(PORT);
 const discoveryShutdown = createDiscoveryShutdownHandler(discovery);
+
+// Register all routes
+registerRoutes();
 
 // ============================================================================
 // SERVER
@@ -164,18 +167,7 @@ process.on('SIGTERM', () => {
 // STARTUP
 // ============================================================================
 
+// Print all registered routes using router.printRoutes()
 console.log(` HTTP/WS   → http://localhost:${PORT}         `);
 console.log(` WebSocket → ws://localhost:${PORT}${ApiPath.WS}         `);
-console.log(' Endpoints:                                 ');
-console.log(` GET  ${ApiPath.HEALTH}             — Health check      `);
-console.log(` GET  ${ApiPath.WEBHOOK_STATUS}    — Server status     `);
-console.log(` GET  ${ApiPath.WEBHOOK_SCHEMAS}   — List schemas      `);
-console.log(` GET  ${ApiPath.WEBHOOK_EVENTS}    — Recent events     `);
-console.log(` GET  ${ApiPath.WEBHOOK_OVERLAYS}  — List saved overlays`);
-console.log(` GET  ${ApiPath.WEBHOOK_OVERLAY_KEY} — Get overlay    `);
-console.log(` POST ${ApiPath.WEBHOOK_ALERT}     — Trigger alert     `);
-console.log(` POST ${ApiPath.WEBHOOK_CONTROL}   — Control overlay   `);
-console.log(` POST ${ApiPath.WEBHOOK_SCHEMA}    — Register schema   `);
-console.log(` POST ${ApiPath.WEBHOOK_SAVE}     — Save overlay data  `);
-console.log(` POST ${ApiPath.WEBHOOK_DELETE}    — Delete overlay    `);
-console.log(` WS   ${ApiPath.WS}               — Overlay connection `);
+router.printRoutes();
