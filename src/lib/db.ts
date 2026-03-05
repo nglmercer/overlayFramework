@@ -35,6 +35,7 @@ export type { AlertVariant, AlertBox, TemplateDB };
 
 // Import constants
 import { DB } from './constants';
+import { normalizeAlertData } from './config';
 
 /**
  * ============================================
@@ -185,14 +186,18 @@ export const dbManager = {
    * @throws Error if validation fails
    */
   async saveTemplate(template: TemplateDB): Promise<void> {
-    const result = validateTemplate(template);
+    const normalized = {
+      ...template,
+      data: normalizeAlertData(template.data)
+    };
+    const result = validateTemplate(normalized);
     validateOrThrow(result, 'template');
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(DB.STORES.TEMPLATES, 'readwrite');
       const store = transaction.objectStore(DB.STORES.TEMPLATES);
-      const request = store.put(template);
+      const request = store.put(normalized);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -384,14 +389,15 @@ export const dbManager = {
    * @throws Error if validation fails
    */
   async saveVariant(variant: AlertVariant): Promise<void> {
-    const result = validateAlertVariant(variant);
+    const normalized = normalizeAlertData(variant);
+    const result = validateAlertVariant(normalized);
     validateOrThrow(result, 'variant');
     
     const db = await initDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
       const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const request = store.put(variant);
+      const request = store.put(normalized);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -462,11 +468,14 @@ export const dbManager = {
    */
   async saveVariants(variants: AlertVariant[]): Promise<void> {
     // Validate all first
+    const normalizedVariants: AlertVariant[] = [];
     for (const variant of variants) {
-      const result = validateAlertVariant(variant);
+      const normalized = normalizeAlertData(variant);
+      const result = validateAlertVariant(normalized);
       if (!result.success) {
         throw new Error(`Invalid variant ${variant.id}: ${(result as ValidationError).errors.join(', ')}`);
       }
+      normalizedVariants.push(normalized);
     }
     
     const db = await initDB();
@@ -474,7 +483,7 @@ export const dbManager = {
       const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
       const store = transaction.objectStore(DB.STORES.VARIANTS);
       
-      for (const variant of variants) {
+      for (const variant of normalizedVariants) {
         store.put(variant);
       }
       
@@ -506,6 +515,59 @@ export const dbManager = {
   // ============================================
   // UTILITY METHODS
   // ============================================
+
+  /**
+   * Automatically fixes media URLs in all stored variants and templates.
+   * Converts absolute URLs with stale host/port into portable relative paths.
+   * This is a safe migration that prevents data loss.
+   * 
+   * @returns Stats about how many items were fixed
+   */
+  async autofixMediaUrls(): Promise<{ variantsFixed: number, templatesFixed: number }> {
+    let variantsFixed = 0;
+    let templatesFixed = 0;
+    
+    try {
+      // 1. Fix all variants in all boxes
+      const boxes = await this.getBoxes();
+      for (const box of boxes) {
+        const variants = await this.getVariants(box.id);
+        const fixedVariants: AlertVariant[] = [];
+        
+        for (const variant of variants) {
+          const normalized = normalizeAlertData(variant);
+          // Compare stringified versions for deep parity check
+          if (JSON.stringify(normalized) !== JSON.stringify(variant)) {
+            fixedVariants.push(normalized);
+            variantsFixed++;
+          }
+        }
+        
+        if (fixedVariants.length > 0) {
+          // Use saveVariants which already applies normalization on save (idempotent)
+          await this.saveVariants(fixedVariants);
+        }
+      }
+      
+      // 2. Fix all templates
+      const templates = await this.getTemplates();
+      for (const template of templates) {
+        const normalizedData = normalizeAlertData(template.data);
+        if (JSON.stringify(normalizedData) !== JSON.stringify(template.data)) {
+          await this.saveTemplate({ ...template, data: normalizedData });
+          templatesFixed++;
+        }
+      }
+      
+      if (variantsFixed > 0 || templatesFixed > 0) {
+        console.log(`[MediaFixer] Successfully normalized ${variantsFixed} variants and ${templatesFixed} templates.`);
+      }
+    } catch (err) {
+      console.error('[MediaFixer] Failed to run autofix:', err);
+    }
+    
+    return { variantsFixed, templatesFixed };
+  },
 
   /**
    * Clears all data from the database

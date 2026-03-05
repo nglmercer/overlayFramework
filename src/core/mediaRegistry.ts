@@ -1,5 +1,4 @@
-import { MediaHandler } from './types';
-import { getBackendUrl } from '../lib/config';
+import { denormalizeMediaUrl, normalizeMediaUrl } from '../lib/config';
 
 class MediaRegistry {
   private handlers: Map<string, (url: string) => string> = new Map();
@@ -17,20 +16,24 @@ class MediaRegistry {
    * Resolves a URL using registered handlers.
    * If no handler matches, returns the original URL.
    */
-  resolve(url: string): string {
+  resolve(url: string | undefined): string {
     if (!url || typeof url !== 'string' || url === 'undefined') return '';
     
-    // If it's a relative path starting with /api/ or /uploads/, point to backend
-    if (url.startsWith('/api/') || url.startsWith('/uploads/')) {
-      return `${getBackendUrl()}${url}`;
+    // First, normalize it. This converts stale absolute URLs (e.g. http://127.0.0.1:old_port/uploads/...)
+    // into portable relative paths (/uploads/...).
+    const normalized = normalizeMediaUrl(url);
+    
+    // If it's a relative path starting with /api/ or /uploads/, point to current backend base
+    if (normalized && (normalized.startsWith('/api/') || normalized.startsWith('/uploads/'))) {
+      return denormalizeMediaUrl(normalized) || '';
     }
 
     for (const [protocol, parser] of this.handlers.entries()) {
-      if (typeof url === 'string' && url.startsWith(protocol)) {
-        return parser(url);
+      if (typeof normalized === 'string' && normalized.startsWith(protocol)) {
+        return parser(normalized);
       }
     }
-    return url;
+    return normalized || url || '';
   }
 
   /**

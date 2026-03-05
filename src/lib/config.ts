@@ -288,6 +288,140 @@ export function getCdnUrl(path?: string): string {
 }
 
 /**
+ * Normalizes a media URL to a relative path if it belongs to the backend/media-upload-api
+ * 
+ * @param url - The URL to normalize
+ * @returns The normalized relative path, or the original URL if not internal
+ * @example 
+ * normalizeMediaUrl('http://localhost:3001/uploads/image.png') -> '/uploads/image.png'
+ */
+export function normalizeMediaUrl(url: string | undefined): string | undefined {
+  if (!url || typeof url !== 'string' || url === '') return url;
+
+  // We only care about absolute URLs that start with http or https
+  if (!url.startsWith('http')) return url;
+
+  const backendUrl = getBackendUrl();
+  const mediaUrl = appConfig.mediaUrl;
+  
+  // Also check discovered services (already resolved to origin if proxied)
+  const discoveredMediaUrl = discoveredServicesCache['media-upload-api'];
+
+  const internalBases = [backendUrl, mediaUrl, discoveredMediaUrl].filter(Boolean) as string[];
+
+  // 1. Try to match known internal bases
+  for (const base of internalBases) {
+    if (url.startsWith(base)) {
+      const path = url.slice(base.length);
+      return path.startsWith('/') ? path : '/' + path;
+    }
+  }
+
+  // 2. Try to match by URI parts: if it belongs to the same domain OR any /uploads/ or /api/ path
+  // We should be careful not to normalize generic external URLs
+  try {
+    const urlObj = new URL(url);
+    const backendObj = new URL(backendUrl);
+    
+    // If it's the same host (even different port) and starts with /api/ or /uploads/
+    if (urlObj.hostname === backendObj.hostname && 
+        (urlObj.pathname.startsWith('/api/') || urlObj.pathname.startsWith('/uploads/'))) {
+      return urlObj.pathname + urlObj.search;
+    }
+    
+    // If it's localhost or an IP address and starts with /api/ or /uploads/, 
+    // it's VERY likely our internal service
+    const isIpOrLocalhost = urlObj.hostname === 'localhost' || 
+                           urlObj.hostname === '127.0.0.1' || 
+                           /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(urlObj.hostname);
+    
+    if (isIpOrLocalhost && (urlObj.pathname.startsWith('/api/') || urlObj.pathname.startsWith('/uploads/'))) {
+      return urlObj.pathname + urlObj.search;
+    }
+  } catch {
+    // Not a valid absolute URL, return as is
+  }
+
+  return url;
+}
+
+/**
+ * Denormalizes a media (relative) path to a full absolute URL using the current configuration
+ * 
+ * @param path - The path to denormalize
+ * @returns The full absolute URL
+ */
+export function denormalizeMediaUrl(path: string | undefined): string | undefined {
+  if (!path || typeof path !== 'string' || path === '') return path;
+  
+  // If already absolute, return as-is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  // Handle /api/ or /uploads/ paths
+  if (path.startsWith('/') || path.startsWith('uploads/')) {
+    const backendBase = getBackendUrl();
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return `${backendBase}${cleanPath}`;
+  }
+
+  return getMediaUrl(path);
+}
+
+/**
+ * Recursively normalizes all media URLs in an object
+ * 
+ * @param data - The object to normalize
+ * @returns A new object with normalized URLs
+ */
+export function normalizeAlertData<T>(data: T): T {
+  if (!data || typeof data !== 'object') return data;
+  
+  if (Array.isArray(data)) {
+    return data.map(item => normalizeAlertData(item)) as unknown as T;
+  }
+
+  const result = { ...data } as any;
+  
+  for (const key in result) {
+    if (key === 'imageUrl' || key === 'soundUrl') {
+      result[key] = normalizeMediaUrl(result[key]);
+    } else if (typeof result[key] === 'object') {
+      result[key] = normalizeAlertData(result[key]);
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Recursively denormalizes all media URLs in an object
+ * 
+ * @param data - The object to denormalize
+ * @returns A new object with absolute URLs
+ */
+export function denormalizeAlertData<T>(data: T): T {
+  if (!data || typeof data !== 'object') return data;
+  
+  if (Array.isArray(data)) {
+    return data.map(item => denormalizeAlertData(item)) as unknown as T;
+  }
+
+  const result = { ...data } as any;
+  
+  for (const key in result) {
+    if (key === 'imageUrl' || key === 'soundUrl') {
+      result[key] = denormalizeMediaUrl(result[key]);
+    } else if (typeof result[key] === 'object') {
+      result[key] = denormalizeAlertData(result[key]);
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Reload configuration from environment
  * Useful when environment variables change at runtime
  * 

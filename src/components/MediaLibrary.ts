@@ -10,7 +10,7 @@ import { mediaLibraryStyles } from './media-library/MediaLibraryStyles';
 // Register sub-component
 import './media-library/MediaLibraryItem';
 import type { MediaLibraryItem } from './media-library/MediaLibraryItem';
-import { resolveServiceUrl } from '../lib/config';
+import { resolveServiceUrl, normalizeMediaUrl } from '../lib/config';
 import type { MediaUploadClient } from '../api/client';
 
 @Component('media-library')
@@ -206,7 +206,7 @@ export class MediaLibrary extends LitElement {
     const selected = this.items.find(i => i.id === this.selectedItem);
     if (!selected) return;
 
-    const url  = this.apiClient.files.getUrl(selected);
+    const url  = normalizeMediaUrl(this.apiClient.files.getUrl(selected)) || '';
     const name = selected.originalName;
 
     // Support both callback prop and event-based integration

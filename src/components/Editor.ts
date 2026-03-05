@@ -41,7 +41,7 @@ import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
 import { CONFIG } from '../lib/constants';
-import { getBackendEndpoint, getInstanceId } from '../lib/config';
+import { getBackendEndpoint, getInstanceId, normalizeMediaUrl } from '../lib/config';
 
 // =============================================================================
 // Type Definitions
@@ -466,6 +466,10 @@ export class AppEditor extends LitElement {
     if (!variant) return;
     
     const updated = { ...variant, ...updates };
+    
+    // Normalize media URLs if present in updates
+    if (updates.imageUrl) updated.imageUrl = normalizeMediaUrl(updates.imageUrl);
+    if (updates.soundUrl) updated.soundUrl = normalizeMediaUrl(updates.soundUrl);
 
     try {
       await dbManager.saveVariant(updated);
@@ -627,12 +631,12 @@ export class AppEditor extends LitElement {
     
     if (this.showMediaLibrary === 'image') {
       this.handlePropertyChange({ 
-        imageUrl: url,
+        imageUrl: normalizeMediaUrl(url),
         imageName: name 
       }, variants);
     } else if (this.showMediaLibrary === 'sound') {
       this.handlePropertyChange({ 
-        soundUrl: url,
+        soundUrl: normalizeMediaUrl(url),
         soundName: name 
       }, variants);
     }

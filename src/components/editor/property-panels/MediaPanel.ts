@@ -2,6 +2,8 @@ import { html, css, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { AlertVariant } from '../../../lib/db';
 import { LocalizeController } from '../../../locales/localization';
+import { mediaRegistry } from '../../../core/mediaRegistry';
+import { normalizeMediaUrl } from '../../../lib/config';
 
 @customElement('property-panel-media')
 export class PropertyPanelMedia extends LitElement {
@@ -195,7 +197,7 @@ export class PropertyPanelMedia extends LitElement {
         </div>
       `;
     }
-    return html`<img class="current-media-thumb" src="${url}" alt="" />`;
+    return html`<img class="current-media-thumb" src="${mediaRegistry.resolve(url)}" alt="" />`;
   }
 
   private _renderCurrentImage() {
@@ -215,8 +217,8 @@ export class PropertyPanelMedia extends LitElement {
         ${hasImage
           ? html`
             ${this._renderImageThumb()}
-            <span class="current-media-name" title="${variant!.imageName ?? variant!.imageUrl}">
-              ${variant!.imageName ?? variant!.imageUrl}
+            <span class="current-media-name" title="${variant!.imageName ?? normalizeMediaUrl(variant!.imageUrl)}">
+              ${variant!.imageName ?? normalizeMediaUrl(variant!.imageUrl)}
             </span>
             <button class="btn-clear" @click="${this._clearImage}" title="${this._t('dialog.remove') || 'Remove'}">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,8 +257,8 @@ export class PropertyPanelMedia extends LitElement {
                   d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
               </svg>
             </div>
-            <span class="current-media-name" title="${variant!.soundName ?? variant!.soundUrl}">
-              ${variant!.soundName ?? variant!.soundUrl}
+            <span class="current-media-name" title="${variant!.soundName ?? normalizeMediaUrl(variant!.soundUrl)}">
+              ${variant!.soundName ?? normalizeMediaUrl(variant!.soundUrl)}
             </span>
             <button class="btn-clear" @click="${this._clearSound}" title="${this._t('dialog.remove') || 'Remove'}">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
