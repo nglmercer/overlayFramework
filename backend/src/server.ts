@@ -33,27 +33,22 @@ import {
   ApiPath,
   WsMessageType,
 } from './constants';
-import { routeRequest, generateClientId, router, registerRoutes } from './router';
+import { routeRequest, router, registerRoutes } from './router';
+import { getEnvInt, logger, loggerError } from './utils';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const PORT = parseInt(process.env[Env.PORT] ?? String(ServerConfig.DEFAULT_PORT), 10);
-const HEARTBEAT_MS = parseInt(process.env[Env.HEARTBEAT_MS] ?? String(ServerConfig.DEFAULT_HEARTBEAT_MS), 10);
+const PORT = getEnvInt(Env.PORT, ServerConfig.DEFAULT_PORT);
+const HEARTBEAT_MS = getEnvInt(Env.HEARTBEAT_MS, ServerConfig.DEFAULT_HEARTBEAT_MS);
 const DIST_PATH = join(import.meta.dir, '../../dist');
 
 // Initialize Discovery
 const discovery = await initDiscovery(PORT);
 const discoveryShutdown = createDiscoveryShutdownHandler(discovery);
 
-// Register all routes
 registerRoutes();
-
-// ============================================================================
-// SERVER
-// ============================================================================
-
 const server = Bun.serve<WsClientData>({
   port: PORT,
 
@@ -67,7 +62,6 @@ const server = Bun.serve<WsClientData>({
       discovery: discovery as Discovery | null,
     });
     
-    // If router returns undefined (WebSocket upgrade in progress), return nothing
     if (response === undefined) {
       return;
     }
@@ -80,7 +74,7 @@ const server = Bun.serve<WsClientData>({
   websocket: {
     /** New client connected */
     open(ws) {
-      console.log("Client connected", ws.data);
+      logger('WS', `Client connected: ${ws.data.id}`);
       wsManager.addClient(ws);
     },
 
@@ -96,7 +90,7 @@ const server = Bun.serve<WsClientData>({
 
         case WsMessageType.ACK:
           // Log acknowledgement
-          console.log(`[WS] ACK from ${ws.data.clientId ?? ws.data.id}: event=${message.eventId} status=${message.status}`);
+          logger('WS', `ACK from ${ws.data.clientId ?? ws.data.id}: event=${message.eventId} status=${message.status}`);
           break;
 
         case WsMessageType.PONG:
@@ -105,14 +99,14 @@ const server = Bun.serve<WsClientData>({
         
         case WsMessageType.ALERT:
           // Client sent an alert - broadcast to all other clients
-          console.log(`[WS] Alert from ${ws.data.clientId ?? ws.data.id}: ${message.eventName}`);
+          logger('WS', `Alert from ${ws.data.clientId ?? ws.data.id}: ${message.eventName}`);
           wsManager.broadcastAlert({
             type: WsMessageType.ALERT,
             eventName: message.eventName,
             data: message.data,
             timestamp: Date.now(),
             id: message.id,
-            target: (message as any).target,
+            target: message.target,
           });
           break;
       }
@@ -139,17 +133,12 @@ const server = Bun.serve<WsClientData>({
 // Initialize storage
 initializeStorage();
 
-// ============================================================================
-// HEARTBEAT
-// ============================================================================
-
 const heartbeatInterval = setInterval(() => {
   wsManager.pingAll();
 }, HEARTBEAT_MS);
 
-// Cleanup on shutdown
 process.on('SIGINT', () => {
-  console.log('\n[Server] Shutting down...');
+  logger('Server', 'SIGINT received, shutting down...');
   clearInterval(heartbeatInterval);
   discoveryShutdown();
   server.stop();
@@ -163,11 +152,7 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// ============================================================================
-// STARTUP
-// ============================================================================
-
-// Print all registered routes using router.printRoutes()
-console.log(` HTTP/WS   → http://localhost:${PORT}         `);
-console.log(` WebSocket → ws://localhost:${PORT}${ApiPath.WS}         `);
+console.log(` Overlay Backend is running!`);
+console.log(` HTTP/WS   → http://${server.hostname}:${PORT}`);
+console.log(` WebSocket → ws://${server.hostname}:${PORT}${ApiPath.WS}\n`);
 router.printRoutes();

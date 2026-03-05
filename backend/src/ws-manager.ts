@@ -10,6 +10,7 @@
 
 import type { ServerWebSocket } from 'bun';
 import type { WsAlertMessage, WsControlMessage, WsConfigMessage } from './schemas';
+import { logger, loggerError } from './utils';
 
 /** Per-client data stored in ws.data */
 export interface WsClientData {
@@ -31,20 +32,20 @@ class WsManager {
   /** Register a new client connection */
   addClient(ws: ServerWebSocket<WsClientData>): void {
     this.clients.add(ws);
-    console.log(`[WS] Client connected: ${ws.data.id} (total: ${this.clients.size})`);
+    logger('WS', `Client connected: ${ws.data.id} (total: ${this.clients.size})`);
   }
 
   /** Remove a client connection */
   removeClient(ws: ServerWebSocket<WsClientData>): void {
     this.clients.delete(ws);
-    console.log(`[WS] Client disconnected: ${ws.data.id} (total: ${this.clients.size})`);
+    logger('WS', `Client disconnected: ${ws.data.id} (total: ${this.clients.size})`);
   }
 
   /** Update client info (from ready message) */
   updateClient(ws: ServerWebSocket<WsClientData>, clientId?: string, capabilities?: string[]): void {
     ws.data.clientId = clientId;
     ws.data.capabilities = capabilities;
-    console.log(`[WS] Client ready: ${clientId ?? ws.data.id}, capabilities: ${capabilities?.join(', ') ?? 'none'}`);
+    logger('WS', `Client ready: ${clientId ?? ws.data.id}, capabilities: ${capabilities?.join(', ') ?? 'none'}`);
   }
 
   /** Record pong from client */
@@ -71,20 +72,30 @@ class WsManager {
   // ========================================
 
   /**
-   * Broadcast an alert to all connected overlay clients
+   * Internal helper to broadcast a JSON message to all or filtered clients
    */
-  broadcastAlert(message: WsAlertMessage): void {
+  private broadcast(message: any, filter?: (ws: ServerWebSocket<WsClientData>) => boolean): number {
     const json = JSON.stringify(message);
     let sent = 0;
 
     for (const client of this.clients) {
+      if (filter && !filter(client)) continue;
+      
       try {
         client.send(json);
         sent++;
       } catch (err) {
-        console.error(`[WS] Failed to send to ${client.data.id}:`, err);
+        loggerError('WS', `Failed to send to ${client.data.id}`, err);
       }
     }
+    return sent;
+  }
+
+  /**
+   * Broadcast an alert to all connected overlay clients
+   */
+  broadcastAlert(message: WsAlertMessage): void {
+    const sent = this.broadcast(message);
 
     // Log the event
     this.eventLog.push(message);
@@ -92,7 +103,7 @@ class WsManager {
       this.eventLog.shift();
     }
 
-    console.log(`[WS] Alert broadcasted to ${sent}/${this.clients.size} clients: ${message.eventName}`);
+    logger('WS', `Alert broadcasted to ${sent}/${this.clients.size} clients: ${message.eventName}`);
   }
 
   /**
@@ -104,17 +115,8 @@ class WsManager {
       action,
       timestamp: Date.now(),
     };
-    const json = JSON.stringify(message);
-
-    for (const client of this.clients) {
-      try {
-        client.send(json);
-      } catch (err) {
-        console.error(`[WS] Failed to send control to ${client.data.id}:`, err);
-      }
-    }
-
-    console.log(`[WS] Control broadcasted: ${action}`);
+    this.broadcast(message);
+    logger('WS', `Control broadcasted: ${action}`);
   }
 
   /**
@@ -127,32 +129,15 @@ class WsManager {
       value,
       timestamp: Date.now(),
     };
-    const json = JSON.stringify(message);
-
-    for (const client of this.clients) {
-      try {
-        client.send(json);
-      } catch (err) {
-        console.error(`[WS] Failed to send config to ${client.data.id}:`, err);
-      }
-    }
-
-    console.log(`[WS] Config broadcasted: ${key}`);
+    this.broadcast(message);
+    logger('WS', `Config broadcasted: ${key}`);
   }
 
   /**
    * Send a ping to all clients
    */
   pingAll(): void {
-    const json = JSON.stringify({ type: 'ping', timestamp: Date.now() });
-
-    for (const client of this.clients) {
-      try {
-        client.send(json);
-      } catch {
-        // Client may have disconnected
-      }
-    }
+    this.broadcast({ type: 'ping', timestamp: Date.now() });
   }
 
   /**
@@ -175,24 +160,12 @@ class WsManager {
    * @param instanceIds - Array of client IDs to send to (if empty, broadcasts to all)
    */
   sendAlertToInstance(message: WsAlertMessage, instanceIds: string[]): void {
-    const json = JSON.stringify(message);
-    let sent = 0;
+    const sent = this.broadcast(message, (client) => {
+      if (instanceIds.length === 0) return true;
+      return instanceIds.includes(client.data.clientId || client.data.id);
+    });
 
-    for (const client of this.clients) {
-      // Skip if we have specific instanceIds and this client isn't in the list
-      if (instanceIds.length > 0 && !instanceIds.includes(client.data.clientId || client.data.id)) {
-        continue;
-      }
-
-      try {
-        client.send(json);
-        sent++;
-      } catch (err) {
-        console.error(`[WS] Failed to send to ${client.data.id}:`, err);
-      }
-    }
-
-    console.log(`[WS] Alert sent to ${sent} instance(s): ${message.eventName}`);
+    logger('WS', `Alert sent to ${sent} instance(s): ${message.eventName}`);
   }
 }
 
