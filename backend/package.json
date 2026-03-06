@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "idb-manager": "^1.2.1",
-    "json-obj-manager": "^3.6.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
