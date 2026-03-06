@@ -202,5 +202,12 @@
   "profile.error.cannotReach": "No se puede alcanzar el backend",
   "profile.warning.cannotLoadProfiles": "No se pudieron cargar los perfiles existentes. Puedes ingresar un ID manualmente abajo.",
   "profile.loadingProfiles": "Buscando perfiles existentes...",
-  "profile.orDivider": "o"
+  "profile.orDivider": "o",
+  "profileSwitcher.noProfile": "Sin Perfil",
+  "profileSwitcher.profiles": "Perfiles",
+  "profileSwitcher.active": "activo",
+  "profileSwitcher.linkAnother": "Vincular otra instancia…",
+  "profileSwitcher.pushData": "Enviar datos al backend",
+  "profileSwitcher.pushSuccess": "¡Datos del perfil enviados al backend exitosamente!",
+  "profileSwitcher.pushFailed": "Error al exportar: {error}"
 }

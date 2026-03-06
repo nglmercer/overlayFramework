@@ -1,6 +1,7 @@
 import { html, unsafeCSS, LitElement, css } from 'lit';
 import { Component, state } from '../../litcomponents';
 import { profileManager, type Profile } from '../../lib/profile-manager';
+import { t as translate } from '../../locales/localization';
 
 /**
  * Profile switcher dropdown — shown in the Dashboard header.
@@ -140,10 +141,15 @@ export class AppProfileSwitcher extends LitElement {
     this.open = false;
     const result = await profileManager.pushToBackend();
     if (result.ok) {
-      alert('Profile data pushed to backend successfully!');
+      alert(translate('profileSwitcher.pushSuccess'));
     } else {
-      alert(`Export failed: ${(result as any).error}`);
+      alert(translate('profileSwitcher.pushFailed', { error: (result as any).error }));
     }
+  }
+
+  // Helper to get translations
+  private _t(key: string, params?: Record<string, string | number>): string {
+    return translate(key, params);
   }
 
   private get _activeProfile(): Profile | null {
@@ -156,7 +162,7 @@ export class AppProfileSwitcher extends LitElement {
     return html`
       <div class="trigger" @click="${this._toggle}">
         <div class="color-dot" style="background: ${active?.color ?? '#9146FF'}"></div>
-        <span>${active?.name ?? 'No Profile'}</span>
+        <span>${active?.name ?? this._t('profileSwitcher.noProfile')}</span>
         <svg class="chevron ${this.open ? 'open' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
         </svg>
@@ -165,7 +171,7 @@ export class AppProfileSwitcher extends LitElement {
       ${this.open ? html`
         <div class="dropdown">
           <div class="dropdown-section">
-            <div class="dropdown-label">Profiles</div>
+            <div class="dropdown-label">${this._t('profileSwitcher.profiles')}</div>
             ${this.profiles.map(p => html`
               <div
                 class="profile-item ${p.id === this.activeId ? 'active' : ''}"
@@ -174,7 +180,7 @@ export class AppProfileSwitcher extends LitElement {
                 <div class="color-dot" style="background: ${p.color ?? '#9146FF'}"></div>
                 <span class="profile-item-name">${p.name}</span>
                 ${p.id === this.activeId
-                  ? html`<span class="profile-item-active-badge">active</span>`
+                  ? html`<span class="profile-item-active-badge">${this._t('profileSwitcher.active')}</span>`
                   : ''}
               </div>
             `)}
@@ -187,13 +193,13 @@ export class AppProfileSwitcher extends LitElement {
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
               </svg>
-              Link another instance…
+              ${this._t('profileSwitcher.linkAnother')}
             </button>
             <button class="action-item" @click="${this._export}">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
               </svg>
-              Push data to backend
+              ${this._t('profileSwitcher.pushData')}
             </button>
           </div>
         </div>
