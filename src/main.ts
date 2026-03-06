@@ -8,14 +8,16 @@ import { loadSchemas, schemaLoader, SchemaMap, LifecycleHooks } from './lib/sche
 import { initializeFramework, cleanupFramework } from './lib/index';
 import { patchAllGlobals } from './lib/dialog';
 import './components/index';
-import { getLocale, setLocale, LocalizeController, initLocale } from './locales/localization';
+import { initLocale } from './locales/localization';
 import { discoverServices } from './lib/config';
+import { profileManager } from './lib/profile-manager';
 
-// Define custom schemas map
-// No custom schemas needed, using centralized PLATFORM_EVENTS from core
+// ============================================================================
+// SCHEMA CONFIG
+// ============================================================================
+
 const customSchemas: SchemaMap = new Map();
 
-// Define lifecycle hooks
 const lifecycleHooks: LifecycleHooks = {
   onLoad: (schemas) => {
     console.log('Schemas loaded:', schemas.size, 'schemas available');
@@ -28,9 +30,13 @@ const lifecycleHooks: LifecycleHooks = {
   },
 };
 
+// ============================================================================
+// MAIN APP COMPONENT
+// ============================================================================
+
 @Component('main-app')
 export class MainApp extends LitElement {
-  @state() private currentView: 'dashboard' | 'editor' = 'dashboard';
+  @state() private currentView: 'profile-setup' | 'dashboard' | 'editor' = 'dashboard';
   @state() private currentBoxId: string = '';
 
   @provide({ context: platformSchemaContext })
@@ -43,26 +49,50 @@ export class MainApp extends LitElement {
   async firstUpdated() {
     // Initialize locale from localStorage
     await initLocale();
-    
+
     // Initialize framework and load schemas
     await initializeFramework();
     await loadSchemas(customSchemas, lifecycleHooks);
     await discoverServices();
-    
+
     // Patch global alert/confirm/prompt to use custom dialog
     patchAllGlobals();
-    
+
     console.log('Framework initialized');
     console.log('Schema loader ready:', schemaLoader.isReady());
+
+    // ── First-run detection ──
+    // If no active profile exists, show the profile setup screen before the dashboard
+    if (profileManager.isFirstRun()) {
+      console.log('[App] First run detected — showing profile setup.');
+      this.currentView = 'profile-setup';
+    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    // Cleanup on unload
     cleanupFramework();
   }
 
+  private _onProfileReady() {
+    // Profile has been created or linked — proceed to normal dashboard
+    this.currentView = 'dashboard';
+  }
+
+  private _onProfileAddRequested() {
+    // Dashboard requests showing the setup modal (e.g. "Link another instance")
+    this.currentView = 'profile-setup';
+  }
+
   render() {
+    if (this.currentView === 'profile-setup') {
+      return html`
+        <app-profile-setup
+          @profile-ready="${this._onProfileReady}"
+        ></app-profile-setup>
+      `;
+    }
+
     if (this.currentView === 'dashboard') {
       return html`
         <app-dashboard
@@ -70,6 +100,7 @@ export class MainApp extends LitElement {
             this.currentBoxId = id;
             this.currentView = 'editor';
           }}"
+          @profile-add-requested="${this._onProfileAddRequested}"
         ></app-dashboard>
       `;
     }
@@ -84,6 +115,10 @@ export class MainApp extends LitElement {
     `;
   }
 }
+
+// ============================================================================
+// BOOTSTRAP
+// ============================================================================
 
 const root = document.getElementById('root');
 if (root) {

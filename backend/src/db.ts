@@ -19,12 +19,24 @@ import { join } from 'path';
 const STORAGE_DIR = process.env.STORAGE_DIR ?? './data';
 const DB_NAME = 'OverlayBackendDB';
 
+// ============================================================================
+// PROFILE TYPE
+// ============================================================================
+
+export interface BackendProfile {
+  id: string;         // same as frontend instanceId
+  name: string;       // human-readable label e.g. "My Gaming PC"
+  createdAt: number;
+  lastSeen: number;
+  color?: string;     // hex color for visual differentiation
+}
+
 /**
  * Backend Database Schema with enhanced indexes
  */
 const schema = {
   name: DB_NAME,
-  version: 2,
+  version: 3,
   stores: [
     { 
       name: 'overlays', 
@@ -37,6 +49,14 @@ const schema = {
     {
       name: 'settings',
       keyPath: 'id'
+    },
+    {
+      name: 'profiles',
+      keyPath: 'id',
+      indexes: [
+        { name: 'createdAt', keyPath: 'createdAt', unique: false },
+        { name: 'lastSeen', keyPath: 'lastSeen', unique: false }
+      ]
     }
   ]
 };
@@ -55,6 +75,7 @@ export const dbManager = {
   // Store proxies
   get overlays() { return db.store('overlays'); },
   get settings() { return db.store('settings'); },
+  get profiles() { return db.store('profiles'); },
 
   /**
     * Initialize the database and setup event listeners
@@ -238,6 +259,55 @@ export const dbManager = {
       console.error('[DB] Import failed:', error);
       return false;
     }
+  },
+
+  // ============================================================================
+  // PROFILE OPERATIONS
+  // ============================================================================
+
+  /**
+   * Save or update a profile record
+   */
+  async saveProfile(profile: BackendProfile): Promise<void> {
+    const existing = await this.profiles.get(profile.id);
+    const record = { ...profile, lastSeen: Date.now() };
+    if (existing) {
+      await this.profiles.update(record);
+    } else {
+      await this.profiles.add(record);
+    }
+  },
+
+  /**
+   * Get a single profile by ID
+   */
+  async getProfile(id: string): Promise<BackendProfile | null> {
+    const result = await this.profiles.get(id);
+    return (result as unknown as BackendProfile) ?? null;
+  },
+
+  /**
+   * List all known profiles
+   */
+  async listProfiles(): Promise<BackendProfile[]> {
+    return (await this.profiles.getAll()) as unknown as BackendProfile[];
+  },
+
+  /**
+   * Update lastSeen timestamp for a profile
+   */
+  async touchProfile(id: string): Promise<void> {
+    const existing = await this.profiles.get(id) as unknown as BackendProfile | undefined;
+    if (existing) {
+      await this.profiles.update({ ...existing, lastSeen: Date.now() });
+    }
+  },
+
+  /**
+   * Delete a profile record
+   */
+  async deleteProfile(id: string): Promise<boolean> {
+    return await this.profiles.delete(id);
   },
 
   /**

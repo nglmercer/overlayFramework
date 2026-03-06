@@ -11,3 +11,5 @@ export * from './dashboard/Dashboard';
 export * from './Editor';
 export * from './MediaLibrary';
 export * from './Dialog';
+export * from './profile/ProfileSetupModal';
+export * from './profile/ProfileSwitcher';

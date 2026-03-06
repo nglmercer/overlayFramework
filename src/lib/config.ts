@@ -213,15 +213,28 @@ export function getBackendEndpoint(path: string): string {
 }
 
 /**
- * Get the current instance ID (for targeting specific overlay instances)
- * @returns The unique instance ID for this browser/tab
+ * Get the current instance ID (for targeting specific overlay instances).
+ * Delegates to the ProfileManager so the ID is always tied to the active profile.
+ * Falls back to a legacy localStorage key if ProfileManager has no active profile yet
+ * (e.g. during the very first render before the setup modal completes).
+ *
+ * @returns The unique instance ID for this browser/device
  */
 export function getInstanceId(): string {
-  const STORAGE_KEY = 'overlay-instance-id';
-  let instanceId = localStorage.getItem(STORAGE_KEY);
+  // Lazy import to avoid circular dependency (profile-manager imports from config)
+  try {
+    const id = localStorage.getItem('overlay-active-profile-id');
+    if (id) return id;
+  } catch {
+    // localStorage may not be available in SSR/test contexts
+  }
+
+  // Legacy fallback: generate once and persist
+  const LEGACY_KEY = 'overlay-instance-id';
+  let instanceId = localStorage.getItem(LEGACY_KEY);
   if (!instanceId) {
     instanceId = `overlay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    localStorage.setItem(STORAGE_KEY, instanceId);
+    localStorage.setItem(LEGACY_KEY, instanceId);
   }
   return instanceId;
 }

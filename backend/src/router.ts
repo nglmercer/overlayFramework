@@ -7,6 +7,7 @@ import { Router, RouterConfig } from './router-engine';
 import { registerWebhookRoutes } from './routes/webhook';
 import { registerSystemRoutes } from './routes/system';
 import { registerProxyRoutes } from './routes/proxy';
+import { registerProfileRoutes } from './routes/profiles';
 import { registerSyncRoutes } from './sync';
 import { ApiPath } from './constants';
 import { wsManager, type WsClientData } from './ws-manager';
@@ -25,6 +26,7 @@ export function registerRoutes(): void {
   registerWebhookRoutes(router);
   registerProxyRoutes(router);
   registerSyncRoutes(router); // Sync API for offline-first functionality
+  registerProfileRoutes(router); // Profile/Instance management
   
   // System routes usually contain catch-all static serving, so register last
   registerSystemRoutes(router);

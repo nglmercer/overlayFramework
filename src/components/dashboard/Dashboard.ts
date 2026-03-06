@@ -118,14 +118,17 @@ export class AppDashboard extends LitElement {
       <div class="max-w-3xl">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
           <h1>${this._localize.t('dashboard.title')}</h1>
-          <select 
-            style="background: #27272a; color: white; border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer;"
-            @change="${this.handleLocaleChange}"
-            .value="${currentLocale}"
-          >
-            <option value="es">Español</option>
-            <option value="en">English</option>
-          </select>
+          <div style="display: flex; align-items: center; gap: 0.625rem;">
+            <app-profile-switcher></app-profile-switcher>
+            <select 
+              style="background: #27272a; color: white; border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer;"
+              @change="${this.handleLocaleChange}"
+              .value="${currentLocale}"
+            >
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </div>
         </div>
         <p class="stats">${this._localize.t('dashboard.alertGroups')}: ${this.alertBoxes.length}/${CONFIG.MAX_BOXES}</p>
 

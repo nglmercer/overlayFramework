@@ -118,6 +118,12 @@ export const ApiPath = {
   SYNC_STATUS: '/sync/status',
   SYNC_RESYNC: '/sync/resync',
   SYNC_CLEAR: '/sync/clear',
+
+  // Profile / Instance management
+  PROFILES: '/profiles',
+  PROFILE_BY_ID: '/profiles/:id',
+  PROFILE_EXPORT: '/profiles/:id/export',
+  PROFILE_IMPORT: '/profiles/:id/import',
 } as const;
 
 // ============================================================================
