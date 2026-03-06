@@ -1,5 +1,5 @@
 /**
- * Database Module - IndexedDB Wrapper
+ * Database Module - IndexedDB Wrapper (Powered by idb-manager)
  * 
  * Provides a clean interface for managing alert data in IndexedDB.
  * Handles persistence for alert boxes, variants, and templates.
@@ -7,19 +7,18 @@
  * Features:
  * - Type-safe CRUD operations with Zod validation
  * - Automatic data validation before persistence
- * - Batch operations for efficiency
+ * - Powered by idb-manager for robust performance
  * - Cascade delete support
  * 
  * @module lib/db
- * @version 2.1.0
+ * @version 3.0.0
  */
 
-import {
-  AlertVariantSchema,
-  AlertVariant,
-  AlertBoxSchema,
-  AlertBox,
-  TemplateDBSchema,
+import { IndexedDBManager } from 'idb-manager';
+import { BrowserAdapter } from 'idb-manager/browser';
+import { 
+  AlertVariant, 
+  AlertBox, 
   TemplateDB,
   validateAlertVariant,
   validateAlertBox,
@@ -33,7 +32,7 @@ import {
 // Re-export types for convenience
 export type { AlertVariant, AlertBox, TemplateDB };
 
-// Import constants
+// Import constants and utils
 import { DB } from './constants';
 import { normalizeAlertData } from './config';
 
@@ -43,8 +42,33 @@ import { normalizeAlertData } from './config';
  * ============================================
  */
 
-const DB_NAME = DB.NAME;
-const DB_VERSION = DB.VERSION;
+const schema = {
+  name: DB.NAME,
+  version: DB.VERSION,
+  stores: [
+    { 
+      name: DB.STORES.BOXES, 
+      keyPath: 'id' 
+    },
+    { 
+      name: DB.STORES.VARIANTS, 
+      keyPath: 'id',
+      indexes: [
+        { name: DB.VARIANT_INDEXES.BOX_ID, keyPath: DB.VARIANT_INDEXES.BOX_ID, unique: false },
+        { name: DB.VARIANT_INDEXES.TYPE, keyPath: DB.VARIANT_INDEXES.TYPE, unique: false }
+      ]
+    },
+    { 
+      name: DB.STORES.TEMPLATES, 
+      keyPath: 'id' 
+    }
+  ]
+};
+const adapter = new BrowserAdapter();
+// Initialize the manager
+const db = new IndexedDBManager(schema,{
+  adapter: adapter,
+});
 
 /**
  * ============================================
@@ -54,43 +78,12 @@ const DB_VERSION = DB.VERSION;
 
 /**
  * Initializes and opens the IndexedDB database
- * 
- * Creates the following object stores:
- * - boxes: For storing alert box configurations
- * - variants: For storing alert variants (indexed by boxId and type)
- * - templates: For storing saved templates
+ * Legacy support for direct IDBDatabase access if needed.
  * 
  * @returns Promise resolving to the database instance
- * @throws Error if database initialization fails
  */
 export async function initDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      
-      // Create boxes object store
-      if (!db.objectStoreNames.contains(DB.STORES.BOXES)) {
-        db.createObjectStore(DB.STORES.BOXES, { keyPath: 'id' });
-      }
-      
-      // Create variants object store with indexes
-      if (!db.objectStoreNames.contains(DB.STORES.VARIANTS)) {
-        const variantStore = db.createObjectStore(DB.STORES.VARIANTS, { keyPath: 'id' });
-        variantStore.createIndex(DB.VARIANT_INDEXES.BOX_ID, DB.VARIANT_INDEXES.BOX_ID, { unique: false });
-        variantStore.createIndex(DB.VARIANT_INDEXES.TYPE, DB.VARIANT_INDEXES.TYPE, { unique: false });
-      }
-
-      // Create templates object store
-      if (!db.objectStoreNames.contains(DB.STORES.TEMPLATES)) {
-        db.createObjectStore(DB.STORES.TEMPLATES, { keyPath: 'id' });
-      }
-    };
-  });
+  return db.openDatabase() as Promise<IDBDatabase>;
 }
 
 /**
@@ -99,17 +92,10 @@ export async function initDB(): Promise<IDBDatabase> {
  * ============================================
  */
 
-/**
- * Type for validation error handling
- */
 type ValidationError = { success: false; errors: string[] };
 
 /**
  * Validates data and throws on failure
- * 
- * @param result - Validation result to check
- * @param entityName - Name of the entity for error message
- * @throws Error if validation fails
  */
 function validateOrThrow(result: ValidationResult<unknown>, entityName: string): void {
   if (!result.success) {
@@ -121,70 +107,30 @@ function validateOrThrow(result: ValidationResult<unknown>, entityName: string):
  * ============================================
  * DATABASE MANAGER
  * ============================================
- * 
- * Provides CRUD operations for all data types.
- * All operations validate data against schemas before saving.
  */
 
 /**
  * Database manager singleton with CRUD operations
- * 
- * @example
- * ```typescript
- * // Get all variants for a box
- * const variants = await dbManager.getVariants('box-123');
- * 
- * // Save a new variant
- * await dbManager.saveVariant(variantData);
- * 
- * // Delete a template
- * await dbManager.deleteTemplate('template-456');
- * ```
+ * Re-implemented using idb-manager.
  */
 export const dbManager = {
+  // Helpers to get store proxies
+  get boxes() { return db.store(DB.STORES.BOXES); },
+  get variants() { return db.store(DB.STORES.VARIANTS); },
+  get templates() { return db.store(DB.STORES.TEMPLATES); },
+
   // ============================================
   // TEMPLATE OPERATIONS
   // ============================================
   
-  /**
-   * Retrieves all templates from the database
-   * 
-   * @returns Promise resolving to array of templates
-   */
   async getTemplates(): Promise<TemplateDB[]> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readonly');
-      const store = transaction.objectStore(DB.STORES.TEMPLATES);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.templates.getAll() as Promise<TemplateDB[]>;
   },
 
-  /**
-   * Retrieves a single template by ID
-   * 
-   * @param id - The template ID
-   * @returns Promise resolving to the template or undefined
-   */
   async getTemplateById(id: string): Promise<TemplateDB | undefined> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readonly');
-      const store = transaction.objectStore(DB.STORES.TEMPLATES);
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.templates.get(id) as Promise<TemplateDB | undefined>;
   },
 
-  /**
-   * Saves a template to the database
-   * 
-   * @param template - The template to save
-   * @throws Error if validation fails
-   */
   async saveTemplate(template: TemplateDB): Promise<void> {
     const normalized = {
       ...template,
@@ -193,22 +139,15 @@ export const dbManager = {
     const result = validateTemplate(normalized);
     validateOrThrow(result, 'template');
     
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.TEMPLATES);
-      const request = store.put(normalized);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    // Check if exists to use correct method
+    const exists = await this.templates.idExists(template.id);
+    if (exists) {
+      await this.templates.update(normalized);
+    } else {
+      await this.templates.add(normalized);
+    }
   },
 
-  /**
-   * Creates and saves a new template
-   * 
-   * @param data - Template data (without id and updatedAt)
-   * @returns The created template with generated id and timestamp
-   */
   async createTemplate(data: Omit<TemplateDB, 'id' | 'updatedAt'>): Promise<TemplateDB> {
     const template = createTemplate({ 
       data: { ...data },
@@ -218,85 +157,34 @@ export const dbManager = {
     return template;
   },
 
-  /**
-   * Deletes a template from the database
-   * 
-   * @param id - The ID of the template to delete
-   */
   async deleteTemplate(id: string): Promise<void> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.TEMPLATES, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.TEMPLATES);
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.templates.delete(id);
   },
 
   // ============================================
   // BOX OPERATIONS
   // ============================================
 
-  /**
-   * Retrieves all alert boxes from the database
-   * 
-   * @returns Promise resolving to array of alert boxes
-   */
   async getBoxes(): Promise<AlertBox[]> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.BOXES, 'readonly');
-      const store = transaction.objectStore(DB.STORES.BOXES);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.boxes.getAll() as Promise<AlertBox[]>;
   },
 
-  /**
-   * Retrieves a single alert box by ID
-   * 
-   * @param id - The box ID
-   * @returns Promise resolving to the box or undefined
-   */
   async getBoxById(id: string): Promise<AlertBox | undefined> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.BOXES, 'readonly');
-      const store = transaction.objectStore(DB.STORES.BOXES);
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.boxes.get(id) as Promise<AlertBox | undefined>;
   },
 
-  /**
-   * Saves an alert box to the database
-   * 
-   * @param box - The alert box to save
-   * @throws Error if validation fails
-   */
   async saveBox(box: AlertBox): Promise<void> {
     const result = validateAlertBox(box);
     validateOrThrow(result, 'box');
     
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.BOXES, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.BOXES);
-      const request = store.put(box);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const exists = await this.boxes.idExists(box.id);
+    if (exists) {
+      await this.boxes.update(box);
+    } else {
+      await this.boxes.add(box);
+    }
   },
 
-  /**
-   * Creates and saves a new alert box
-   * 
-   * @param data - Box data (without id)
-   * @returns The created box with generated id
-   */
   async createBox(data: Omit<AlertBox, 'id'>): Promise<AlertBox> {
     const box = createAlertBox({
       data: { ...data },
@@ -306,109 +194,42 @@ export const dbManager = {
     return box;
   },
 
-  /**
-   * Deletes an alert box from the database
-   * 
-   * @param id - The ID of the box to delete
-   */
   async deleteBox(id: string): Promise<void> {
-    // First delete all variants associated with this box
+    // Cascade delete variants
     await this.deleteVariantsByBoxId(id);
-    
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.BOXES, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.BOXES);
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.boxes.delete(id);
   },
 
   // ============================================
   // VARIANT OPERATIONS
   // ============================================
 
-  /**
-   * Retrieves all variants for a specific box
-   * 
-   * @param boxId - The ID of the box
-   * @returns Promise resolving to array of variants
-   */
   async getVariants(boxId: string): Promise<AlertVariant[]> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const index = store.index(DB.VARIANT_INDEXES.BOX_ID);
-      const request = index.getAll(boxId);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    // idb-manager's filter method is perfect for this
+    return this.variants.filter({ boxId }) as Promise<AlertVariant[]>;
   },
 
-  /**
-   * Retrieves a single variant by ID
-   * 
-   * @param id - The variant ID
-   * @returns Promise resolving to the variant or undefined
-   */
   async getVariantById(id: string): Promise<AlertVariant | undefined> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.variants.get(id) as Promise<AlertVariant | undefined>;
   },
 
-  /**
-   * Retrieves all variants of a specific type
-   * 
-   * @param type - The variant type
-   * @returns Promise resolving to array of variants
-   */
   async getVariantsByType(type: string): Promise<AlertVariant[]> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readonly');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const index = store.index(DB.VARIANT_INDEXES.TYPE);
-      const request = index.getAll(type);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return this.variants.filter({ type }) as Promise<AlertVariant[]>;
   },
 
-  /**
-   * Saves a variant to the database
-   * 
-   * @param variant - The variant to save
-   * @throws Error if validation fails
-   */
   async saveVariant(variant: AlertVariant): Promise<void> {
     const normalized = normalizeAlertData(variant);
     const result = validateAlertVariant(normalized);
     validateOrThrow(result, 'variant');
     
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const request = store.put(normalized);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const exists = await this.variants.idExists(normalized.id);
+    if (exists) {
+      await this.variants.update(normalized);
+    } else {
+      await this.variants.add(normalized);
+    }
   },
 
-  /**
-   * Creates and saves a new variant
-   * 
-   * @param data - Variant data including boxId
-   * @returns The created variant
-   */
   async createVariant(data: Partial<AlertVariant> & { boxId: string }): Promise<AlertVariant> {
     const variant = createAlertVariant({
       boxId: data.boxId,
@@ -419,53 +240,22 @@ export const dbManager = {
     return variant;
   },
 
-  /**
-   * Deletes a variant from the database
-   * 
-   * @param id - The ID of the variant to delete
-   */
   async deleteVariant(id: string): Promise<void> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.variants.delete(id);
   },
 
-  /**
-   * Deletes all variants for a specific box
-   * 
-   * @param boxId - The ID of the box whose variants should be deleted
-   */
   async deleteVariantsByBoxId(boxId: string): Promise<void> {
     const variants = await this.getVariants(boxId);
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      
-      for (const variant of variants) {
-        store.delete(variant.id);
-      }
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    if (variants.length > 0) {
+      const ids = variants.map(v => v.id);
+      await this.variants.deleteMany(ids);
+    }
   },
 
   // ============================================
   // BATCH OPERATIONS
   // ============================================
 
-  /**
-   * Saves multiple variants at once
-   * 
-   * @param variants - Array of variants to save
-   * @throws Error if any validation fails
-   */
   async saveVariants(variants: AlertVariant[]): Promise<void> {
     // Validate all first
     const normalizedVariants: AlertVariant[] = [];
@@ -478,83 +268,48 @@ export const dbManager = {
       normalizedVariants.push(normalized);
     }
     
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      
-      for (const variant of normalizedVariants) {
-        store.put(variant);
+    // We don't have a batch upsert in idb-manager directly that handles both add/update easily, 
+    // so we'll do them one by one or split them.
+    // For simplicity and to maintain current behavior:
+    for (const variant of normalizedVariants) {
+      const exists = await this.variants.idExists(variant.id);
+      if (exists) {
+        await this.variants.update(variant);
+      } else {
+        await this.variants.add(variant);
       }
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    }
   },
 
-  /**
-   * Deletes multiple variants at once
-   * 
-   * @param ids - Array of variant IDs to delete
-   */
   async deleteVariants(ids: string[]): Promise<void> {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(DB.STORES.VARIANTS, 'readwrite');
-      const store = transaction.objectStore(DB.STORES.VARIANTS);
-      
-      for (const id of ids) {
-        store.delete(id);
-      }
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    await this.variants.deleteMany(ids);
   },
 
   // ============================================
   // UTILITY METHODS
   // ============================================
 
-  /**
-   * Automatically fixes media URLs in all stored variants and templates.
-   * Converts absolute URLs with stale host/port into portable relative paths.
-   * This is a safe migration that prevents data loss.
-   * 
-   * @returns Stats about how many items were fixed
-   */
   async autofixMediaUrls(): Promise<{ variantsFixed: number, templatesFixed: number }> {
     let variantsFixed = 0;
     let templatesFixed = 0;
     
     try {
-      // 1. Fix all variants in all boxes
-      const boxes = await this.getBoxes();
-      for (const box of boxes) {
-        const variants = await this.getVariants(box.id);
-        const fixedVariants: AlertVariant[] = [];
-        
-        for (const variant of variants) {
-          const normalized = normalizeAlertData(variant);
-          // Compare stringified versions for deep parity check
-          if (JSON.stringify(normalized) !== JSON.stringify(variant)) {
-            fixedVariants.push(normalized);
-            variantsFixed++;
-          }
-        }
-        
-        if (fixedVariants.length > 0) {
-          // Use saveVariants which already applies normalization on save (idempotent)
-          await this.saveVariants(fixedVariants);
+      // 1. Fix all variants
+      const allVariants = await this.variants.getAll() as AlertVariant[];
+      for (const variant of allVariants) {
+        const normalized = normalizeAlertData(variant);
+        if (JSON.stringify(normalized) !== JSON.stringify(variant)) {
+          await this.variants.update(normalized);
+          variantsFixed++;
         }
       }
       
       // 2. Fix all templates
-      const templates = await this.getTemplates();
-      for (const template of templates) {
+      const allTemplates = await this.templates.getAll() as TemplateDB[];
+      for (const template of allTemplates) {
         const normalizedData = normalizeAlertData(template.data);
         if (JSON.stringify(normalizedData) !== JSON.stringify(template.data)) {
-          await this.saveTemplate({ ...template, data: normalizedData });
+          await this.templates.update({ ...template, data: normalizedData });
           templatesFixed++;
         }
       }
@@ -569,33 +324,11 @@ export const dbManager = {
     return { variantsFixed, templatesFixed };
   },
 
-  /**
-   * Clears all data from the database
-   * WARNING: This will delete all boxes, variants, and templates
-   */
   async clearAll(): Promise<void> {
-    const db = await initDB();
-    
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(
-        [DB.STORES.BOXES, DB.STORES.VARIANTS, DB.STORES.TEMPLATES],
-        'readwrite'
-      );
-      
-      transaction.objectStore(DB.STORES.BOXES).clear();
-      transaction.objectStore(DB.STORES.VARIANTS).clear();
-      transaction.objectStore(DB.STORES.TEMPLATES).clear();
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    await this.boxes.clear();
+    await this.variants.clear();
+    await this.templates.clear();
   },
 };
-
-/**
- * ============================================
- * DEFAULT EXPORTS
- * ============================================
- */
 
 export default dbManager;
