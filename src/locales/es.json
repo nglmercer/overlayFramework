@@ -6,15 +6,16 @@
   "app.back": "Regresar",
   "app.save": "Guardar",
   "app.cancel": "Cancelar",
+  "app.or": "o",
   "app.delete": "Eliminar",
   "app.create": "Crear",
-  
+
   "common.success": "Éxito",
   "common.error": "Error",
   "common.ok": "Aceptar",
   "common.cancel": "Cancelar",
   "common.save": "Guardar",
-  
+
   "dialog.ok": "Aceptar",
   "dialog.cancel": "Cancelar",
   "dialog.confirm": "Confirmar",
@@ -27,7 +28,7 @@
   "dialog.title.input": "Entrada",
   "dialog.title.modal": "Modal",
   "dialog.placeholder.default": "Ingresa texto...",
-  
+
   "dashboard.title": "Tus alertas",
   "dashboard.alertGroups": "Grupos de alertas",
   "dashboard.createAlertBox": "Crear recuadro de alerta",
@@ -53,7 +54,7 @@
   "sidebar.general": "Configuración general",
   "sidebar.typography": "Textos y Mensajes",
   "sidebar.animations": "Animaciones",
-  
+
   "variant.new": "Nueva variante",
   "variant.name": "Nombre",
   "variant.duration": "Duración",
@@ -70,7 +71,7 @@
   "variant.rounded": "Redondeado",
   "variant.shadow": "Sombra de caja",
   "variant.random": "Aleatorio",
-  
+
   "variant.duplicate": "Crear alerta aleatoria duplicada",
   "variant.probability": "Probabilidad",
   "variant.prob.always": "Siempre (100%)",
@@ -82,7 +83,7 @@
   "variant.copyJson": "Copiar JSON",
   "variant.copySuccess": "JSON de la variante copiado al portapapeles!",
   "variant.confirmDelete": "¿Estás seguro de que deseas eliminar esta variante?",
-  
+
   "variant.message": "Mensaje de la alerta",
   "variant.fontFamily": "Tipografía",
   "variant.fontWeight": "Grosor",
@@ -95,7 +96,7 @@
   "variant.highlightColor": "Color de resaltado",
   "variant.textShadow": "Sombra de texto",
   "variant.ttsEnabled": "Leer mensaje (TTS)",
-  
+
   "variant.animIn": "Entrada",
   "variant.animInDuration": "Duración entrada (s)",
   "variant.animOut": "Salida",
@@ -109,7 +110,7 @@
   "variant.anim.bounceIn": "Rebote",
   "variant.anim.entrance": "Entrada",
   "variant.anim.exit": "Salida",
-  
+
   "event.kick_chat": "Kick: Chat",
   "event.kick_chat.condition": "Cualquier mensaje en Kick",
   "event.kick_reward_redeemed": "Kick: canjeo remcompensa",
@@ -119,7 +120,7 @@
   "event.tiktok_gift.condition": "Cualquier regalo en TikTok",
   "event.tiktok_social": "TikTok: Seguimiento",
   "event.tiktok_social.condition": "Nuevos seguidores en TikTok",
-  
+
   "media.changeImage": "Cambiar imagen",
   "media.changeSound": "Cambiar sonido",
   "media.imageScale": "Escala de imagen",
@@ -160,16 +161,46 @@
   "preview.options": "Opciones de vista previa",
   "preview.width": "Ancho px",
   "preview.height": "Altura px",
-  
+
   "errors.loadFailed": "Error al cargar los datos",
   "errors.saveFailed": "Error al guardar los datos",
   "errors.validation": "Error de validación",
-  
+
   "labels.username": "Nombre del usuario",
   "labels.months": "Meses suscrito",
   "labels.amount": "Cantidad de bits",
   "labels.message": "Mensaje",
   "labels.tier": "Nivel de suscripción",
   "labels.isNew": "Nuevo seguidor",
-  "labels.isGift": "Suscripción regalada"
+  "labels.isGift": "Suscripción regalada",
+
+  "profile.title": "Bienvenido a Overlay Framework",
+  "profile.description": "Este dispositivo aún no tiene perfil. Sincroniza con una instancia existente o crea una nueva.",
+  "profile.syncTitle": "Sincronizar instancia existente",
+  "profile.syncDescription": "Vincula a un perfil que ya tienes",
+  "profile.selectProfile": "Seleccionar un perfil",
+  "profile.selectPlaceholder": "-- Elige un perfil existente --",
+  "profile.orEnterId": "O ingresa el ID de instancia manualmente",
+  "profile.instanceId": "ID de Instancia",
+  "profile.instanceIdPlaceholder": "overlay-1234567-abc123",
+  "profile.checking": "Verificando…",
+  "profile.found": "Encontrado: \"{name}\"",
+  "profile.notFound": "Instancia no encontrada en el servidor.",
+  "profile.error": "No se puede alcanzar el backend.",
+  "profile.checkInstance": "Verificar Instancia",
+  "profile.syncImport": "Sincronizar e Importar Datos",
+  "profile.syncingData": "Sincronizando datos…",
+  "profile.createTitle": "Empezar de cero",
+  "profile.createDescription": "Crear un nuevo perfil para este dispositivo",
+  "profile.profileName": "Nombre del perfil",
+  "profile.color": "Color",
+  "profile.createProfile": "Crear Perfil",
+  "profile.creating": "Creando…",
+  "profile.error.enterName": "Por favor ingresa un nombre de perfil.",
+  "profile.error.createFailed": "Error al crear el perfil.",
+  "profile.error.loadFailed": "Error al cargar los perfiles",
+  "profile.error.cannotReach": "No se puede alcanzar el backend",
+  "profile.warning.cannotLoadProfiles": "No se pudieron cargar los perfiles existentes. Puedes ingresar un ID manualmente abajo.",
+  "profile.loadingProfiles": "Buscando perfiles existentes...",
+  "profile.orDivider": "o"
 }

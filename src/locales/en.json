@@ -6,15 +6,16 @@
   "app.back": "Back",
   "app.save": "Save",
   "app.cancel": "Cancel",
+  "app.or": "or",
   "app.delete": "Delete",
   "app.create": "Create",
-  
+
   "common.success": "Success",
   "common.error": "Error",
   "common.ok": "OK",
   "common.cancel": "Cancel",
   "common.save": "Save",
-  
+
   "dialog.ok": "OK",
   "dialog.cancel": "Cancel",
   "dialog.confirm": "Confirm",
@@ -27,7 +28,7 @@
   "dialog.title.input": "Input",
   "dialog.title.modal": "Modal",
   "dialog.placeholder.default": "Enter text...",
-  
+
   "dashboard.title": "Your Alerts",
   "dashboard.alertGroups": "Alert Groups",
   "dashboard.createAlertBox": "Create alert box",
@@ -45,7 +46,7 @@
   "dashboard.instanceIdCopied": "Instance ID copied to clipboard!",
   "dashboard.instanceIdHelp": "Use this ID in webhooks to target this specific instance:",
   "dashboard.copy": "Copy",
-  
+
   "sidebar.variants": "VARIANTS",
   "sidebar.settings": "SETTINGS",
   "sidebar.design": "DESIGN",
@@ -53,7 +54,7 @@
   "sidebar.general": "General settings",
   "sidebar.typography": "Typography & Messages",
   "sidebar.animations": "Animations",
-  
+
   "variant.new": "New variant",
   "variant.name": "Name",
   "variant.duration": "Duration",
@@ -70,7 +71,7 @@
   "variant.rounded": "Rounded",
   "variant.shadow": "Box shadow",
   "variant.random": "Random",
-  
+
   "variant.duplicate": "Create duplicated random alert",
   "variant.probability": "Probability",
   "variant.prob.always": "Always (100%)",
@@ -82,7 +83,7 @@
   "variant.copyJson": "Copy JSON",
   "variant.copySuccess": "Variant JSON copied to clipboard!",
   "variant.confirmDelete": "Are you sure you want to delete this variant?",
-  
+
   "variant.message": "Alert message",
   "variant.fontFamily": "Font family",
   "variant.fontWeight": "Font weight",
@@ -95,7 +96,7 @@
   "variant.highlightColor": "Highlight color",
   "variant.textShadow": "Text shadow",
   "variant.ttsEnabled": "Read message (TTS)",
-  
+
   "variant.animIn": "Animation In",
   "variant.animInDuration": "Duration In (s)",
   "variant.animOut": "Animation Out",
@@ -107,7 +108,7 @@
   "variant.anim.zoomIn": "Zoom In",
   "variant.anim.zoomOut": "Zoom out",
   "variant.anim.bounceIn": "Bounce in",
-  
+
   "event.kick_chat": "Kick: Chat",
   "event.kick_chat.condition": "Any message on Kick",
   "event.kick_reward_redeemed": "Kick: Reward redeemed",
@@ -117,7 +118,7 @@
   "event.tiktok_gift.condition": "Any gift on TikTok",
   "event.tiktok_social": "TikTok: Follow",
   "event.tiktok_social.condition": "New followers on TikTok",
-  
+
   "media.changeImage": "Change image",
   "media.changeSound": "Change sound",
   "media.imageScale": "Image scale",
@@ -150,7 +151,7 @@
   "media.noAudioSelected": "No audio selected",
   "media.changeVisual": "Change Visual",
   "media.changeAudio": "Change Audio",
-  
+
   "preview.select": "Select a variant to preview",
   "preview.loading": "Loading variants...",
   "preview.alert": "Preview alert",
@@ -158,16 +159,46 @@
   "preview.options": "Preview options",
   "preview.width": "Width px",
   "preview.height": "Height px",
-  
+
   "errors.loadFailed": "Failed to load data",
   "errors.saveFailed": "Failed to save data",
   "errors.validation": "Validation error",
-  
+
   "labels.username": "Username",
   "labels.months": "Months subscribed",
   "labels.amount": "Amount of bits",
   "labels.message": "Message",
   "labels.tier": "Subscription tier",
   "labels.isNew": "New follower",
-  "labels.isGift": "Gifted subscription"
+  "labels.isGift": "Gifted subscription",
+
+  "profile.title": "Welcome to Overlay Framework",
+  "profile.description": "This device has no profile yet. Sync with an existing instance or create a new one.",
+  "profile.syncTitle": "Sync existing instance",
+  "profile.syncDescription": "Link to a profile you already have",
+  "profile.selectProfile": "Select a profile",
+  "profile.selectPlaceholder": "-- Choose an existing profile --",
+  "profile.orEnterId": "Or enter Instance ID manually",
+  "profile.instanceId": "Instance ID",
+  "profile.instanceIdPlaceholder": "overlay-1234567-abc123",
+  "profile.checking": "Checking…",
+  "profile.found": "Found: \"{name}\"",
+  "profile.notFound": "Instance not found on server.",
+  "profile.error": "Cannot reach backend.",
+  "profile.checkInstance": "Check Instance",
+  "profile.syncImport": "Sync & Import Data",
+  "profile.syncingData": "Syncing data…",
+  "profile.createTitle": "Start fresh",
+  "profile.createDescription": "Create a new profile for this device",
+  "profile.profileName": "Profile name",
+  "profile.color": "Color",
+  "profile.createProfile": "Create Profile",
+  "profile.creating": "Creating…",
+  "profile.error.enterName": "Please enter a profile name.",
+  "profile.error.createFailed": "Failed to create profile.",
+  "profile.error.loadFailed": "Failed to load profiles",
+  "profile.error.cannotReach": "Cannot reach backend",
+  "profile.warning.cannotLoadProfiles": "Could not load existing profiles. You can enter an ID manually below.",
+  "profile.loadingProfiles": "Looking for existing profiles...",
+  "profile.orDivider": "or"
 }
