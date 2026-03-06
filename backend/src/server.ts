@@ -5,6 +5,8 @@
  * - WebSocket server for real-time overlay communication
  * - HTTP webhook endpoints for receiving external events
  * - Heartbeat system for connection health monitoring
+ * - CORS support for cross-origin requests
+ * - Offline-first sync API with Git-like operations
  * 
  * Usage:
  *   bun run src/server.ts
@@ -14,14 +16,16 @@
  *   PORT            - Server port (default: 3001)
  *   WEBHOOK_SECRET  - Optional auth secret for webhook endpoints
  *   HEARTBEAT_MS    - Heartbeat interval in ms (default: 30000)
+ *   CORS_ALLOWED_ORIGINS - Comma-separated list of allowed origins (default: *)
  * 
  * @module backend/server
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { parseClientMessage } from './schemas';
 import { wsManager, type WsClientData } from './ws-manager';
 import { initializeStorage } from './storage';
+import { syncManager } from './sync';
 import { join } from 'path';
 import { initDiscovery, createDiscoveryShutdownHandler, stopDiscovery } from './discover';
 import type { Discovery } from '../discover';
@@ -131,7 +135,10 @@ const server = Bun.serve<WsClientData>({
 });
 
 // Initialize storage
-initializeStorage();
+await initializeStorage();
+
+// Initialize sync manager
+await syncManager.init();
 
 const heartbeatInterval = setInterval(() => {
   wsManager.pingAll();

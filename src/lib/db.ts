@@ -140,8 +140,8 @@ export const dbManager = {
     validateOrThrow(result, 'template');
     
     // Check if exists to use correct method
-    const exists = await this.templates.idExists(template.id);
-    if (exists) {
+    const existing = await this.templates.get(template.id);
+    if (existing) {
       await this.templates.update(normalized);
     } else {
       await this.templates.add(normalized);
@@ -177,8 +177,8 @@ export const dbManager = {
     const result = validateAlertBox(box);
     validateOrThrow(result, 'box');
     
-    const exists = await this.boxes.idExists(box.id);
-    if (exists) {
+    const existing = await this.boxes.get(box.id);
+    if (existing) {
       await this.boxes.update(box);
     } else {
       await this.boxes.add(box);
@@ -222,8 +222,8 @@ export const dbManager = {
     const result = validateAlertVariant(normalized);
     validateOrThrow(result, 'variant');
     
-    const exists = await this.variants.idExists(normalized.id);
-    if (exists) {
+    const existing = await this.variants.get(normalized.id);
+    if (existing) {
       await this.variants.update(normalized);
     } else {
       await this.variants.add(normalized);
@@ -272,8 +272,8 @@ export const dbManager = {
     // so we'll do them one by one or split them.
     // For simplicity and to maintain current behavior:
     for (const variant of normalizedVariants) {
-      const exists = await this.variants.idExists(variant.id);
-      if (exists) {
+      const existing = await this.variants.get(variant.id);
+      if (existing) {
         await this.variants.update(variant);
       } else {
         await this.variants.add(variant);

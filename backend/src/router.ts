@@ -7,9 +7,11 @@ import { Router, RouterConfig } from './router-engine';
 import { registerWebhookRoutes } from './routes/webhook';
 import { registerSystemRoutes } from './routes/system';
 import { registerProxyRoutes } from './routes/proxy';
+import { registerSyncRoutes } from './sync';
 import { ApiPath } from './constants';
 import { wsManager, type WsClientData } from './ws-manager';
 import { generateId } from './utils';
+
 /**
  * Singleton router instance
  */
@@ -22,10 +24,12 @@ export function registerRoutes(): void {
   // Register modular routes in order of priority
   registerWebhookRoutes(router);
   registerProxyRoutes(router);
+  registerSyncRoutes(router); // Sync API for offline-first functionality
   
   // System routes usually contain catch-all static serving, so register last
   registerSystemRoutes(router);
 }
+
 /**
  * Handle WebSocket upgrade (Bun specific)
  */

@@ -5,7 +5,7 @@
  * to eliminate hardcoded values throughout the codebase.
  * 
  * @module backend/src/constants
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 // ============================================================================
@@ -17,6 +17,8 @@ export const Env = {
   WEBHOOK_SECRET: 'WEBHOOK_SECRET',
   HEARTBEAT_MS: 'HEARTBEAT_MS',
   MEDIA_UPLOAD_API_URL: 'MEDIA_UPLOAD_API_URL',
+  CORS_ALLOWED_ORIGINS: 'CORS_ALLOWED_ORIGINS',
+  DEBUG_DB: 'DEBUG_DB',
 } as const;
 
 // ============================================================================
@@ -110,6 +112,12 @@ export const ApiPath = {
   // Proxy paths
   API: '/api',
   UPLOADS: '/uploads',
+  
+  // Sync endpoints (offline-first)
+  SYNC: '/sync',
+  SYNC_STATUS: '/sync/status',
+  SYNC_RESYNC: '/sync/resync',
+  SYNC_CLEAR: '/sync/clear',
 } as const;
 
 // ============================================================================

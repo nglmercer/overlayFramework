@@ -1,17 +1,17 @@
 /**
- * Storage Module - JsonObjManager Integration
+ * Storage Module - idb-manager Integration
  * 
- * Provides persistent storage using JsonObjManager with file-based adapter.
- * Supports saving overlay data and generating preview URLs.
+ * Provides persistent storage using idb-manager with NodeAdapter.
+ * Supports saving overlay data, generating preview URLs, and advanced operations.
  * 
  * @module backend/storage
- * @version 1.0.0
+ * @version 3.0.0
  */
 
-import { JsonObjManager, createManager, FileAdapter, type StorageAdapter, type ManagerConfig } from 'json-obj-manager';
-import { readFile, writeFile, mkdir, readdir, rm } from 'fs/promises';
+import { dbManager } from './db';
 import { existsSync } from 'fs';
-import { join, dirname, basename, extname } from 'path';
+import { mkdir } from 'fs/promises';
+import { dirname } from 'path';
 
 // ============================================================================
 // CONFIGURATION
@@ -22,199 +22,31 @@ const STORAGE_FILE = process.env.STORAGE_FILE ?? './data/storage.json';
 const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:3001/preview.html';
 
 // ============================================================================
-// FILE ADAPTER (Per-key files)
+// STORAGE MANAGER (Legacy Support)
 // ============================================================================
 
 /**
- * File-based storage adapter for JsonObjManager
- * Stores each key as a separate JSON file in the specified directory
+ * Initialize the storage manager
+ * Re-implemented with idb-manager.
  */
-class KeyFileStorageAdapter<T = unknown> implements StorageAdapter<T> {
-  private dirPath: string;
-  private extension: string;
-
-  constructor(dirPath: string = STORAGE_DIR, extension: string = '.json') {
-    this.dirPath = dirPath;
-    this.extension = extension;
-  }
-
-  private async ensureDir(): Promise<void> {
-    if (!existsSync(this.dirPath)) {
-      await mkdir(this.dirPath, { recursive: true });
-    }
-  }
-
-  private getFilePath(key: string): string {
-    // Sanitize key to be a valid filename
-    const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
-    return join(this.dirPath, `${safeKey}${this.extension}`);
-  }
-
-  async get(key: string): Promise<T | null> {
-    try {
-      const filePath = this.getFilePath(key);
-      if (!existsSync(filePath)) {
-        return null;
-      }
-      const content = await readFile(filePath, 'utf-8');
-      return JSON.parse(content) as T;
-    } catch (error) {
-      console.error(`[Storage] Error reading key "${key}":`, error);
-      return null;
-    }
-  }
-
-  async set(key: string, data: T): Promise<void> {
-    try {
-      await this.ensureDir();
-      const filePath = this.getFilePath(key);
-      await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-    } catch (error) {
-      console.error(`[Storage] Error writing key "${key}":`, error);
-      throw error;
-    }
-  }
-
-  async delete(key: string): Promise<void> {
-    try {
-      const filePath = this.getFilePath(key);
-      if (existsSync(filePath)) {
-        await rm(filePath);
-      }
-    } catch (error) {
-      console.error(`[Storage] Error deleting key "${key}":`, error);
-      throw error;
-    }
-  }
-
-  async clear(): Promise<void> {
-    try {
-      await this.ensureDir();
-      const files = await readdir(this.dirPath);
-      await Promise.all(
-        files
-          .filter(f => f.endsWith(this.extension))
-          .map(f => rm(join(this.dirPath, f)))
-      );
-    } catch (error) {
-      console.error('[Storage] Error clearing storage:', error);
-      throw error;
-    }
-  }
-
-  async getAll(): Promise<Record<string, T>> {
-    try {
-      await this.ensureDir();
-      const files = await readdir(this.dirPath);
-      const result: Record<string, T> = {};
-      
-      const jsonFiles = files.filter(f => f.endsWith(this.extension));
-      
-      for (const file of jsonFiles) {
-        try {
-          const content = await readFile(join(this.dirPath, file), 'utf-8');
-          const key = basename(file, this.extension);
-          result[key] = JSON.parse(content) as T;
-        } catch (e) {
-          // Skip invalid files
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('[Storage] Error getting all keys:', error);
-      return {};
-    }
-  }
-
-  async keys(): Promise<string[]> {
-    try {
-      await this.ensureDir();
-      const files = await readdir(this.dirPath);
-      return files
-        .filter(f => f.endsWith(this.extension))
-        .map(f => basename(f, this.extension));
-    } catch (error) {
-      console.error('[Storage] Error listing keys:', error);
-      return [];
-    }
-  }
-
-  async has(key: string): Promise<boolean> {
-    const filePath = this.getFilePath(key);
-    return existsSync(filePath);
-  }
-}
-
-// ============================================================================
-// STORAGE MANAGER
-// ============================================================================
-
-/** Default storage configuration */
-const defaultConfig: ManagerConfig = {
-  name: 'overlay-storage',
-  cloneOnLoad: true,
-  cloneOnSave: true,
-  strict: false,
-};
-
-/** Global storage manager instance */
-let storageManager: JsonObjManager | null = null;
-
-/**
- * Initialize the storage manager with file adapter
- * Uses single-file storage for simplicity
- */
-export function initializeStorage(filename: string = STORAGE_FILE): JsonObjManager {
-  if (storageManager) {
-    return storageManager;
-  }
-
-  // Ensure directory exists
-  const dir = dirname(filename);
-  if (!existsSync(dir)) {
-    mkdir(dir, { recursive: true });
-  }
-
-  const adapter = new FileAdapter<unknown>(filename);
-  
-  storageManager = createManager({
-    ...defaultConfig,
-    adapter: adapter as StorageAdapter,
-  });
-
-  console.log(`[Storage] Initialized at: ${filename}`);
-  return storageManager;
+export async function initializeStorage(): Promise<void> {
+  await dbManager.init();
 }
 
 /**
  * Initialize storage with per-key file storage
- * More suitable for large datasets
+ * Legacy support for API compatibility.
  */
-export function initializeKeyFileStorage(dirPath: string = STORAGE_DIR): JsonObjManager {
-  if (storageManager) {
-    return storageManager;
-  }
-
-  const adapter = new KeyFileStorageAdapter(dirPath);
-  
-  storageManager = createManager({
-    ...defaultConfig,
-    adapter: adapter as StorageAdapter,
-  });
-
-  console.log(`[Storage] Initialized with per-key files at: ${dirPath}`);
-  return storageManager;
+export async function initializeKeyFileStorage(dirPath: string = STORAGE_DIR): Promise<void> {
+  await dbManager.init();
 }
 
 /**
  * Get the storage manager instance
+ * DEPRECATED: Use dbManager directly or storage helper functions.
  */
-export function getStorage(): JsonObjManager {
-  if (!storageManager) {
-    return initializeStorage();
-  }
-  return storageManager;
+export function getStorage(): any {
+  return dbManager;
 }
 
 // ============================================================================
@@ -269,10 +101,8 @@ export async function saveOverlayData(
   key: string, 
   data: unknown
 ): Promise<{ key: string; previewUrl: string }> {
-  const storage = getStorage();
-  
-  // Save the data
-  await storage.set(key, data as any);
+  // Save the data using dbManager
+  await dbManager.saveOverlay(key, data);
   
   // Generate preview URL
   const previewUrl = generatePreviewUrl(key);
@@ -287,40 +117,93 @@ export async function loadOverlayData<T = unknown>(
   key: string, 
   fallback?: T
 ): Promise<T | null> {
-  const storage = getStorage();
-  return await storage.get(key, fallback) as T | null;
+  const data = await dbManager.loadOverlay(key);
+  // Important: dbManager returns {id, ...data}, but loadOverlayData callers expect just data
+  if (!data) return (fallback as T) || null;
+  const { id, ...rest } = data;
+  return rest as T;
 }
 
 /**
  * Delete overlay data by key
  */
 export async function deleteOverlayData(key: string): Promise<boolean> {
-  const storage = getStorage();
-  const existed = await storage.has(key);
-  await storage.delete(key);
-  return existed;
+  return await dbManager.deleteOverlay(key);
 }
 
 /**
  * List all saved overlay keys
  */
 export async function listOverlayKeys(): Promise<string[]> {
-  const storage = getStorage();
-  const all = await storage.getAll();
-  return Object.keys(all);
+  return await dbManager.listOverlays();
 }
 
 /**
  * Get all overlay data
  */
 export async function getAllOverlayData(): Promise<Record<string, unknown>> {
-  const storage = getStorage();
-  return await storage.getAll();
+  return await dbManager.getAllOverlays();
+}
+
+/**
+ * Get overlay statistics
+ */
+export async function getOverlayStats() {
+  return await dbManager.getOverlayStats();
+}
+
+/**
+ * Batch save multiple overlays
+ */
+export async function saveManyOverlays(items: Array<{ key: string; data: unknown }>): Promise<{ keys: string[]; success: boolean }> {
+  const overlayItems = items.map(item => ({
+    id: item.key,
+    ...(item.data as object)
+  }));
+  const success = await dbManager.saveManyOverlays(overlayItems);
+  return {
+    keys: items.map(item => item.key),
+    success
+  };
+}
+
+/**
+ * Batch delete multiple overlays
+ */
+export async function deleteManyOverlays(keys: string[]): Promise<{ deleted: string[]; failed: string[] }> {
+  const success = await dbManager.deleteManyOverlays(keys);
+  // If success is true, all were deleted; if false, some failed
+  // For more granular info, we'd need to check individually
+  return {
+    deleted: success ? keys : [],
+    failed: success ? [] : keys
+  };
+}
+
+/**
+ * Get database statistics
+ */
+export async function getDatabaseStats() {
+  return await dbManager.getDatabaseStats();
+}
+
+/**
+ * Export all data to backup format
+ */
+export async function exportData(): Promise<Record<string, any>> {
+  return await dbManager.exportData();
+}
+
+/**
+ * Import data from backup format
+ */
+export async function importData(backup: Record<string, any>): Promise<boolean> {
+  return await dbManager.importData(backup);
 }
 
 // ============================================================================
 // EXPORTS
 // ============================================================================
 
-export { KeyFileStorageAdapter };
-export type { KeyFileStorageAdapter as KeyFileStorage };
+// Legacy exports for compatibility
+export { dbManager as storageManager };

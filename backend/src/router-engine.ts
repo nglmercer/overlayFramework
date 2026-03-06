@@ -5,9 +5,10 @@
  * - Path parameter extraction (:id)
  * - Zod schema validation for body, params, and query
  * - Middleware-like handling logic
+ * - CORS support for cross-origin requests
  * 
  * @module backend/src/router-engine
- * @version 1.1.0
+ * @version 1.2.0
  */
 
 import { z } from 'zod';
@@ -57,6 +58,71 @@ export interface RouteDefinition {
 }
 
 // ============================================================================
+// CORS MIDDLEWARE
+// ============================================================================
+
+/**
+ * CORS configuration
+ */
+export const CORS_CONFIG = {
+  allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'],
+  allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    HttpHeader.CONTENT_TYPE,
+    HttpHeader.ACCESS_CONTROL_ALLOW_ORIGIN,
+    'Authorization',
+    'X-Requested-With',
+  ],
+  exposedHeaders: [
+    HttpHeader.ACCESS_CONTROL_ALLOW_ORIGIN,
+  ],
+  maxAge: 86400, // 24 hours
+  credentials: false,
+};
+
+/**
+ * Check if origin is allowed
+ */
+function isOriginAllowed(origin: string): boolean {
+  if (CORS_CONFIG.allowedOrigins.includes('*')) return true;
+  return CORS_CONFIG.allowedOrigins.includes(origin);
+}
+
+/**
+ * Build CORS headers for a response
+ */
+export function buildCORSHeaders(origin: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    [HttpHeader.ACCESS_CONTROL_ALLOW_ORIGIN]: isOriginAllowed(origin) ? origin : '*',
+    'Access-Control-Allow-Methods': CORS_CONFIG.allowedMethods.join(', '),
+    'Access-Control-Allow-Headers': CORS_CONFIG.allowedHeaders.join(', '),
+    'Access-Control-Max-Age': String(CORS_CONFIG.maxAge),
+  };
+  
+  if (CORS_CONFIG.credentials) {
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+  
+  return headers;
+}
+
+/**
+ * Handle CORS preflight (OPTIONS) request
+ */
+export function handleCORSPreflight(req: Request): Response {
+  const origin = req.headers.get('Origin') || '*';
+  const headers = buildCORSHeaders(origin);
+  
+  return new Response(null, {
+    status: HttpStatus.OK,
+    headers: {
+      ...headers,
+      [HttpHeader.CONTENT_TYPE]: ContentType.PLAIN,
+    },
+  });
+}
+
+// ============================================================================
 // ROUTER CLASS
 // ============================================================================
 
@@ -65,6 +131,15 @@ export class Router {
   private staticRoutes: Map<string, RouteHandler> = new Map();
   private wsHandler: RouteHandler | null = null;
   private wsPath: string | null = null;
+  private corsEnabled: boolean = true;
+
+  /**
+   * Enable or disable CORS for this router
+   */
+  setCORS(enabled: boolean): this {
+    this.corsEnabled = enabled;
+    return this;
+  }
 
   /**
    * Register a route with schemas and handler
@@ -112,6 +187,10 @@ export class Router {
     return this.map(HttpMethod.DELETE, path, options);
   }
 
+  patch(path: string, options: { schema?: RouteSchema; handler: RouteHandler; description?: string } | RouteHandler): this {
+    return this.map(HttpMethod.PATCH, path, options);
+  }
+
   ws(path: string, handler: RouteHandler): this {
     this.wsHandler = handler;
     this.wsPath = path;
@@ -140,12 +219,12 @@ export class Router {
     for (const route of this.routes) {
       const method = route.method.padEnd(6);
       const path = route.path.padEnd(32);
-      const desc = route.description ? ` \u2014 ${route.description}` : '';
+      const desc = route.description ? ` — ${route.description}` : '';
       console.log(` ${method} ${path}${desc}`);
     }
 
     if (this.wsHandler && this.wsPath) {
-      console.log(` WS    ${this.wsPath.padEnd(32)} \u2014 WebSocket connection `);
+      console.log(` WS    ${this.wsPath.padEnd(32)} — WebSocket connection `);
     }
   }
 
@@ -230,6 +309,27 @@ export class Router {
   }
 
   /**
+   * Apply CORS headers to a response
+   */
+  private applyCORSHeaders(response: Response, req: Request): Response {
+    if (!this.corsEnabled) return response;
+    
+    const origin = req.headers.get('Origin') || '*';
+    const corsHeaders = buildCORSHeaders(origin);
+    
+    // Merge CORS headers into existing response headers
+    const newHeaders = new Headers(response.headers);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      newHeaders.set(key, value);
+    }
+    
+    return new Response(response.body, {
+      status: response.status,
+      headers: newHeaders,
+    });
+  }
+
+  /**
    * Main router execution logic
    */
   async execute(
@@ -237,11 +337,18 @@ export class Router {
     config: RouterConfig, 
     extras?: any
   ): Promise<Response | null | undefined> {
+    const url = new URL(req.url);
+    const method = req.method.toUpperCase();
+    
+    // Handle CORS preflight
+    if (this.corsEnabled && method === HttpMethod.OPTIONS) {
+      return handleCORSPreflight(req);
+    }
+
     const matched = await this.match(req);
     if (!matched) return null;
 
     const { handler, route, params } = matched;
-    const url = new URL(req.url);
 
     // 1. Validate Path Params
     let validatedParams = params;
@@ -265,7 +372,7 @@ export class Router {
 
     // 3. Validate Body
     let validatedBody: any = null;
-    if (req.method !== HttpMethod.GET && req.method !== HttpMethod.HEAD) {
+    if (req.method !== HttpMethod.GET && req.method !== HttpMethod.HEAD && req.method !== HttpMethod.OPTIONS) {
       if (route.schema?.body) {
         try {
           const contentType = req.headers.get(HttpHeader.CONTENT_TYPE);
@@ -294,7 +401,14 @@ export class Router {
       extras,
     };
 
-    return handler(ctx);
+    const response = await handler(ctx);
+    
+    // Apply CORS headers to response if enabled
+    if (response && this.corsEnabled) {
+      return this.applyCORSHeaders(response, req);
+    }
+    
+    return response;
   }
 
   private errorResponse(message: string, details: any, status: number): Response {
@@ -313,7 +427,6 @@ export function json(data: any, status: number = HttpStatus.OK, headers: any = {
     status,
     headers: {
       [HttpHeader.CONTENT_TYPE]: ContentType.JSON,
-      [HttpHeader.ACCESS_CONTROL_ALLOW_ORIGIN]: '*',
       ...headers
     }
   });
