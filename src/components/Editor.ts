@@ -462,9 +462,9 @@ export class AppEditor extends LitElement {
       // Refresh from DB in background
       this._variantsTask.run();
       
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('create', 'variant', newVariant);
       }
       
       dbManager.getVariants(this.boxId).then((freshVariants) => {
@@ -525,9 +525,9 @@ export class AppEditor extends LitElement {
       // Refresh from DB in background
       this._variantsTask.run();
       
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('create', 'variant', newVariant);
       }
       
       dbManager.getVariants(this.boxId).then((freshVariants) => {
@@ -558,9 +558,9 @@ export class AppEditor extends LitElement {
       
       this._variantsTask.run();
       
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('delete', 'variant', { id });
       }
     }
   }

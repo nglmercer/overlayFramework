@@ -124,6 +124,7 @@ export const ApiPath = {
   PROFILE_BY_ID: '/profiles/:id',
   PROFILE_EXPORT: '/profiles/:id/export',
   PROFILE_IMPORT: '/profiles/:id/import',
+  PROFILE_SYNC: '/profiles/:id/sync',
 } as const;
 
 // ============================================================================

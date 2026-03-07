@@ -5,7 +5,7 @@
     "": {
       "name": "overlay-backend",
       "dependencies": {
-        "idb-manager": "^1.2.1",
+        "idb-manager": "^1.2.2",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -21,7 +21,7 @@
 
     "bun-types": ["bun-types@1.3.9", "", { "dependencies": { "@types/node": "*" } }, "sha512-+UBWWOakIP4Tswh0Bt0QD0alpTY8cb5hvgiYeWCMet9YukHbzuruIEeXC2D7nMJPB12kbh8C7XJykSexEqGKJg=="],
 
-    "idb-manager": ["idb-manager@1.2.1", "", {}, "sha512-agjlsLi2ytJJu1AP9tiljMLdbRFHR4nuDkI20PgY3QBWbAq2SJDQYBZ4eoyJZn19QTpaAfGbIWNf1vQ0zl3QEA=="],
+    "idb-manager": ["idb-manager@1.2.2", "", {}, "sha512-ZCyik3Lhtwi6Ox8KW5uep89dgNW1W04FCg+eWIdLAQ8SKx3xHNC84v377oX3MbEU9agDs0O7hlLQcmW22oVQBw=="],
 
     "typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
 

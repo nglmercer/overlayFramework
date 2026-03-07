@@ -351,6 +351,40 @@ class ProfileManager {
     }
   }
 
+  /**
+   * Sync a single item change to the backend (incremental sync).
+   * More efficient than pushToBackend when only one item changed.
+   * 
+   * @param action - 'create', 'update', or 'delete'
+   * @param itemType - 'box', 'variant', or 'template'
+   * @param item - The item data (not required for delete)
+   */
+  async syncItem(
+    action: 'create' | 'update' | 'delete',
+    itemType: 'box' | 'variant' | 'template',
+    item?: any
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const id = this.getActiveProfileId();
+    if (!id) return { ok: false, error: 'No active profile' };
+
+    try {
+      const url = getBackendEndpoint(`/profiles/${encodeURIComponent(id)}/sync`);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, itemType, item }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { ok: false, error: `Sync failed: ${res.status} - ${errorData.error || res.statusText}` };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? String(err) };
+    }
+  }
+
   // --------------------------------------------------------------------------
   // Private helpers
   // --------------------------------------------------------------------------

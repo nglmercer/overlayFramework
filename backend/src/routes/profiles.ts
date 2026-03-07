@@ -42,6 +42,16 @@ const ProfileImportSchema = z.object({
   replace: z.any().optional().transform((val) => val === true),
 });
 
+// Schema for incremental sync - sends only the changed item with action type
+const ProfileSyncItemSchema = z.object({
+  /** Action type: 'create', 'update', or 'delete' */
+  action: z.enum(['create', 'update', 'delete']),
+  /** Item type: 'box', 'variant', or 'template' */
+  itemType: z.enum(['box', 'variant', 'template']),
+  /** The item data (not required for delete) */
+  item: z.any().optional(),
+});
+
 // ============================================================================
 // VALIDATOR HELPERS
 // ============================================================================
@@ -387,5 +397,89 @@ export function registerProfileRoutes(router: Router): void {
       });
     },
     description: 'Import data backup for a profile instance',
+  });
+
+  // --------------------------------------------------------------------------
+  // POST /profiles/:id/sync
+  // Incremental sync - sends only a single item change (create/update/delete)
+  // This is more efficient than sending all data on every change.
+  // --------------------------------------------------------------------------
+  router.post(ApiPath.PROFILE_SYNC, {
+    schema: { body: ProfileSyncItemSchema },
+    handler: async (ctx) => {
+      const id = ctx.params?.id ?? extractProfileId(ctx.url, '/profiles/');
+      if (!id) {
+        return json({ error: 'Missing profile ID' }, HttpStatus.BAD_REQUEST);
+      }
+
+      const profile = await dbManager.getProfile(id);
+      if (!profile) {
+        return json({ error: 'Profile not found. Register it first via POST /profiles/:id' }, HttpStatus.NOT_FOUND);
+      }
+
+      const { action, itemType, item } = ctx.body as z.infer<typeof ProfileSyncItemSchema>;
+      
+      // Build the key based on item type
+      const key = `${itemType}:${item?.id}`;
+      
+      try {
+        switch (action) {
+          case 'create':
+          case 'update':
+            if (!item?.id) {
+              return json({ error: 'Item ID is required for create/update' }, HttpStatus.BAD_REQUEST);
+            }
+            // Validate and transform based on item type
+            let validatedData: Record<string, any>;
+            if (itemType === 'box') {
+              const validated = validateAndTransformBox(item.id, item);
+              if (!validated.success) {
+                return json({ error: validated.error }, HttpStatus.BAD_REQUEST);
+              }
+              validatedData = validated.data;
+            } else if (itemType === 'variant') {
+              const validated = validateAndTransformVariant(item.id, item);
+              if (!validated.success) {
+                return json({ error: validated.error }, HttpStatus.BAD_REQUEST);
+              }
+              validatedData = validated.data;
+            } else if (itemType === 'template') {
+              const validated = validateAndTransformTemplate(item.id, item);
+              if (!validated.success) {
+                return json({ error: validated.error }, HttpStatus.BAD_REQUEST);
+              }
+              validatedData = validated.data;
+            } else {
+              validatedData = item;
+            }
+            await dbManager.saveOverlay(key, validatedData);
+            break;
+            
+          case 'delete':
+            if (!item?.id) {
+              return json({ error: 'Item ID is required for delete' }, HttpStatus.BAD_REQUEST);
+            }
+            await dbManager.deleteOverlay(key);
+            break;
+            
+          default:
+            return json({ error: 'Invalid action type' }, HttpStatus.BAD_REQUEST);
+        }
+
+        await dbManager.touchProfile(id);
+
+        return json({
+          ok: true,
+          id,
+          action,
+          itemType,
+          itemId: item?.id,
+        });
+      } catch (err) {
+        console.error('[Profile sync] Error:', err);
+        return json({ error: String(err) }, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    },
+    description: 'Sync a single item change (create/update/delete) for a profile',
   });
 }

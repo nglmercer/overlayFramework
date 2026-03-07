@@ -57,9 +57,9 @@ export class AppDashboard extends LitElement {
     };
     await dbManager.saveBox(newBox);
     await this.loadBoxes();
-    // Sync to backend
+    // Sync to backend (incremental)
     if (profileManager.getActiveProfileId()) {
-      await profileManager.pushToBackend();
+      await profileManager.syncItem('create', 'box', newBox);
     }
   }
 
@@ -67,9 +67,9 @@ export class AppDashboard extends LitElement {
     const updated = { ...box, enabled: !box.enabled };
     await dbManager.saveBox(updated);
     await this.loadBoxes();
-    // Sync to backend
+    // Sync to backend (incremental)
     if (profileManager.getActiveProfileId()) {
-      await profileManager.pushToBackend();
+      await profileManager.syncItem('update', 'box', updated);
     }
   }
 
@@ -79,9 +79,9 @@ export class AppDashboard extends LitElement {
       if (!confirmed) return;
       await dbManager.deleteBox(id);
       await this.loadBoxes();
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('delete', 'box', { id });
       }
     } catch (error) {
       console.error('Error deleting box:', error);
@@ -103,9 +103,9 @@ export class AppDashboard extends LitElement {
       };
       await dbManager.saveBox(newBox);
       await this.loadBoxes();
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('create', 'box', newBox);
       }
     } catch (error) {
       console.error('Error duplicating box:', error);
@@ -121,9 +121,9 @@ export class AppDashboard extends LitElement {
       const updated = { ...box, name: newName.trim() };
       await dbManager.saveBox(updated);
       await this.loadBoxes();
-      // Sync to backend
+      // Sync to backend (incremental)
       if (profileManager.getActiveProfileId()) {
-        await profileManager.pushToBackend();
+        await profileManager.syncItem('update', 'box', updated);
       }
     }
   }
