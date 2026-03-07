@@ -130,7 +130,6 @@ export {
 // ============================================
 
 export {
-  initDB,
   dbManager,
 } from './db';
 
@@ -330,14 +329,14 @@ export async function initializeFramework(config: Partial<FrameworkConfig> = {})
   // Run Autofix/Migration tool
   // This automatically cleans up stale absolute URLs in IndexedDB without data loss
   const { dbManager } = await import('./db');
-  try {
-    const stats = await dbManager.autofixMediaUrls();
-    if (stats.variantsFixed > 0 || stats.templatesFixed > 0) {
-      console.log(`[Framework] Data migration complete: fixed ${stats.variantsFixed} variants.`);
-    }
-  } catch (err) {
-    console.warn('[Framework] Autofix failed:', err);
-  }
+  // try {
+  //   const stats = await dbManager.autofixMediaUrls();
+  //   if (stats.variantsFixed > 0 || stats.templatesFixed > 0) {
+  //     console.log(`[Framework] Data migration complete: fixed ${stats.variantsFixed} variants.`);
+  //   }
+  // } catch (err) {
+  //   console.warn('[Framework] Autofix failed:', err);
+  // }
   
   console.log('Overlay Framework initialized');
 }

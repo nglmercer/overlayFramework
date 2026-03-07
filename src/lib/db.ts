@@ -14,7 +14,7 @@
  * @version 3.0.0
  */
 
-import { IndexedDBManager } from 'idb-manager';
+import { IndexedDBManager,type StoreProxy,type DatabaseItem } from 'idb-manager';
 import { BrowserAdapter } from 'idb-manager/browser';
 import { 
   AlertVariant, 
@@ -67,40 +67,123 @@ const schema = {
 };
 const adapter = new BrowserAdapter();
 // Initialize the manager
-const db = new IndexedDBManager(schema,{
+const db = new IndexedDBManager(schema, {
   adapter: adapter,
 });
 
 /**
  * ============================================
- * DATABASE INITIALIZATION
+ * DATABASE INITIALIZATION & SINGLETON GUARD
  * ============================================
  */
 
+let dbManagerInstance: any = null;
+let dbInstance: IndexedDBManager | null = null;
+let dbInitialized = false;
+
 /**
- * Initializes and opens the IndexedDB database
- * Legacy support for direct IDBDatabase access if needed.
- * 
- * @returns Promise resolving to the database instance
+ * Ensures the database is initialized and handles blocked connections.
+ * This is critical for preventing "Blocked" version upgrades.
  */
-export async function initDB(): Promise<IDBDatabase> {
-  return db.openDatabase() as Promise<IDBDatabase>;
+async function ensureDBInitialized(): Promise<void> {
+  if (dbInitialized && dbInstance) return;
+
+  try {
+    if (!dbInstance) {
+      dbInstance = new IndexedDBManager(schema, { adapter });
+    }
+
+    // Attempt to open the database
+    const rawDb = await dbInstance.openDatabase() as IDBDatabase;
+    
+    // NATIVE LIFECYCLE HANDLERS
+    // If another tab tries to upgrade the version, we must close this connection
+    rawDb.onversionchange = () => {
+      console.warn('[dbManager] Database version change detected. Closing connection...');
+      rawDb.close();
+      dbInitialized = false;
+      // Optional: reload or notify UI
+      window.location.reload();
+    };
+
+    dbInitialized = true;
+    console.log('[dbManager] Database connection established (Version: ' + rawDb.version + ')');
+    
+    // Run normalization if needed
+    setTimeout(() => normalizeStoreData(), 1000);
+    
+  } catch (error) {
+    console.error('[dbManager] Initialization fatal error:', error);
+    throw error;
+  }
 }
 
 /**
  * ============================================
- * VALIDATION HELPERS
+ * NATIVE IDB UTILS (Bypasses idb-manager bug)
  * ============================================
  */
 
-type ValidationError = { success: false; errors: string[] };
+/**
+ * Perform a strictly-typed native IndexedDB operation.
+ * Bypasses idb-manager's 'normalizeId' which breaks string keys like "10".
+ */
+async function nativeOp(storeName: string, mode: IDBTransactionMode, callback: (store: IDBObjectStore) => IDBRequest | void): Promise<any> {
+  const db = await dbInstance!.openDatabase() as IDBDatabase;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    const request = callback(store);
+    
+    if (request) {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }
+    
+    tx.oncomplete = () => { if (!request) resolve(true); };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(new Error('Transaction aborted'));
+  });
+}
+
+/**
+ * Normalizes numeric IDs to strings to prevent key mismatches.
+ * Forces native IDB to avoid the library's conversion.
+ */
+async function normalizeStoreData() {
+  if (!dbInstance) return;
+  console.log('[dbManager] Starting NATIVE data normalization check...');
+  
+  const stores = [DB.STORES.BOXES, DB.STORES.VARIANTS, DB.STORES.TEMPLATES];
+  for (const storeName of stores) {
+    const items = await dbInstance.store(storeName).getAll();
+    for (const item of items) {
+      if (typeof item.id === 'number') {
+        const stringId = String(item.id);
+        console.log(`[dbManager] NATIVELY Normalizing numeric ID in ${storeName}:`, item.id, '->', stringId);
+        
+        // Use native ops to ensure type is preserved
+        try {
+          // 1. Save with string ID
+          const data = { ...item, id: stringId };
+          await nativeOp(storeName, 'readwrite', (s) => s.put(data));
+          // 2. Delete original numeric key
+          await nativeOp(storeName, 'readwrite', (s) => s.delete(item.id));
+        } catch (err) {
+          console.error('[dbManager] Normalization failed for', item.id, err);
+        }
+      }
+    }
+  }
+}
 
 /**
  * Validates data and throws on failure
  */
 function validateOrThrow(result: ValidationResult<unknown>, entityName: string): void {
   if (!result.success) {
-    throw new Error(`Invalid ${entityName}: ${(result as ValidationError).errors.join(', ')}`);
+    const errors = (result as any).errors || ['Unknown validation error'];
+    throw new Error(`Invalid ${entityName}: ${errors.join(', ')}`);
   }
 }
 
@@ -110,56 +193,52 @@ function validateOrThrow(result: ValidationResult<unknown>, entityName: string):
  * ============================================
  */
 
-/**
- * Database manager singleton with CRUD operations
- * Re-implemented using idb-manager.
- */
 export const dbManager = {
-  // Helpers to get store proxies
-  get boxes() { return db.store(DB.STORES.BOXES); },
-  get variants() { return db.store(DB.STORES.VARIANTS); },
-  get templates() { return db.store(DB.STORES.TEMPLATES); },
+  // Direct store access
+  get _boxes() { return dbInstance!.store(DB.STORES.BOXES); },
+  get _variants() { return dbInstance!.store(DB.STORES.VARIANTS); },
+  get _templates() { return dbInstance!.store(DB.STORES.TEMPLATES); },
+
+  // Backward compatibility
+  get boxes() { return this._boxes; },
+  get variants() { return this._variants; },
+  get templates() { return this._templates; },
 
   // ============================================
   // TEMPLATE OPERATIONS
   // ============================================
-  
+
   async getTemplates(): Promise<TemplateDB[]> {
-    return this.templates.getAll() as Promise<TemplateDB[]>;
+    await ensureDBInitialized();
+    return await this._templates.getAll() as TemplateDB[];
   },
 
-  async getTemplateById(id: string): Promise<TemplateDB | undefined> {
-    return this.templates.get(id) as Promise<TemplateDB | undefined>;
+  async getTemplateById(id: string | number): Promise<TemplateDB | undefined> {
+    await ensureDBInitialized();
+    let item = await this._templates.get(id) as TemplateDB | undefined;
+    if (!item && typeof id === 'string' && !isNaN(Number(id))) {
+      item = await this._templates.get(Number(id)) as TemplateDB | undefined;
+    }
+    return item || undefined;
   },
 
   async saveTemplate(template: TemplateDB): Promise<void> {
-    const normalized = {
-      ...template,
-      data: normalizeAlertData(template.data)
-    };
+    await ensureDBInitialized();
+    const normalized = { ...template, data: normalizeAlertData(template.data) };
     const result = validateTemplate(normalized);
     validateOrThrow(result, 'template');
     
-    // Check if exists to use correct method
-    const existing = await this.templates.get(template.id);
-    if (existing) {
-      await this.templates.update(normalized);
-    } else {
-      await this.templates.add(normalized);
+    // NATIVE SAVE to preserve string ID
+    await nativeOp(DB.STORES.TEMPLATES, 'readwrite', (s) => s.put(normalized));
+  },
+
+  async deleteTemplate(id: string | number): Promise<void> {
+    await ensureDBInitialized();
+    // NATIVE DELETE - try exact, then numeric fallback if string
+    await nativeOp(DB.STORES.TEMPLATES, 'readwrite', (s) => s.delete(id));
+    if (typeof id === 'string' && !isNaN(Number(id))) {
+      await nativeOp(DB.STORES.TEMPLATES, 'readwrite', (s) => s.delete(Number(id)));
     }
-  },
-
-  async createTemplate(data: Omit<TemplateDB, 'id' | 'updatedAt'>): Promise<TemplateDB> {
-    const template = createTemplate({ 
-      data: { ...data },
-      throwOnError: true,
-    });
-    await this.saveTemplate(template);
-    return template;
-  },
-
-  async deleteTemplate(id: string): Promise<void> {
-    await this.templates.delete(id);
   },
 
   // ============================================
@@ -167,49 +246,64 @@ export const dbManager = {
   // ============================================
 
   async getBoxes(): Promise<AlertBox[]> {
-    return this.boxes.getAll() as Promise<AlertBox[]>;
+    await ensureDBInitialized();
+    return await this._boxes.getAll() as AlertBox[];
   },
 
-  async getBoxById(id: string): Promise<AlertBox | undefined> {
-    return this.boxes.get(id) as Promise<AlertBox | undefined>;
+  async getBoxById(id: string | number): Promise<AlertBox | undefined> {
+    await ensureDBInitialized();
+    let box = await this._boxes.get(id) as AlertBox | undefined;
+    if (!box && typeof id === 'string' && !isNaN(Number(id))) {
+      box = await this._boxes.get(Number(id)) as AlertBox | undefined;
+    }
+    return box || undefined;
   },
 
   async saveBox(box: AlertBox): Promise<void> {
-    try {
-      const result = validateAlertBox(box);
-      validateOrThrow(result, 'box');
-      
-      const existing = await this.boxes.get(box.id);
-      if (existing) {
-        await this.boxes.update(box);
-        console.log('[dbManager] Updated box:', box.id, box.name);
-      } else {
-        await this.boxes.add(box);
-        console.log('[dbManager] Created box:', box.id, box.name);
-      }
-    } catch (error) {
-      console.error('[dbManager] Error saving box:', error);
-      throw error;
-    }
+    await ensureDBInitialized();
+    const result = validateAlertBox(box);
+    validateOrThrow(result, 'box');
+    
+    // NATIVE SAVE
+    await nativeOp(DB.STORES.BOXES, 'readwrite', (s) => s.put(box));
   },
 
   async createBox(data: Omit<AlertBox, 'id'>): Promise<AlertBox> {
-    const box = createAlertBox({
-      data: { ...data },
-      throwOnError: true,
-    });
+    const box = createAlertBox({ data: { ...data }, throwOnError: true });
     await this.saveBox(box);
     return box;
   },
 
-  async deleteBox(id: string): Promise<void> {
+  async deleteBox(id: string | number): Promise<void> {
+    await ensureDBInitialized();
+    const stringId = String(id);
+    const numericId = !isNaN(Number(id)) ? Number(id) : null;
+    
+    console.log('[dbManager] NATIVE-AGGRESSIVE deletion of box:', id);
+    
     try {
-      // Cascade delete variants
+      // 1. Cascade variants
       await this.deleteVariantsByBoxId(id);
-      await this.boxes.delete(id);
-      console.log('[dbManager] Deleted box:', id);
+      
+      // 2. Multimodal deletion using NATIVE IDs (bypass normalizeId)
+      // Try exact key
+      await nativeOp(DB.STORES.BOXES, 'readwrite', (s) => s.delete(id));
+      // Try numeric key if it was a number
+      if (numericId !== null) {
+        await nativeOp(DB.STORES.BOXES, 'readwrite', (s) => s.delete(numericId));
+      }
+      // Try explicit string key
+      await nativeOp(DB.STORES.BOXES, 'readwrite', (s) => s.delete(stringId));
+      
+      // Verification
+      const check = await this.getBoxById(id);
+      if (check) {
+        console.error('[dbManager] NATIVE DELETE FAILED - Still exists as', typeof check.id);
+      } else {
+        console.log('[dbManager] NATIVE DELETE SUCCESS');
+      }
     } catch (error) {
-      console.error('[dbManager] Error deleting box:', error);
+      console.error('[dbManager] Error in deleteBox:', error);
       throw error;
     }
   },
@@ -218,159 +312,106 @@ export const dbManager = {
   // VARIANT OPERATIONS
   // ============================================
 
-  async getVariants(boxId: string): Promise<AlertVariant[]> {
-    // idb-manager's filter method is perfect for this
-    const data = await this.variants.filter({ boxId }) as AlertVariant[];
+  async getVariants(boxId: string | number): Promise<AlertVariant[]> {
+    await ensureDBInitialized();
+    const stringId = String(boxId);
+    const numericId = !isNaN(Number(boxId)) ? Number(boxId) : null;
+
+    // Use idb-manager's getAll then manual filter because filter() is broken for mixed types
+    const all = await this._variants.getAll() as AlertVariant[];
+    let data = all.filter(v => String(v.boxId) === stringId);
     
-    // Healing logic: fix variants with incorrect types (e.g., from old versions or sync issues)
+    // Heal types
     return data.map(v => {
       if (v.type === 'variant' || v.type === 'default' || !v.type) {
-        // Try to deduce the correct type from the name or condition
         const events = Object.values(PLATFORM_EVENTS) as PlatformEventDefinition[];
         const match = events.find(e => 
-          (v.name && v.name.includes(e.label)) || 
-          (v.condition && v.condition.includes(e.conditionLabel)) ||
-          (v.name && v.name.toLowerCase().includes(e.id.replace('_', ' ')))
+          (v.name?.includes(e.label)) || 
+          (v.condition?.includes(e.conditionLabel)) ||
+          (v.name?.toLowerCase().includes(e.id.replace('_', ' ')))
         );
-        
         if (match) {
-          console.log(`[DB] Healed variant ${v.id} type: ${v.type} -> ${match.id}`);
           v.type = match.id;
-          // Optimistically update in DB too
-          this.variants.update(v).catch(err => console.error('[DB] Failed to persist healed variant:', err));
+          this.saveVariant(v).catch(() => {});
         }
       }
       return v;
     });
   },
 
-  async getVariantById(id: string): Promise<AlertVariant | undefined> {
-    return this.variants.get(id) as Promise<AlertVariant | undefined>;
-  },
-
-  async getVariantsByType(type: string): Promise<AlertVariant[]> {
-    return this.variants.filter({ type }) as Promise<AlertVariant[]>;
+  async getVariantById(id: string | number): Promise<AlertVariant | undefined> {
+    await ensureDBInitialized();
+    let variant = await this._variants.get(id) as AlertVariant | undefined;
+    if (!variant && typeof id === 'string' && !isNaN(Number(id))) {
+      variant = await this._variants.get(Number(id)) as AlertVariant | undefined;
+    } else if (!variant && typeof id === 'number') {
+      variant = await this._variants.get(String(id)) as AlertVariant | undefined;
+    }
+    return variant || undefined;
   },
 
   async saveVariant(variant: AlertVariant): Promise<void> {
+    await ensureDBInitialized();
     const normalized = normalizeAlertData(variant);
     const result = validateAlertVariant(normalized);
     validateOrThrow(result, 'variant');
     
-    const existing = await this.variants.get(normalized.id);
-    if (existing) {
-      await this.variants.update(normalized);
-    } else {
-      await this.variants.add(normalized);
+    // NATIVE SAVE
+    await nativeOp(DB.STORES.VARIANTS, 'readwrite', (s) => s.put(normalized));
+  },
+
+  async deleteVariant(id: string | number): Promise<void> {
+    await ensureDBInitialized();
+    await nativeOp(DB.STORES.VARIANTS, 'readwrite', (s) => s.delete(id));
+    if (typeof id === 'string' && !isNaN(Number(id))) {
+      await nativeOp(DB.STORES.VARIANTS, 'readwrite', (s) => s.delete(Number(id)));
+    } else if (typeof id === 'number') {
+      await nativeOp(DB.STORES.VARIANTS, 'readwrite', (s) => s.delete(String(id)));
     }
   },
 
-  async createVariant(data: Partial<AlertVariant> & { boxId: string }): Promise<AlertVariant> {
-    const variant = createAlertVariant({
-      boxId: data.boxId,
-      data,
-      throwOnError: true,
-    });
-    await this.saveVariant(variant);
-    return variant;
-  },
-
-  async deleteVariant(id: string): Promise<void> {
-    await this.variants.delete(id);
-  },
-
-  async deleteVariantsByBoxId(boxId: string): Promise<void> {
-    try {
-      const variants = await this.getVariants(boxId);
-      console.log('[dbManager] Variants found for box', boxId, ':', variants.length);
-      if (variants.length > 0) {
-        const ids = variants.map(v => v.id);
-        console.log('[dbManager] Deleting variant ids:', ids);
-        await this.variants.deleteMany(ids);
-      }
-    } catch (error) {
-      console.error('[dbManager] Error deleting variants for box', boxId, ':', error);
-      throw error;
+  async deleteVariantsByBoxId(boxId: string | number): Promise<void> {
+    await ensureDBInitialized();
+    const variants = await this.getVariants(boxId);
+    for (const v of variants) {
+      await this.deleteVariant(v.id);
     }
-  },
-
-  // ============================================
-  // BATCH OPERATIONS
-  // ============================================
-
-  async saveVariants(variants: AlertVariant[]): Promise<void> {
-    // Validate all first
-    const normalizedVariants: AlertVariant[] = [];
-    for (const variant of variants) {
-      const normalized = normalizeAlertData(variant);
-      const result = validateAlertVariant(normalized);
-      if (!result.success) {
-        throw new Error(`Invalid variant ${variant.id}: ${(result as ValidationError).errors.join(', ')}`);
-      }
-      normalizedVariants.push(normalized);
-    }
-    
-    // We don't have a batch upsert in idb-manager directly that handles both add/update easily, 
-    // so we'll do them one by one or split them.
-    // For simplicity and to maintain current behavior:
-    for (const variant of normalizedVariants) {
-      const existing = await this.variants.get(variant.id);
-      if (existing) {
-        await this.variants.update(variant);
-      } else {
-        await this.variants.add(variant);
-      }
-    }
-  },
-
-  async deleteVariants(ids: string[]): Promise<void> {
-    await this.variants.deleteMany(ids);
   },
 
   // ============================================
   // UTILITY METHODS
   // ============================================
 
-  async autofixMediaUrls(): Promise<{ variantsFixed: number, templatesFixed: number }> {
-    let variantsFixed = 0;
-    let templatesFixed = 0;
-    
+  async resetDatabase(): Promise<void> {
+    console.log('[dbManager] RESETTING DATABASE...');
     try {
-      // 1. Fix all variants
-      const allVariants = await this.variants.getAll() as AlertVariant[];
-      for (const variant of allVariants) {
-        const normalized = normalizeAlertData(variant);
-        if (JSON.stringify(normalized) !== JSON.stringify(variant)) {
-          await this.variants.update(normalized);
-          variantsFixed++;
-        }
-      }
-      
-      // 2. Fix all templates
-      const allTemplates = await this.templates.getAll() as TemplateDB[];
-      for (const template of allTemplates) {
-        const normalizedData = normalizeAlertData(template.data);
-        if (JSON.stringify(normalizedData) !== JSON.stringify(template.data)) {
-          await this.templates.update({ ...template, data: normalizedData });
-          templatesFixed++;
-        }
-      }
-      
-      if (variantsFixed > 0 || templatesFixed > 0) {
-        console.log(`[MediaFixer] Successfully normalized ${variantsFixed} variants and ${templatesFixed} templates.`);
-      }
+      const request = indexedDB.deleteDatabase(DB.NAME);
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => { window.location.reload(); resolve(); };
+        request.onerror = (e) => reject(e);
+        request.onblocked = () => {
+          alert('Blocked: Close other tabs to finish reset.');
+          window.location.reload();
+          resolve();
+        };
+      });
     } catch (err) {
-      console.error('[MediaFixer] Failed to run autofix:', err);
+      console.error('[dbManager] Reset failed:', err);
     }
-    
-    return { variantsFixed, templatesFixed };
   },
 
   async clearAll(): Promise<void> {
-    await this.boxes.clear();
-    await this.variants.clear();
-    await this.templates.clear();
+    await ensureDBInitialized();
+    await this._boxes.clear();
+    await this._variants.clear();
+    await this._templates.clear();
   },
 };
+
+// Global helper for user-initiated nuke
+if (typeof window !== 'undefined') {
+  (window as any).dbManager = dbManager;
+  (window as any).nukeDB = () => dbManager.resetDatabase();
+}
 
 export default dbManager;

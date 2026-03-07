@@ -19,7 +19,7 @@ export const DB = {
   /** IndexedDB database name */
   NAME: 'AlertsDB',
   /** Database version number */
-  VERSION: 2,
+  VERSION: 3,
   /** Object store names */
   STORES: {
     BOXES: 'boxes',

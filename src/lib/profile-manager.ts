@@ -266,7 +266,7 @@ class ProfileManager {
         console.log('mapBoxes', mapBoxesResult.items);
         console.log('skipped boxes (missing ID):', mapBoxesResult.skipped);
         if (mapBoxesResult.items.length > 0) {
-          await dbManager.boxes.updateMany(mapBoxesResult.items);
+          await dbManager._boxes.updateMany(mapBoxesResult.items);
         }
       }
       if (backup?.data?.variants) {
