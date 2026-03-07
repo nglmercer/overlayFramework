@@ -259,19 +259,33 @@ class ProfileManager {
       }
 
       // Re-import boxes, variants, templates if present
+      // Use Object.entries to get the key (id) and value (data) together
       if (backup?.data?.boxes) {
-        for (const box of Object.values(backup.data.boxes) as any[]) {
-          await dbManager.saveBox(box);
+        for (const [boxId, boxData] of Object.entries(backup.data.boxes)) {
+          // Ensure the box has an id field (it might be in the key)
+          const box = boxData as { id?: string; [key: string]: any };
+          if (!box.id) {
+            box.id = boxId;
+          }
+          await dbManager.saveBox(box as any);
         }
       }
       if (backup?.data?.variants) {
-        for (const variant of Object.values(backup.data.variants) as any[]) {
-          await dbManager.saveVariant(variant);
+        for (const [variantId, variantData] of Object.entries(backup.data.variants)) {
+          const variant = variantData as { id?: string; [key: string]: any };
+          if (!variant.id) {
+            variant.id = variantId;
+          }
+          await dbManager.saveVariant(variant as any);
         }
       }
       if (backup?.data?.templates) {
-        for (const template of Object.values(backup.data.templates) as any[]) {
-          await dbManager.saveTemplate(template);
+        for (const [templateId, templateData] of Object.entries(backup.data.templates)) {
+          const template = templateData as { id?: string; [key: string]: any };
+          if (!template.id) {
+            template.id = templateId;
+          }
+          await dbManager.saveTemplate(template as any);
         }
       }
 

@@ -43,6 +43,98 @@ const ProfileImportSchema = z.object({
 });
 
 // ============================================================================
+// VALIDATOR HELPERS
+// ============================================================================
+
+/**
+ * Validate and transform a box entry from legacy or malformed data.
+ * Ensures the box has required fields and correct types.
+ */
+function validateAndTransformBox(boxId: string, data: unknown): { success: true; data: Record<string, any> } | { success: false; error: string } {
+  const boxData = data as Record<string, any>;
+  
+  // If data is missing or not an object, create a minimal valid box
+  if (!boxData || typeof boxData !== 'object') {
+    return {
+      success: true,
+      data: { id: boxId, type: 'box', name: `Box ${boxId}`, enabled: true, createdAt: Date.now(), updatedAt: Date.now() }
+    };
+  }
+  
+  // Ensure id is set (from key)
+  if (!boxData.id) {
+    boxData.id = boxId;
+  }
+  
+  // Ensure type is set
+  if (!boxData.type) {
+    boxData.type = 'box';
+  }
+  
+  // Ensure name exists
+  if (!boxData.name) {
+    boxData.name = `Box ${boxId}`;
+  }
+  
+  // Ensure enabled is boolean
+  if (typeof boxData.enabled !== 'boolean') {
+    boxData.enabled = true;
+  }
+  
+  // Ensure timestamps exist
+  if (!boxData.createdAt) {
+    boxData.createdAt = Date.now();
+  }
+  boxData.updatedAt = Date.now();
+  
+  return { success: true, data: boxData };
+}
+
+/**
+ * Validate and transform a variant entry from legacy or malformed data.
+ */
+function validateAndTransformVariant(variantId: string, data: unknown): { success: true; data: Record<string, any> } | { success: false; error: string } {
+  const variantData = data as Record<string, any>;
+  
+  if (!variantData || typeof variantData !== 'object') {
+    return {
+      success: true,
+      data: { id: variantId, type: 'variant', name: `Variant ${variantId}`, createdAt: Date.now(), updatedAt: Date.now() }
+    };
+  }
+  
+  if (!variantData.id) variantData.id = variantId;
+  if (!variantData.type) variantData.type = 'variant';
+  if (!variantData.name) variantData.name = `Variant ${variantId}`;
+  if (!variantData.createdAt) variantData.createdAt = Date.now();
+  variantData.updatedAt = Date.now();
+  
+  return { success: true, data: variantData };
+}
+
+/**
+ * Validate and transform a template entry from legacy or malformed data.
+ */
+function validateAndTransformTemplate(templateId: string, data: unknown): { success: true; data: Record<string, any> } | { success: false; error: string } {
+  const templateData = data as Record<string, any>;
+  
+  if (!templateData || typeof templateData !== 'object') {
+    return {
+      success: true,
+      data: { id: templateId, type: 'template', name: `Template ${templateId}`, createdAt: Date.now(), updatedAt: Date.now() }
+    };
+  }
+  
+  if (!templateData.id) templateData.id = templateId;
+  if (!templateData.type) templateData.type = 'template';
+  if (!templateData.name) templateData.name = `Template ${templateId}`;
+  if (!templateData.createdAt) templateData.createdAt = Date.now();
+  templateData.updatedAt = Date.now();
+  
+  return { success: true, data: templateData };
+}
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -223,26 +315,43 @@ export function registerProfileRoutes(router: Router): void {
       } else {
         // Merge: import boxes/variants/templates (frontend format) or overlays/settings (backend format)
         
-        // Handle frontend boxes format
+        // Handle frontend boxes format with validation and transformation
         const incomingBoxes = Object.entries(backup?.data?.boxes ?? {});
+        let boxesImported = 0;
         for (const [boxId, data] of incomingBoxes) {
-          // Ensure the id is included in the box data
-          const boxData = data as Record<string, any>;
-          await dbManager.saveOverlay(`box:${boxId}`, { type: 'box', id: boxId, ...boxData });
+          const validated = validateAndTransformBox(boxId, data);
+          if (validated.success) {
+            await dbManager.saveOverlay(`box:${boxId}`, validated.data);
+            boxesImported++;
+          } else {
+            console.warn(`[Import] Invalid box ${boxId}: ${validated.error}`);
+          }
         }
         
-        // Handle frontend variants format  
+        // Handle frontend variants format with validation and transformation
         const incomingVariants = Object.entries(backup?.data?.variants ?? {});
+        let variantsImported = 0;
         for (const [variantId, data] of incomingVariants) {
-          const variantData = data as Record<string, any>;
-          await dbManager.saveOverlay(`variant:${variantId}`, { type: 'variant', id: variantId, ...variantData });
+          const validated = validateAndTransformVariant(variantId, data);
+          if (validated.success) {
+            await dbManager.saveOverlay(`variant:${variantId}`, validated.data);
+            variantsImported++;
+          } else {
+            console.warn(`[Import] Invalid variant ${variantId}: ${validated.error}`);
+          }
         }
         
-        // Handle frontend templates format
+        // Handle frontend templates format with validation and transformation
         const incomingTemplates = Object.entries(backup?.data?.templates ?? {});
+        let templatesImported = 0;
         for (const [templateId, data] of incomingTemplates) {
-          const templateData = data as Record<string, any>;
-          await dbManager.saveOverlay(`template:${templateId}`, { type: 'template', id: templateId, ...templateData });
+          const validated = validateAndTransformTemplate(templateId, data);
+          if (validated.success) {
+            await dbManager.saveOverlay(`template:${templateId}`, validated.data);
+            templatesImported++;
+          } else {
+            console.warn(`[Import] Invalid template ${templateId}: ${validated.error}`);
+          }
         }
         
         // Handle legacy backend overlays format
