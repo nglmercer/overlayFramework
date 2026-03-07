@@ -61,13 +61,18 @@ function generatePreviewId(): string {
 }
 
 /**
- * Generate a preview URL for saved overlay data
+ * Generate a preview URL for saved overlay data.
+ * Standardized format used across the application.
  */
-export function generatePreviewUrl(overlayId: string): string {
-  const previewId = generatePreviewId();
+export function generatePreviewUrl(overlayId: string, preview: boolean = false): string {
   const url = new URL(PREVIEW_BASE_URL);
   url.searchParams.set('id', overlayId);
-  url.searchParams.set('preview', previewId);
+  
+  if (preview) {
+    const previewId = generatePreviewId();
+    url.searchParams.set('w', previewId);
+  }
+  
   return url.toString();
 }
 

@@ -43,7 +43,7 @@ import tiktokSocialSample from '../../schemas/sample/tiktok_social.json';
 
 // Import constants
 import { CONFIG } from '../lib/constants';
-import { getBackendEndpoint, getInstanceId, normalizeMediaUrl } from '../lib/config';
+import { getBackendEndpoint, getInstanceId, normalizeMediaUrl, getOverlayPreviewUrl } from '../lib/config';
 
 // =============================================================================
 // Type Definitions
@@ -334,8 +334,9 @@ export class AppEditor extends LitElement {
       });
       
       if (response.ok) {
-        const result = await response.json();
-        return result.previewUrl;
+        // Return the stable URL from our config helper so it's consistent with Dashboard.ts
+        // We've already saved the data to the backend, so the preview will work.
+        return getOverlayPreviewUrl(this.boxId);
       }
     } catch (error) {
       console.error('Failed to generate preview URL:', error);

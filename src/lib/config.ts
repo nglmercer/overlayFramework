@@ -213,6 +213,27 @@ export function getBackendEndpoint(path: string): string {
 }
 
 /**
+ * Get the preview URL for an overlay.
+ * Standardizes the URL format used across the application.
+ * 
+ * @param id - The overlay/box ID
+ * @param options - Optional parameters (e.g., preview mode)
+ * @returns The full preview URL
+ */
+export function getOverlayPreviewUrl(id: string, options: { preview?: boolean } = {}): string {
+  const base = getBackendUrl();
+  const url = new URL(`${base}/preview.html`);
+  url.searchParams.set('id', id);
+  
+  if (options.preview) {
+    // Add a unique token to bypass cache if in preview mode
+    url.searchParams.set('w', `preview-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  }
+  
+  return url.toString();
+}
+
+/**
  * Get the current instance ID (for targeting specific overlay instances).
  * Delegates to the ProfileManager so the ID is always tied to the active profile.
  * Falls back to a legacy localStorage key if ProfileManager has no active profile yet

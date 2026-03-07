@@ -5,7 +5,7 @@ import { profileManager } from '../../lib/profile-manager';
 import { LocalizeController, getLocale, setLocale } from '../../locales/localization';
 import { alert, confirm, prompt } from '../../lib/dialog';
 import { CONFIG } from '../../lib/constants';
-import { getInstanceId } from '../../lib/config';
+import { getInstanceId, getOverlayPreviewUrl } from '../../lib/config';
 
 // Import external styles
 import styles from './Dashboard.css?inline';
@@ -125,7 +125,7 @@ export class AppDashboard extends LitElement {
 
   async handleCopySource(id: string) {
     // Generate the URL in the same format shown in the application
-    const url = `${window.location.origin}/preview.html?id=${id}`;
+    const url = getOverlayPreviewUrl(id);
     try {
       await navigator.clipboard.writeText(url);
       await alert(this._localize.t('dashboard.urlCopied') || 'URL copied to clipboard!');

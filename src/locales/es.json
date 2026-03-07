@@ -54,7 +54,8 @@
   "sidebar.general": "Configuración general",
   "sidebar.typography": "Textos y Mensajes",
   "sidebar.animations": "Animaciones",
-
+  "sidebar.properties": "Propiedades",
+  
   "variant.new": "Nueva variante",
   "variant.name": "Nombre",
   "variant.duration": "Duración",
