@@ -99,6 +99,7 @@ async function ensureDBInitialized(): Promise<void> {
     // If another tab tries to upgrade the version, we must close this connection
     rawDb.onversionchange = () => {
       console.warn('[dbManager] Database version change detected. Closing connection...');
+      rawDb.close();
       dbInitialized = false;
     };
 

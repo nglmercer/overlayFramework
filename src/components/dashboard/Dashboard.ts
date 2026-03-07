@@ -22,7 +22,20 @@ export class AppDashboard extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadBoxes();
+    
+    // Listen for profile switch events to refresh boxes
+    this.addEventListener('profile-switched', this._handleProfileSwitch);
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('profile-switched', this._handleProfileSwitch);
+  }
+
+  private _handleProfileSwitch = () => {
+    // Reload boxes when profile changes
+    this.loadBoxes();
+  };
 
   async loadBoxes() {
     const boxes = await dbManager.getBoxes();

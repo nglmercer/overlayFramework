@@ -206,7 +206,22 @@ export class AppEditor extends LitElement {
     if (this.schema && this.schema.length > 0 && !this.expandedSection) {
       this.expandedSection = this.schema[0].id;
     }
+    
+    // Listen for profile switch events to refresh variants
+    this.addEventListener('profile-switched', this._handleProfileSwitch);
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('profile-switched', this._handleProfileSwitch);
+  }
+
+  private _handleProfileSwitch = () => {
+    // Reload variants when profile changes
+    if (this._variantsTask) {
+      this._variantsTask.run();
+    }
+  };
 
   willUpdate(changedProperties: Map<string, unknown>) {
     if (changedProperties.has('boxId') && this.boxId && this._localVariants.length > 0) {
