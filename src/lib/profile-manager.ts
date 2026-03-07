@@ -14,6 +14,7 @@
  */
 
 import { getBackendEndpoint } from './config';
+import { mapBackupBoxes, mapBackupVariants, mapBackupTemplates } from './backup-mapper';
 
 // ============================================================================
 // TYPES
@@ -257,35 +258,31 @@ class ProfileManager {
       if (replace) {
         await dbManager.clearAll();
       }
-
+      console.log('backup', backup);
       // Re-import boxes, variants, templates if present
-      // Use Object.entries to get the key (id) and value (data) together
+      // Use the backup-mapper module for type-safe mapping with validation
       if (backup?.data?.boxes) {
-        for (const [boxId, boxData] of Object.entries(backup.data.boxes)) {
-          // Ensure the box has an id field (it might be in the key)
-          const box = boxData as { id?: string; [key: string]: any };
-          if (!box.id) {
-            box.id = boxId;
-          }
-          await dbManager.saveBox(box as any);
+        const mapBoxesResult = mapBackupBoxes(backup.data.boxes);
+        console.log('mapBoxes', mapBoxesResult.items);
+        console.log('skipped boxes (missing ID):', mapBoxesResult.skipped);
+        if (mapBoxesResult.items.length > 0) {
+          await dbManager.boxes.updateMany(mapBoxesResult.items);
         }
       }
       if (backup?.data?.variants) {
-        for (const [variantId, variantData] of Object.entries(backup.data.variants)) {
-          const variant = variantData as { id?: string; [key: string]: any };
-          if (!variant.id) {
-            variant.id = variantId;
-          }
-          await dbManager.saveVariant(variant as any);
+        const mapVariantsResult = mapBackupVariants(backup.data.variants);
+        console.log('mapVariants', mapVariantsResult.items);
+        console.log('skipped variants (missing ID):', mapVariantsResult.skipped);
+        if (mapVariantsResult.items.length > 0) {
+          await dbManager.variants.updateMany(mapVariantsResult.items);
         }
       }
       if (backup?.data?.templates) {
-        for (const [templateId, templateData] of Object.entries(backup.data.templates)) {
-          const template = templateData as { id?: string; [key: string]: any };
-          if (!template.id) {
-            template.id = templateId;
-          }
-          await dbManager.saveTemplate(template as any);
+        const mapTemplatesResult = mapBackupTemplates(backup.data.templates);
+        console.log('mapTemplates', mapTemplatesResult.items);
+        console.log('skipped templates (missing ID):', mapTemplatesResult.skipped);
+        if (mapTemplatesResult.items.length > 0) {
+          await dbManager.templates.updateMany(mapTemplatesResult.items);
         }
       }
 

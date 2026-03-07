@@ -11,6 +11,7 @@
 import { IndexedDBManager, type DatabaseItem } from 'idb-manager';
 import { NodeAdapter } from 'idb-manager/node';
 import { join } from 'path';
+import { existsSync, readFileSync } from 'fs';
 
 // ============================================================================
 // CONFIGURATION
@@ -84,8 +85,68 @@ export const dbManager = {
     await db.openDatabase();
     console.log(`[DB] Backend storage initialized at: ${STORAGE_DIR}`);
     
+    // Migrate old storage.json data if it exists
+    //await this._migrateLegacyData();
+    
     // Setup event listeners for logging/monitoring
     this.setupEventListeners();
+  },
+
+  /**
+    * Migrate data from old storage.json format to new idb-manager format
+    */
+  async _migrateLegacyData(): Promise<void> {
+    const legacyPath = join(STORAGE_DIR, 'storage.json');
+    if (!existsSync(legacyPath)) {
+      return;
+    }
+    
+    try {
+      const legacyData = JSON.parse(readFileSync(legacyPath, 'utf-8'));
+      let migrated = 0;
+      
+      // Old format: { "boxId": { variants: [...], variant: {...}, ... } }
+      for (const [boxId, boxData] of Object.entries(legacyData)) {
+        const data = boxData as Record<string, any>;
+        
+        // Save box if not already saved
+        if (data.variants || data.variant) {
+          // This is a box with variants - save the box first
+          const boxRecord = {
+            id: boxId,
+            type: 'box',
+            name: data.variant?.name?.replace('Variant', '')?.trim() || data.name || `Box ${boxId}`,
+            enabled: true,
+            createdAt: data.createdAt || Date.now(),
+            updatedAt: Date.now()
+          };
+          await this.overlays.add(boxRecord);
+          
+          // Save variants
+          const variants = data.variants || (data.variant ? [data.variant] : []);
+          for (const variant of variants) {
+            if (variant && variant.id) {
+              const variantRecord = {
+                ...variant,
+                id: variant.id,
+                type: 'variant',
+                boxId: boxId,
+                createdAt: variant.createdAt || Date.now(),
+                updatedAt: Date.now()
+              };
+              await this.overlays.add(variantRecord);
+              migrated++;
+            }
+          }
+        }
+      }
+      
+      if (migrated > 0) {
+        console.log(`[DB] Migrated ${migrated} variants from legacy storage`);
+      }
+    } catch (error) {
+      console.warn('[DB] Legacy migration failed:', error);
+    }
   },
 
   /**

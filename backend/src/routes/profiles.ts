@@ -250,18 +250,21 @@ export function registerProfileRoutes(router: Router): void {
     const templates: Record<string, any> = {};
     
     for (const [key, data] of Object.entries(overlays)) {
-      if (key.startsWith('box:')) {
-        const boxId = key.slice(4);
-        boxes[boxId] = data;
-      } else if (key.startsWith('variant:')) {
-        const variantId = key.slice(8);
-        variants[variantId] = data;
-      } else if (key.startsWith('template:')) {
-        const templateId = key.slice(9);
-        templates[templateId] = data;
+      const overlayData = data as Record<string, any>;
+      const type = overlayData.type || key.split(':')[0];
+      
+      if (key.startsWith('box:') || type === 'box') {
+        const boxId = key.startsWith('box:') ? key.slice(4) : key;
+        boxes[boxId] = overlayData;
+      } else if (key.startsWith('variant:') || type === 'variant') {
+        const variantId = key.startsWith('variant:') ? key.slice(8) : key;
+        variants[variantId] = overlayData;
+      } else if (key.startsWith('template:') || type === 'template') {
+        const templateId = key.startsWith('template:') ? key.slice(9) : key;
+        templates[templateId] = overlayData;
       } else {
         // Legacy format - treat as box
-        boxes[key] = data;
+        boxes[key] = overlayData;
       }
     }
 

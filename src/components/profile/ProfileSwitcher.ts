@@ -134,7 +134,6 @@ export class AppProfileSwitcher extends LitElement {
             detail: { profileId: id },
             bubbles: true, composed: true,
           }));
-          window.location.reload();
         } else {
           alert(translate('profileSwitcher.syncFailed', { error: (result as any).error }));
         }
@@ -148,7 +147,6 @@ export class AppProfileSwitcher extends LitElement {
         detail: { profileId: id },
         bubbles: true, composed: true,
       }));
-      window.location.reload();
     }
   }
 
