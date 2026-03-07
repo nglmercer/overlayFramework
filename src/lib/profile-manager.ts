@@ -113,11 +113,13 @@ class ProfileManager {
    * @param id   - The existing instanceId to link to
    * @param name - Display name for this profile locally
    * @param syncData - If true, import data snapshot from the backend
+   * @param replace - If true, replaces ALL local data. If false, merges (default)
    */
   async setActiveProfile(
     id: string,
     name: string,
-    syncData = true
+    syncData = true,
+    replace = false
   ): Promise<ProfileSyncResult> {
     // 1. Verify the profile exists on the backend
     const checkUrl = getBackendEndpoint(`/profiles/${encodeURIComponent(id)}`);
@@ -147,7 +149,7 @@ class ProfileManager {
 
     // 2. Optionally pull data
     if (syncData) {
-      const syncResult = await this.syncFromInstance(id);
+      const syncResult = await this.syncFromInstance(id, replace);
       if (!syncResult.ok) {
         // Non-fatal — profile is linked, data just wasn't synced
         console.warn('[ProfileManager] Data sync failed after linking:', (syncResult as { ok: false; error: string }).error);
@@ -168,6 +170,35 @@ class ProfileManager {
     return true;
   }
 
+  /**
+   * Switch to a different profile and optionally sync data from the backend.
+   * This is the main method to use when user wants to switch profiles with data sync.
+   * 
+   * @param id - The profile ID to switch to
+   * @param syncData - Whether to sync data from backend (default: true)
+   * @param replace - If true, replaces ALL local data. If false, merges (default: false)
+   */
+  async switchProfileAndSync(
+    id: string,
+    syncData = true,
+    replace = false
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const profile = this.listProfiles().find(p => p.id === id);
+    if (!profile) {
+      return { ok: false, error: 'Profile not found locally' };
+    }
+    
+    this._setActiveId(id);
+    
+    if (syncData) {
+      const syncResult = await this.syncFromInstance(id, replace);
+      if (!syncResult.ok) {
+        return syncResult;
+      }
+    }
+    
+    return { ok: true };
+  }
   /**
    * Remove a profile from the local list.
    * If it was the active profile, clears the active ID.
@@ -204,10 +235,10 @@ class ProfileManager {
    * Pull a full data snapshot from the backend for the given instance ID
    * and import it into the local IndexedDB.
    *
-   * ⚠️  This will REPLACE local data for any overlays/settings that exist
-   *    in the snapshot. Overlays that only exist locally are kept.
+   * @param instanceId - The profile ID to sync from
+   * @param replace - If true, replaces ALL local data. If false, keeps local-only data (default)
    */
-  async syncFromInstance(instanceId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  async syncFromInstance(instanceId: string, replace = false): Promise<{ ok: true } | { ok: false; error: string }> {
     try {
       const url = getBackendEndpoint(`/profiles/${encodeURIComponent(instanceId)}/export`);
       const res = await fetch(url);
@@ -221,7 +252,11 @@ class ProfileManager {
 
       // Import into local IndexedDB via dynamic import to avoid circular deps
       const { dbManager } = await import('./db');
-      await (dbManager as any).clearAll?.();
+      
+      // Only clear if replace is true
+      if (replace) {
+        await dbManager.clearAll();
+      }
 
       // Re-import boxes, variants, templates if present
       if (backup?.data?.boxes) {
@@ -249,8 +284,10 @@ class ProfileManager {
   /**
    * Export local data to the backend under the active profile ID.
    * Useful to keep the backend in sync after local changes.
+   * 
+   * @param replace - If true, replaces all data on backend. If false, merges (default)
    */
-  async pushToBackend(): Promise<{ ok: true } | { ok: false; error: string }> {
+  async pushToBackend(replace = false): Promise<{ ok: true } | { ok: false; error: string }> {
     const id = this.getActiveProfileId();
     if (!id) return { ok: false, error: 'No active profile' };
 
@@ -262,12 +299,13 @@ class ProfileManager {
         const v = await dbManager.getVariants(box.id);
         variants.push(...v);
       }
-      const templates = await dbManager.getBoxes(); // intentional: reuse type
+      const templates = await dbManager.getTemplates();
 
       const backup = {
         data: {
           boxes: Object.fromEntries(boxes.map(b => [b.id, b])),
           variants: Object.fromEntries(variants.map(v => [v.id, v])),
+          templates: Object.fromEntries(templates.map(t => [t.id, t])),
         }
       };
 
@@ -275,10 +313,13 @@ class ProfileManager {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ backup, replace: false }),
+        body: JSON.stringify({ backup, replace }),
       });
 
-      if (!res.ok) return { ok: false, error: `Import failed: ${res.status}` };
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { ok: false, error: `Import failed: ${res.status} - ${errorData.error || res.statusText}` };
+      }
       return { ok: true };
     } catch (err: any) {
       return { ok: false, error: err?.message ?? String(err) };

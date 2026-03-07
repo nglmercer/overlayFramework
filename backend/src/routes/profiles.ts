@@ -30,6 +30,9 @@ const ProfileImportSchema = z.object({
   /** The full backup payload produced by dbManager.exportData() on the client */
   backup: z.object({
     data: z.object({
+      boxes: z.record(z.string(), z.any()).optional(),
+      variants: z.record(z.string(), z.any()).optional(),
+      templates: z.record(z.string(), z.any()).optional(),
       overlays: z.record(z.string(), z.any()).optional(),
       settings: z.record(z.string(), z.any()).optional(),
     }).optional(),
@@ -145,7 +148,41 @@ export function registerProfileRoutes(router: Router): void {
     }
 
     // Export full overlay + settings snapshot from the backend DB
-    const backup = await dbManager.exportData();
+    const backendBackup = await dbManager.exportData();
+    
+    // Convert backend overlays to frontend format (boxes, variants, templates)
+    const overlays = backendBackup.data?.overlays ?? {};
+    const boxes: Record<string, any> = {};
+    const variants: Record<string, any> = {};
+    const templates: Record<string, any> = {};
+    
+    for (const [key, data] of Object.entries(overlays)) {
+      if (key.startsWith('box:')) {
+        const boxId = key.slice(4);
+        boxes[boxId] = data;
+      } else if (key.startsWith('variant:')) {
+        const variantId = key.slice(8);
+        variants[variantId] = data;
+      } else if (key.startsWith('template:')) {
+        const templateId = key.slice(9);
+        templates[templateId] = data;
+      } else {
+        // Legacy format - treat as box
+        boxes[key] = data;
+      }
+    }
+
+    // Build the backup in frontend-compatible format
+    const backup = {
+      version: backendBackup.version,
+      timestamp: backendBackup.timestamp,
+      data: {
+        boxes,
+        variants,
+        templates,
+        settings: backendBackup.data?.settings ?? {},
+      }
+    };
 
     // Touch lastSeen
     await dbManager.touchProfile(id);
@@ -183,11 +220,32 @@ export function registerProfileRoutes(router: Router): void {
         // Full replace: wipe existing data and import fresh
         await dbManager.importData(backup as Record<string, any>);
       } else {
-        // Merge: import overlays individually, keeping existing ones that aren't in the payload
+        // Merge: import boxes/variants/templates (frontend format) or overlays/settings (backend format)
+        
+        // Handle frontend boxes format
+        const incomingBoxes = Object.entries(backup?.data?.boxes ?? {});
+        for (const [boxId, data] of incomingBoxes) {
+          await dbManager.saveOverlay(`box:${boxId}`, { type: 'box', ...(data as object) });
+        }
+        
+        // Handle frontend variants format  
+        const incomingVariants = Object.entries(backup?.data?.variants ?? {});
+        for (const [variantId, data] of incomingVariants) {
+          await dbManager.saveOverlay(`variant:${variantId}`, { type: 'variant', ...(data as object) });
+        }
+        
+        // Handle frontend templates format
+        const incomingTemplates = Object.entries(backup?.data?.templates ?? {});
+        for (const [templateId, data] of incomingTemplates) {
+          await dbManager.saveOverlay(`template:${templateId}`, { type: 'template', ...(data as object) });
+        }
+        
+        // Handle legacy backend overlays format
         const incomingOverlays = Object.entries(backup?.data?.overlays ?? {});
         for (const [overlayId, data] of incomingOverlays) {
           await dbManager.saveOverlay(overlayId, data);
         }
+        
         // Merge settings
         const incomingSettings = Object.entries(backup?.data?.settings ?? {});
         for (const [settingId, data] of incomingSettings) {
@@ -204,6 +262,9 @@ export function registerProfileRoutes(router: Router): void {
         ok: true,
         id,
         replace,
+        boxesImported: Object.keys(backup?.data?.boxes ?? {}).length,
+        variantsImported: Object.keys(backup?.data?.variants ?? {}).length,
+        templatesImported: Object.keys(backup?.data?.templates ?? {}).length,
         overlaysImported: Object.keys(backup?.data?.overlays ?? {}).length,
         settingsImported: Object.keys(backup?.data?.settings ?? {}).length,
       });

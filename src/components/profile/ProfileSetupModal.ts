@@ -45,6 +45,7 @@ export class AppProfileSetup extends LitElement {
   @state() private syncCheckMessage = '';
   @state() private syncSubmitState: SubmitState = 'idle';
   @state() private syncError = '';
+  @state() private syncReplace = false; // Whether to replace data when syncing
 
   // --- Backend profiles list state ---
   @state() private backendProfiles: Profile[] = [];
@@ -141,7 +142,7 @@ export class AppProfileSetup extends LitElement {
     this.syncSubmitState = 'loading';
     this.syncError = '';
 
-    const result = await profileManager.setActiveProfile(this.syncId, this.syncId, true);
+    const result = await profileManager.setActiveProfile(this.syncId, this.syncId, true, this.syncReplace);
 
     if (result.ok) {
       this.syncSubmitState = 'done';
@@ -150,6 +151,10 @@ export class AppProfileSetup extends LitElement {
       this.syncSubmitState = 'error';
       this.syncError = (result as { ok: false; error: string }).error;
     }
+  }
+
+  private _onReplaceToggle(e: Event) {
+    this.syncReplace = (e.target as HTMLInputElement).checked;
   }
 
   // -------------------------------------------------------------------------
@@ -299,6 +304,20 @@ export class AppProfileSetup extends LitElement {
                   </div>
                 ` : ''}
               </div>
+
+              ${this.syncCheckState === 'found' ? html`
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input
+                      type="checkbox"
+                      .checked="${this.syncReplace}"
+                      @change="${this._onReplaceToggle}"
+                    />
+                    <span>${this._t('profile.replaceData')}</span>
+                  </label>
+                  <p class="form-hint">${this._t('profile.replaceDataHint')}</p>
+                </div>
+              ` : ''}
 
               ${this.syncCheckState === 'idle' || this.syncCheckState === 'notfound' || this.syncCheckState === 'error'
                 ? html`

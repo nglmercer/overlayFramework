@@ -190,6 +190,8 @@
   "profile.checkInstance": "Verificar Instancia",
   "profile.syncImport": "Sincronizar e Importar Datos",
   "profile.syncingData": "Sincronizando datos…",
+  "profile.replaceData": "Reemplazar todos los datos locales",
+  "profile.replaceDataHint": "Si está marcado, todos los datos locales existentes serán eliminados y reemplazados con datos del backend",
   "profile.createTitle": "Empezar de cero",
   "profile.createDescription": "Crear un nuevo perfil para este dispositivo",
   "profile.profileName": "Nombre del perfil",
@@ -209,5 +211,8 @@
   "profileSwitcher.linkAnother": "Vincular otra instancia…",
   "profileSwitcher.pushData": "Enviar datos al backend",
   "profileSwitcher.pushSuccess": "¡Datos del perfil enviados al backend exitosamente!",
-  "profileSwitcher.pushFailed": "Error al exportar: {error}"
+  "profileSwitcher.pushFailed": "Error al exportar: {error}",
+  "profileSwitcher.askSync": "¿Desea sincronizar los datos del backend para este perfil?",
+  "profileSwitcher.askReplace": "¿Desea REEMPLAZAR todos los datos (se eliminarán los datos existentes)? Cancelar = Fusionar en su lugar.",
+  "profileSwitcher.syncFailed": "Error al sincronizar: {error}"
 }

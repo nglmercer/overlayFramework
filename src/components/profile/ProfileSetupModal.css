@@ -245,6 +245,30 @@
   color: #ffffff;
 }
 
+/* Checkbox */
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #e4e4e7;
+  margin: 0;
+}
+
+.form-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #9146ff;
+  cursor: pointer;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #71717a;
+  margin: 0.25rem 0 0 1.5rem;
+}
+
 /* Color picker */
 .color-picker {
   display: flex;

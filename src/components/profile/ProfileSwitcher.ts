@@ -119,15 +119,37 @@ export class AppProfileSwitcher extends LitElement {
 
   private _switch(id: string) {
     if (id === this.activeId) { this.open = false; return; }
-    profileManager.switchProfile(id);
-    this.activeId = id;
-    this.open = false;
-    this.dispatchEvent(new CustomEvent('profile-switched', {
-      detail: { profileId: id },
-      bubbles: true, composed: true,
-    }));
-    // Reload to refresh all data from the new profile
-    window.location.reload();
+    
+    // Ask user if they want to sync data and whether to replace or merge
+    const shouldSync = confirm(translate('profileSwitcher.askSync'));
+    const replace = shouldSync ? confirm(translate('profileSwitcher.askReplace')) : false;
+    
+    if (shouldSync) {
+      // Sync with backend
+      profileManager.switchProfileAndSync(id, true, replace).then(result => {
+        if (result.ok) {
+          this.activeId = id;
+          this.open = false;
+          this.dispatchEvent(new CustomEvent('profile-switched', {
+            detail: { profileId: id },
+            bubbles: true, composed: true,
+          }));
+          window.location.reload();
+        } else {
+          alert(translate('profileSwitcher.syncFailed', { error: (result as any).error }));
+        }
+      });
+    } else {
+      // Just switch locally without syncing
+      profileManager.switchProfile(id);
+      this.activeId = id;
+      this.open = false;
+      this.dispatchEvent(new CustomEvent('profile-switched', {
+        detail: { profileId: id },
+        bubbles: true, composed: true,
+      }));
+      window.location.reload();
+    }
   }
 
   private _addNew() {
@@ -139,7 +161,11 @@ export class AppProfileSwitcher extends LitElement {
 
   private async _export() {
     this.open = false;
-    const result = await profileManager.pushToBackend();
+    
+    // Ask if user wants to replace all data on backend
+    const replace = confirm(translate('profileSwitcher.askReplace'));
+    
+    const result = await profileManager.pushToBackend(replace);
     if (result.ok) {
       alert(translate('profileSwitcher.pushSuccess'));
     } else {

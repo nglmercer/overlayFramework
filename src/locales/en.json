@@ -188,6 +188,8 @@
   "profile.checkInstance": "Check Instance",
   "profile.syncImport": "Sync & Import Data",
   "profile.syncingData": "Syncing data…",
+  "profile.replaceData": "Replace all local data",
+  "profile.replaceDataHint": "If checked, all existing local data will be deleted and replaced with data from the backend",
   "profile.createTitle": "Start fresh",
   "profile.createDescription": "Create a new profile for this device",
   "profile.profileName": "Profile name",
@@ -207,5 +209,8 @@
   "profileSwitcher.linkAnother": "Link another instance…",
   "profileSwitcher.pushData": "Push data to backend",
   "profileSwitcher.pushSuccess": "Profile data pushed to backend successfully!",
-  "profileSwitcher.pushFailed": "Export failed: {error}"
+  "profileSwitcher.pushFailed": "Export failed: {error}",
+  "profileSwitcher.askSync": "Do you want to sync data from the backend for this profile?",
+  "profileSwitcher.askReplace": "Do you want to REPLACE all data (will delete existing data)? Cancel = Merge instead.",
+  "profileSwitcher.syncFailed": "Sync failed: {error}"
 }
