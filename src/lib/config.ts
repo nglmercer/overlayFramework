@@ -186,11 +186,18 @@ export function getBackendUrl(): string {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
+    const port = window.location.port;
     
     // In production, the app is served from the same origin as the backend
     // If we're not on localhost or file://, use relative URL
     if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
       return ''; // Use relative URL in production
+    }
+    
+    // In development, use the same port as the current window
+    // This handles cases where the backend runs on a random port (e.g., Vite dev server)
+    if (port && port !== '80' && port !== '443') {
+      return `http://localhost:${port}`;
     }
   }
   
