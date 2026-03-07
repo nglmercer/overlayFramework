@@ -52,25 +52,35 @@ export class AppDashboard extends LitElement {
   }
 
   async handleDeleteBox(id: string) {
-    const confirmed = await confirm(this._localize.t('dashboard.confirmDelete') || 'Are you sure you want to delete this alert box?');
-    if (!confirmed) return;
-    await dbManager.deleteBox(id);
-    await this.loadBoxes();
+    try {
+      const confirmed = await confirm(this._localize.t('dashboard.confirmDelete') || 'Are you sure you want to delete this alert box?');
+      if (!confirmed) return;
+      await dbManager.deleteBox(id);
+      await this.loadBoxes();
+    } catch (error) {
+      console.error('Error deleting box:', error);
+      await alert(this._localize.t('dashboard.deleteError') || 'Failed to delete alert box. Please try again.');
+    }
   }
 
   async handleDuplicateBox(box: AlertBox) {
-    if (this.alertBoxes.length >= CONFIG.MAX_BOXES) {
-      await alert(this._localize.t('dashboard.maxBoxesReached') || 'Maximum number of alert boxes reached.');
-      return;
+    try {
+      if (this.alertBoxes.length >= CONFIG.MAX_BOXES) {
+        await alert(this._localize.t('dashboard.maxBoxesReached') || 'Maximum number of alert boxes reached.');
+        return;
+      }
+      const newBox = {
+        ...box,
+        id: crypto.randomUUID(),
+        name: `${box.name} (Copy)`,
+        enabled: box.enabled
+      };
+      await dbManager.saveBox(newBox);
+      await this.loadBoxes();
+    } catch (error) {
+      console.error('Error duplicating box:', error);
+      await alert(this._localize.t('dashboard.duplicateError') || 'Failed to duplicate alert box. Please try again.');
     }
-    const newBox = {
-      ...box,
-      id: crypto.randomUUID(),
-      name: `${box.name} (Copy)`,
-      enabled: box.enabled
-    };
-    await dbManager.saveBox(newBox);
-    await this.loadBoxes();
   }
 
   async handleRenameBox(box: AlertBox) {

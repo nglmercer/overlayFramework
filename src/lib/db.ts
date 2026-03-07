@@ -28,6 +28,7 @@ import {
   createTemplate,
   ValidationResult,
 } from './core';
+import { PLATFORM_EVENTS, PlatformEventDefinition } from './core/platform-events';
 
 // Re-export types for convenience
 export type { AlertVariant, AlertBox, TemplateDB };
@@ -174,14 +175,21 @@ export const dbManager = {
   },
 
   async saveBox(box: AlertBox): Promise<void> {
-    const result = validateAlertBox(box);
-    validateOrThrow(result, 'box');
-    
-    const existing = await this.boxes.get(box.id);
-    if (existing) {
-      await this.boxes.update(box);
-    } else {
-      await this.boxes.add(box);
+    try {
+      const result = validateAlertBox(box);
+      validateOrThrow(result, 'box');
+      
+      const existing = await this.boxes.get(box.id);
+      if (existing) {
+        await this.boxes.update(box);
+        console.log('[dbManager] Updated box:', box.id, box.name);
+      } else {
+        await this.boxes.add(box);
+        console.log('[dbManager] Created box:', box.id, box.name);
+      }
+    } catch (error) {
+      console.error('[dbManager] Error saving box:', error);
+      throw error;
     }
   },
 
@@ -195,9 +203,15 @@ export const dbManager = {
   },
 
   async deleteBox(id: string): Promise<void> {
-    // Cascade delete variants
-    await this.deleteVariantsByBoxId(id);
-    await this.boxes.delete(id);
+    try {
+      // Cascade delete variants
+      await this.deleteVariantsByBoxId(id);
+      await this.boxes.delete(id);
+      console.log('[dbManager] Deleted box:', id);
+    } catch (error) {
+      console.error('[dbManager] Error deleting box:', error);
+      throw error;
+    }
   },
 
   // ============================================
@@ -206,7 +220,28 @@ export const dbManager = {
 
   async getVariants(boxId: string): Promise<AlertVariant[]> {
     // idb-manager's filter method is perfect for this
-    return this.variants.filter({ boxId }) as Promise<AlertVariant[]>;
+    const data = await this.variants.filter({ boxId }) as AlertVariant[];
+    
+    // Healing logic: fix variants with incorrect types (e.g., from old versions or sync issues)
+    return data.map(v => {
+      if (v.type === 'variant' || v.type === 'default' || !v.type) {
+        // Try to deduce the correct type from the name or condition
+        const events = Object.values(PLATFORM_EVENTS) as PlatformEventDefinition[];
+        const match = events.find(e => 
+          (v.name && v.name.includes(e.label)) || 
+          (v.condition && v.condition.includes(e.conditionLabel)) ||
+          (v.name && v.name.toLowerCase().includes(e.id.replace('_', ' ')))
+        );
+        
+        if (match) {
+          console.log(`[DB] Healed variant ${v.id} type: ${v.type} -> ${match.id}`);
+          v.type = match.id;
+          // Optimistically update in DB too
+          this.variants.update(v).catch(err => console.error('[DB] Failed to persist healed variant:', err));
+        }
+      }
+      return v;
+    });
   },
 
   async getVariantById(id: string): Promise<AlertVariant | undefined> {
@@ -245,10 +280,17 @@ export const dbManager = {
   },
 
   async deleteVariantsByBoxId(boxId: string): Promise<void> {
-    const variants = await this.getVariants(boxId);
-    if (variants.length > 0) {
-      const ids = variants.map(v => v.id);
-      await this.variants.deleteMany(ids);
+    try {
+      const variants = await this.getVariants(boxId);
+      console.log('[dbManager] Variants found for box', boxId, ':', variants.length);
+      if (variants.length > 0) {
+        const ids = variants.map(v => v.id);
+        console.log('[dbManager] Deleting variant ids:', ids);
+        await this.variants.deleteMany(ids);
+      }
+    } catch (error) {
+      console.error('[dbManager] Error deleting variants for box', boxId, ':', error);
+      throw error;
     }
   },
 

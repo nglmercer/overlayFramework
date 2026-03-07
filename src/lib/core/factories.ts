@@ -188,6 +188,7 @@ export function createAlertVariant(options: VariantFactoryOptions): AlertVariant
   const eventDefaults = platformEvent ? {
     name: `${platformEvent.label} Variant`,
     message: platformEvent.defaultMessage,
+    type: platformEvent.id,
   } : {};
   
   // Merge: explicit data > event defaults > schema defaults

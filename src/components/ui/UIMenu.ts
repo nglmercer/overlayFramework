@@ -101,7 +101,18 @@ export class UIMenu extends LitElement {
   private _handleItemClick(item: MenuItem, e: Event) {
     e.stopPropagation();
     if (item.onClick) {
-      item.onClick();
+      // Handle async onClick handlers properly - don't close menu immediately
+      const result = item.onClick() as Promise<void> | void;
+      if (result && typeof result.then === 'function') {  
+        // It's a Promise - wait for it to resolve before closing menu
+        result.then(() => {
+          this._closeMenu();
+        }).catch((err) => {
+          console.error('Menu item onClick error:', err);
+          this._closeMenu();
+        });
+        return; // Don't close menu yet
+      }
     }
     this.dispatchEvent(new CustomEvent('menu-click', {
       detail: item.id,
