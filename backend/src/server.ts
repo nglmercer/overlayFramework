@@ -29,7 +29,7 @@ import { syncManager } from './sync';
 import { join } from 'path';
 import { initDiscovery, createDiscoveryShutdownHandler, stopDiscovery } from './discover';
 import type { Discovery } from '../discover';
-
+import '../mediaserver';
 // Import new modular components
 import { 
   Env, 
