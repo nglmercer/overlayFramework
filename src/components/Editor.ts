@@ -10,6 +10,7 @@
 import { html, css, LitElement } from 'lit';
 import { Component, property, state, query } from '../litcomponents';
 import { dbManager, AlertVariant } from '../lib/db';
+import { profileManager } from '../lib/profile-manager';
 import { platformEventsSchema, PlatformEventDefinition } from '../lib/alertEvents';
 import { consume } from '@lit/context';
 import { platformSchemaContext } from '../context/schemaContext';
@@ -445,6 +446,12 @@ export class AppEditor extends LitElement {
       
       // Refresh from DB in background
       this._variantsTask.run();
+      
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
+      
       dbManager.getVariants(this.boxId).then((freshVariants) => {
         if (freshVariants && freshVariants.length > 0) {
           this._localVariants = freshVariants;
@@ -502,6 +509,12 @@ export class AppEditor extends LitElement {
       
       // Refresh from DB in background
       this._variantsTask.run();
+      
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
+      
       dbManager.getVariants(this.boxId).then((freshVariants) => {
         if (freshVariants && freshVariants.length > 0) {
           this._localVariants = freshVariants;
@@ -529,6 +542,11 @@ export class AppEditor extends LitElement {
       }
       
       this._variantsTask.run();
+      
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
     }
   }
 

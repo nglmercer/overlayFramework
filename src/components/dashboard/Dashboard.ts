@@ -1,6 +1,7 @@
 import { html, unsafeCSS, LitElement } from 'lit';
 import { Component, state, property } from '../../litcomponents';
 import { dbManager, AlertBox } from '../../lib/db';
+import { profileManager } from '../../lib/profile-manager';
 import { LocalizeController, getLocale, setLocale } from '../../locales/localization';
 import { alert, confirm, prompt } from '../../lib/dialog';
 import { CONFIG } from '../../lib/constants';
@@ -43,12 +44,20 @@ export class AppDashboard extends LitElement {
     };
     await dbManager.saveBox(newBox);
     await this.loadBoxes();
+    // Sync to backend
+    if (profileManager.getActiveProfileId()) {
+      await profileManager.pushToBackend();
+    }
   }
 
   async handleToggleBox(box: AlertBox) {
     const updated = { ...box, enabled: !box.enabled };
     await dbManager.saveBox(updated);
     await this.loadBoxes();
+    // Sync to backend
+    if (profileManager.getActiveProfileId()) {
+      await profileManager.pushToBackend();
+    }
   }
 
   async handleDeleteBox(id: string) {
@@ -57,6 +66,10 @@ export class AppDashboard extends LitElement {
       if (!confirmed) return;
       await dbManager.deleteBox(id);
       await this.loadBoxes();
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
     } catch (error) {
       console.error('Error deleting box:', error);
       await alert(this._localize.t('dashboard.deleteError') || 'Failed to delete alert box. Please try again.');
@@ -77,6 +90,10 @@ export class AppDashboard extends LitElement {
       };
       await dbManager.saveBox(newBox);
       await this.loadBoxes();
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
     } catch (error) {
       console.error('Error duplicating box:', error);
       await alert(this._localize.t('dashboard.duplicateError') || 'Failed to duplicate alert box. Please try again.');
@@ -91,6 +108,10 @@ export class AppDashboard extends LitElement {
       const updated = { ...box, name: newName.trim() };
       await dbManager.saveBox(updated);
       await this.loadBoxes();
+      // Sync to backend
+      if (profileManager.getActiveProfileId()) {
+        await profileManager.pushToBackend();
+      }
     }
   }
 
