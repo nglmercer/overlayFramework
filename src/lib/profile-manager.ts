@@ -15,6 +15,7 @@
 
 import { getBackendEndpoint } from './config';
 import { mapBackupBoxes, mapBackupVariants, mapBackupTemplates } from './backup-mapper';
+import { dbManager } from './db';
 
 // ============================================================================
 // TYPES
@@ -192,6 +193,9 @@ class ProfileManager {
     this._setActiveId(id);
     
     if (syncData) {
+      await dbManager._boxes.clear();
+      await dbManager._templates.clear();
+      await dbManager._templates.clear();
       const syncResult = await this.syncFromInstance(id, replace);
       if (!syncResult.ok) {
         return syncResult;
@@ -214,6 +218,17 @@ class ProfileManager {
         localStorage.removeItem(ACTIVE_PROFILE_KEY);
       }
     }
+  }
+
+  /**
+   * Reset all profile data - clears active profile, all stored profiles,
+   * and resets the local database. This effectively resets the app to 
+   * first-run state with a fresh database.
+   */
+  async resetAllProfiles(): Promise<void> {
+    localStorage.removeItem(ACTIVE_PROFILE_KEY);
+    localStorage.removeItem(PROFILES_LIST_KEY);
+    await dbManager.resetDatabase();
   }
 
   /**
@@ -252,7 +267,7 @@ class ProfileManager {
       }
 
       // Import into local IndexedDB via dynamic import to avoid circular deps
-      const { dbManager } = await import('./db');
+      
       
       // Only clear if replace is true
       if (replace) {
@@ -303,7 +318,6 @@ class ProfileManager {
     if (!id) return { ok: false, error: 'No active profile' };
 
     try {
-      const { dbManager } = await import('./db');
       const boxes = await dbManager.getBoxes();
       const variants: any[] = [];
       for (const box of boxes) {

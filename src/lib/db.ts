@@ -77,7 +77,6 @@ const db = new IndexedDBManager(schema, {
  * ============================================
  */
 
-let dbManagerInstance: any = null;
 let dbInstance: IndexedDBManager | null = null;
 let dbInitialized = false;
 
@@ -100,10 +99,7 @@ async function ensureDBInitialized(): Promise<void> {
     // If another tab tries to upgrade the version, we must close this connection
     rawDb.onversionchange = () => {
       console.warn('[dbManager] Database version change detected. Closing connection...');
-      rawDb.close();
       dbInitialized = false;
-      // Optional: reload or notify UI
-      window.location.reload();
     };
 
     dbInitialized = true;
@@ -387,11 +383,10 @@ export const dbManager = {
     try {
       const request = indexedDB.deleteDatabase(DB.NAME);
       return new Promise((resolve, reject) => {
-        request.onsuccess = () => { window.location.reload(); resolve(); };
+        request.onsuccess = () => { resolve(); };
         request.onerror = (e) => reject(e);
         request.onblocked = () => {
           alert('Blocked: Close other tabs to finish reset.');
-          window.location.reload();
           resolve();
         };
       });
