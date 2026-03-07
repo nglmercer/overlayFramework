@@ -39,13 +39,8 @@ export class AppDashboard extends LitElement {
 
   async loadBoxes() {
     const boxes = await dbManager.getBoxes();
-    if (boxes.length === 0) {
-      const defaultBox = { id: '1', name: 'Alerts Box 1', enabled: true };
-      await dbManager.saveBox(defaultBox);
-      this.alertBoxes = [defaultBox];
-    } else {
-      this.alertBoxes = boxes;
-    }
+    // Don't auto-create default box - let user create manually
+    this.alertBoxes = boxes;
   }
 
   async handleCreateBox() {

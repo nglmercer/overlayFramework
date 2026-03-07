@@ -250,8 +250,8 @@ export function registerProfileRoutes(router: Router): void {
       return json({ error: 'Profile not found', id }, HttpStatus.NOT_FOUND);
     }
 
-    // Export full overlay + settings snapshot from the backend DB
-    const backendBackup = await dbManager.exportData();
+    // Export only the overlays belonging to this profile from the backend DB
+    const backendBackup = await dbManager.exportData(id);
     
     // Convert backend overlays to frontend format (boxes, variants, templates)
     const overlays = backendBackup.data?.overlays ?? {};
@@ -323,10 +323,11 @@ export function registerProfileRoutes(router: Router): void {
       const { backup, replace } = ctx.body as z.infer<typeof ProfileImportSchema>;
 
       if (replace) {
-        // Full replace: wipe existing data and import fresh
-        await dbManager.importData(backup as Record<string, any>);
+        // Full replace: wipe existing profile data and import fresh
+        await dbManager.importData(backup as Record<string, any>, id, true);
       } else {
         // Merge: import boxes/variants/templates (frontend format) or overlays/settings (backend format)
+        // Each imported item is associated with this profile
         
         // Handle frontend boxes format with validation and transformation
         const incomingBoxes = Object.entries(backup?.data?.boxes ?? {});
@@ -334,7 +335,7 @@ export function registerProfileRoutes(router: Router): void {
         for (const [boxId, data] of incomingBoxes) {
           const validated = validateAndTransformBox(boxId, data);
           if (validated.success) {
-            await dbManager.saveOverlay(`box:${boxId}`, validated.data);
+            await dbManager.saveOverlay(`box:${boxId}`, validated.data, id);
             boxesImported++;
           } else {
             console.warn(`[Import] Invalid box ${boxId}: ${validated.error}`);
@@ -347,7 +348,7 @@ export function registerProfileRoutes(router: Router): void {
         for (const [variantId, data] of incomingVariants) {
           const validated = validateAndTransformVariant(variantId, data);
           if (validated.success) {
-            await dbManager.saveOverlay(`variant:${variantId}`, validated.data);
+            await dbManager.saveOverlay(`variant:${variantId}`, validated.data, id);
             variantsImported++;
           } else {
             console.warn(`[Import] Invalid variant ${variantId}: ${validated.error}`);
@@ -360,7 +361,7 @@ export function registerProfileRoutes(router: Router): void {
         for (const [templateId, data] of incomingTemplates) {
           const validated = validateAndTransformTemplate(templateId, data);
           if (validated.success) {
-            await dbManager.saveOverlay(`template:${templateId}`, validated.data);
+            await dbManager.saveOverlay(`template:${templateId}`, validated.data, id);
             templatesImported++;
           } else {
             console.warn(`[Import] Invalid template ${templateId}: ${validated.error}`);
@@ -370,10 +371,10 @@ export function registerProfileRoutes(router: Router): void {
         // Handle legacy backend overlays format
         const incomingOverlays = Object.entries(backup?.data?.overlays ?? {});
         for (const [overlayId, data] of incomingOverlays) {
-          await dbManager.saveOverlay(overlayId, data);
+          await dbManager.saveOverlay(overlayId, data, id);
         }
         
-        // Merge settings
+        // Merge settings (global, not profile-specific)
         const incomingSettings = Object.entries(backup?.data?.settings ?? {});
         for (const [settingId, data] of incomingSettings) {
           const existing = await dbManager.settings.get(settingId);
@@ -419,8 +420,9 @@ export function registerProfileRoutes(router: Router): void {
 
       const { action, itemType, item } = ctx.body as z.infer<typeof ProfileSyncItemSchema>;
       
-      // Build the key based on item type
-      const key = `${itemType}:${item?.id}`;
+      // Build the key based on item type - try both with prefix and without for backward compatibility
+      const keyWithPrefix = `${itemType}:${item?.id}`;
+      const keyWithoutPrefix = item?.id;
       
       try {
         switch (action) {
@@ -452,14 +454,18 @@ export function registerProfileRoutes(router: Router): void {
             } else {
               validatedData = item;
             }
-            await dbManager.saveOverlay(key, validatedData);
+            await dbManager.saveOverlay(keyWithPrefix, validatedData, id);
             break;
             
           case 'delete':
             if (!item?.id) {
               return json({ error: 'Item ID is required for delete' }, HttpStatus.BAD_REQUEST);
             }
-            await dbManager.deleteOverlay(key);
+            // Try deleting with prefix first, then without prefix (for backward compatibility with legacy data)
+            let deleted = await dbManager.deleteOverlay(keyWithPrefix);
+            if (!deleted) {
+              deleted = await dbManager.deleteOverlay(keyWithoutPrefix) || deleted;
+            }
             break;
             
           default:
@@ -474,6 +480,7 @@ export function registerProfileRoutes(router: Router): void {
           action,
           itemType,
           itemId: item?.id,
+          keyDeleted: action === 'delete' ? keyWithPrefix : undefined,
         });
       } catch (err) {
         console.error('[Profile sync] Error:', err);
