@@ -38,7 +38,8 @@ const ProfileImportSchema = z.object({
     }).optional(),
   }),
   /** If true, existing data is cleared before import (full replace). Default: false (merge) */
-  replace: z.boolean().optional().default(false),
+  // Accept any value and coerce to boolean for robustness
+  replace: z.any().optional().transform((val) => val === true),
 });
 
 // ============================================================================
@@ -225,19 +226,23 @@ export function registerProfileRoutes(router: Router): void {
         // Handle frontend boxes format
         const incomingBoxes = Object.entries(backup?.data?.boxes ?? {});
         for (const [boxId, data] of incomingBoxes) {
-          await dbManager.saveOverlay(`box:${boxId}`, { type: 'box', ...(data as object) });
+          // Ensure the id is included in the box data
+          const boxData = data as Record<string, any>;
+          await dbManager.saveOverlay(`box:${boxId}`, { type: 'box', id: boxId, ...boxData });
         }
         
         // Handle frontend variants format  
         const incomingVariants = Object.entries(backup?.data?.variants ?? {});
         for (const [variantId, data] of incomingVariants) {
-          await dbManager.saveOverlay(`variant:${variantId}`, { type: 'variant', ...(data as object) });
+          const variantData = data as Record<string, any>;
+          await dbManager.saveOverlay(`variant:${variantId}`, { type: 'variant', id: variantId, ...variantData });
         }
         
         // Handle frontend templates format
         const incomingTemplates = Object.entries(backup?.data?.templates ?? {});
         for (const [templateId, data] of incomingTemplates) {
-          await dbManager.saveOverlay(`template:${templateId}`, { type: 'template', ...(data as object) });
+          const templateData = data as Record<string, any>;
+          await dbManager.saveOverlay(`template:${templateId}`, { type: 'template', id: templateId, ...templateData });
         }
         
         // Handle legacy backend overlays format

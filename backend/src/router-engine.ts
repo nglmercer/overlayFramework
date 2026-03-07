@@ -355,7 +355,7 @@ export class Router {
     if (route.schema?.params) {
       const result = route.schema.params.safeParse(params);
       if (!result.success) {
-        return this.errorResponse('Invalid path parameters', result.error.issues, HttpStatus.BAD_REQUEST);
+        return this.errorResponse('Invalid path parameters', result.error.issues, HttpStatus.BAD_REQUEST, req);
       }
       validatedParams = result.data;
     }
@@ -365,7 +365,7 @@ export class Router {
     if (route.schema?.query) {
       const result = route.schema.query.safeParse(validatedQuery);
       if (!result.success) {
-        return this.errorResponse('Invalid query parameters', result.error.issues, HttpStatus.BAD_REQUEST);
+        return this.errorResponse('Invalid query parameters', result.error.issues, HttpStatus.BAD_REQUEST, req);
       }
       validatedQuery = result.data;
     }
@@ -380,12 +380,12 @@ export class Router {
             const body = await req.json();
             const result = route.schema.body.safeParse(body);
             if (!result.success) {
-              return this.errorResponse('Invalid request body', result.error.issues, HttpStatus.BAD_REQUEST);
+              return this.errorResponse('Invalid request body', result.error.issues, HttpStatus.BAD_REQUEST, req);
             }
             validatedBody = result.data;
           }
         } catch (err) {
-          return this.errorResponse('Malformed JSON body', String(err), HttpStatus.BAD_REQUEST);
+          return this.errorResponse('Malformed JSON body', String(err), HttpStatus.BAD_REQUEST, req);
         }
       }
     }
@@ -411,11 +411,18 @@ export class Router {
     return response;
   }
 
-  private errorResponse(message: string, details: any, status: number): Response {
-    return new Response(JSON.stringify({ error: message, details }), {
+  private errorResponse(message: string, details: any, status: number, req?: Request): Response {
+    const response = new Response(JSON.stringify({ error: message, details }), {
       status,
       headers: { [HttpHeader.CONTENT_TYPE]: ContentType.JSON }
     });
+    
+    // Apply CORS headers to error responses as well
+    if (req && this.corsEnabled) {
+      return this.applyCORSHeaders(response, req);
+    }
+    
+    return response;
   }
 }
 
