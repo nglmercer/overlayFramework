@@ -22,6 +22,7 @@ import { duplicateAlertVariant, createAlertVariant } from '../lib/core';
 import { copyToClipboard } from '../lib/browser-utils';
 import './FormControls';
 import './MediaLibrary';
+import './ui/JsonCopyModal';
 
 import './editor';
 
@@ -108,6 +109,9 @@ export class AppEditor extends LitElement {
   /** Which media library to show (if any) */
   @state() private showMediaLibrary: MediaLibraryType | null = null;
   
+  /** Which variant to show in JSON explorer (if any) */
+  @state() private showJsonExplorer: AlertVariant | null = null;
+
   /** Currently selected variant ID */
   @state() private selectedVariantId: string | null = null;
   
@@ -587,7 +591,23 @@ export class AppEditor extends LitElement {
     } catch (err) {
       console.error('[Editor] handleCopyVariant failed:', err);
     }
-  }
+  };
+
+  /**
+   * Shows the JSON explorer modal for a variant.
+   */
+  handleCopyVariantDetailed = async (idOrEvent: string | CustomEvent): Promise<void> => {
+    const id = typeof idOrEvent === 'string' ? idOrEvent : idOrEvent.detail;
+    if (!id) return;
+
+    try {
+      const variant = await dbManager.getVariantById(id);
+      if (!variant) return;
+      this.showJsonExplorer = variant;
+    } catch (err) {
+      console.error('[Editor] handleCopyVariantDetailed failed:', err);
+    }
+  };
 
   // =============================================================================
   // Event Handlers (arrow functions for correct `this` binding)
@@ -716,6 +736,7 @@ export class AppEditor extends LitElement {
           @create-variant="${(e: CustomEvent) => this.handleCreateVariant(e)}"
           @duplicate-variant="${this.handleDuplicateVariant}"
           @delete-variant="${this.handleDeleteVariant}"
+          @copy-variant-detailed="${(e: CustomEvent) => this.handleCopyVariantDetailed(e)}"
           @randomize-toggle="${this._handleRandomizeToggle}"
         ></editor-left-sidebar>
 
@@ -746,6 +767,7 @@ export class AppEditor extends LitElement {
           @delete-variant="${this.handleDeleteVariant}"
           @duplicate-variant="${(e: CustomEvent) => this.handleDuplicateVariant(e.detail)}"
           @copy-variant="${(e: CustomEvent) => this.handleCopyVariant(e.detail)}"
+          @copy-variant-detailed="${(e: CustomEvent) => this.handleCopyVariantDetailed(e)}"
         ></editor-right-sidebar>
       </div>
 
@@ -757,6 +779,14 @@ export class AppEditor extends LitElement {
           @media-select="${this._handleMediaSelect}"
           @media-close="${this._handleMediaClose}"
         ></media-library>
+      ` : ''}
+
+      <!-- JSON Copy Modal -->
+      ${this.showJsonExplorer ? html`
+        <json-copy-modal
+          .data="${this.showJsonExplorer}"
+          @close="${() => this.showJsonExplorer = null}"
+        ></json-copy-modal>
       ` : ''}
     `;
   }

@@ -81,6 +81,11 @@
   "variant.customHtml": "Personalizar HTML/CSS",
   "variant.delete": "Eliminar variante",
   "variant.copyJson": "Copiar JSON",
+  "variant.copyJsonDetailed": "Copiar JSON detallado",
+  "variant.copyJsonTitle": "Explorador JSON",
+  "variant.copyValue": "Copiar valor",
+  "variant.copyKey": "Copiar clave",
+  "variant.copyFull": "Copiar objeto completo",
   "variant.copySuccess": "JSON de la variante copiado al portapapeles!",
   "variant.confirmDelete": "¿Estás seguro de que deseas eliminar esta variante?",
 
