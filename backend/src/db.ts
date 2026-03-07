@@ -37,10 +37,38 @@ export interface BackendProfile {
  */
 const schema = {
   name: DB_NAME,
-  version: 4,
+  version: 5,
   stores: [
     { 
       name: 'overlays', 
+      keyPath: 'id',
+      indexes: [
+        { name: 'createdAt', keyPath: 'createdAt', unique: false },
+        { name: 'updatedAt', keyPath: 'updatedAt', unique: false },
+        { name: 'profileId', keyPath: 'profileId', unique: false }
+      ]
+    },
+    { 
+      name: 'boxes', 
+      keyPath: 'id',
+      indexes: [
+        { name: 'createdAt', keyPath: 'createdAt', unique: false },
+        { name: 'updatedAt', keyPath: 'updatedAt', unique: false },
+        { name: 'profileId', keyPath: 'profileId', unique: false }
+      ]
+    },
+    { 
+      name: 'variants', 
+      keyPath: 'id',
+      indexes: [
+        { name: 'boxId', keyPath: 'boxId', unique: false },
+        { name: 'createdAt', keyPath: 'createdAt', unique: false },
+        { name: 'updatedAt', keyPath: 'updatedAt', unique: false },
+        { name: 'profileId', keyPath: 'profileId', unique: false }
+      ]
+    },
+    { 
+      name: 'templates', 
       keyPath: 'id',
       indexes: [
         { name: 'createdAt', keyPath: 'createdAt', unique: false },
@@ -76,6 +104,9 @@ const db = new IndexedDBManager(schema, {
 export const dbManager = {
   // Store proxies
   get overlays() { return db.store('overlays'); },
+  get boxes() { return db.store('boxes'); },
+  get variants() { return db.store('variants'); },
+  get templates() { return db.store('templates'); },
   get settings() { return db.store('settings'); },
   get profiles() { return db.store('profiles'); },
 
@@ -235,9 +266,11 @@ export const dbManager = {
     * @param profileId - The profile ID to filter by
     */
   async getOverlaysByProfile(profileId: string): Promise<Record<string, any>> {
-    const all = await this.overlays.filter({ profileId }) as DatabaseItem[];
+    // Use getAll then manually filter since filter by index may not work correctly
+    const all = await this.overlays.getAll() as DatabaseItem[];
+    const filtered = all.filter(item => item.profileId === profileId);
     const result: Record<string, any> = {};
-    for (const item of all) {
+    for (const item of filtered) {
       const { id, ...data } = item;
       result[id as string] = data;
     }
@@ -249,7 +282,9 @@ export const dbManager = {
     * @param profileId - The profile ID whose overlays to delete
     */
   async deleteOverlaysByProfile(profileId: string): Promise<number> {
-    const overlays = await this.overlays.filter({ profileId }) as DatabaseItem[];
+    // Use getAll then manually filter since filter by index may not work correctly
+    const all = await this.overlays.getAll() as DatabaseItem[];
+    const overlays = all.filter(item => item.profileId === profileId);
     const ids = overlays.map(o => o.id as string);
     if (ids.length > 0) {
       await this.overlays.deleteMany(ids);
@@ -290,6 +325,215 @@ export const dbManager = {
     return await this.overlays.deleteMany(ids);
   },
 
+  // ============================================================================
+  // BOX OPERATIONS (separate store)
+  // ============================================================================
+
+  /**
+    * Save box data (create or update)
+    */
+  async saveBox(id: string, data: any, profileId?: string): Promise<void> {
+    const existing = await this.boxes.get(id);
+    const record: DatabaseItem = { 
+      id, 
+      ...data,
+      profileId: profileId ?? existing?.profileId,
+      createdAt: existing?.createdAt ?? Date.now(),
+      updatedAt: Date.now()
+    };
+    
+    if (existing) {
+      await this.boxes.update(record);
+    } else {
+      await this.boxes.add(record);
+    }
+  },
+
+  /**
+    * Get box by ID
+    */
+  async getBox(id: string): Promise<any | null> {
+    return await this.boxes.get(id);
+  },
+
+  /**
+    * Delete box by ID
+    */
+  async deleteBox(id: string): Promise<boolean> {
+    return await this.boxes.delete(id);
+  },
+
+  /**
+    * Get all boxes for a specific profile
+    */
+  async getBoxesByProfile(profileId: string): Promise<Record<string, any>> {
+    const all = await this.boxes.getAll() as DatabaseItem[];
+    const filtered = all.filter(item => item.profileId === profileId);
+    const result: Record<string, any> = {};
+    for (const item of filtered) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  /**
+    * Get all boxes
+    */
+  async getAllBoxes(): Promise<Record<string, any>> {
+    const all = await this.boxes.getAll() as DatabaseItem[];
+    const result: Record<string, any> = {};
+    for (const item of all) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  // ============================================================================
+  // VARIANT OPERATIONS (separate store)
+  // ============================================================================
+
+  /**
+    * Save variant data (create or update)
+    */
+  async saveVariant(id: string, data: any, profileId?: string): Promise<void> {
+    const existing = await this.variants.get(id);
+    const record: DatabaseItem = { 
+      id, 
+      ...data,
+      profileId: profileId ?? existing?.profileId,
+      createdAt: existing?.createdAt ?? Date.now(),
+      updatedAt: Date.now()
+    };
+    
+    if (existing) {
+      await this.variants.update(record);
+    } else {
+      await this.variants.add(record);
+    }
+  },
+
+  /**
+    * Get variant by ID
+    */
+  async getVariant(id: string): Promise<any | null> {
+    return await this.variants.get(id);
+  },
+
+  /**
+    * Delete variant by ID
+    */
+  async deleteVariant(id: string): Promise<boolean> {
+    return await this.variants.delete(id);
+  },
+
+  /**
+    * Get all variants for a specific profile
+    */
+  async getVariantsByProfile(profileId: string): Promise<Record<string, any>> {
+    const all = await this.variants.getAll() as DatabaseItem[];
+    const filtered = all.filter(item => item.profileId === profileId);
+    const result: Record<string, any> = {};
+    for (const item of filtered) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  /**
+    * Get all variants for a specific box
+    */
+  async getVariantsByBox(boxId: string): Promise<Record<string, any>> {
+    const all = await this.variants.getAll() as DatabaseItem[];
+    const filtered = all.filter(item => item.boxId === boxId);
+    const result: Record<string, any> = {};
+    for (const item of filtered) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  /**
+    * Get all variants
+    */
+  async getAllVariants(): Promise<Record<string, any>> {
+    const all = await this.variants.getAll() as DatabaseItem[];
+    const result: Record<string, any> = {};
+    for (const item of all) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  // ============================================================================
+  // TEMPLATE OPERATIONS (separate store)
+  // ============================================================================
+
+  /**
+    * Save template data (create or update)
+    */
+  async saveTemplate(id: string, data: any, profileId?: string): Promise<void> {
+    const existing = await this.templates.get(id);
+    const record: DatabaseItem = { 
+      id, 
+      ...data,
+      profileId: profileId ?? existing?.profileId,
+      createdAt: existing?.createdAt ?? Date.now(),
+      updatedAt: Date.now()
+    };
+    
+    if (existing) {
+      await this.templates.update(record);
+    } else {
+      await this.templates.add(record);
+    }
+  },
+
+  /**
+    * Get template by ID
+    */
+  async getTemplate(id: string): Promise<any | null> {
+    return await this.templates.get(id);
+  },
+
+  /**
+    * Delete template by ID
+    */
+  async deleteTemplate(id: string): Promise<boolean> {
+    return await this.templates.delete(id);
+  },
+
+  /**
+    * Get all templates for a specific profile
+    */
+  async getTemplatesByProfile(profileId: string): Promise<Record<string, any>> {
+    const all = await this.templates.getAll() as DatabaseItem[];
+    const filtered = all.filter(item => item.profileId === profileId);
+    const result: Record<string, any> = {};
+    for (const item of filtered) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
+  /**
+    * Get all templates
+    */
+  async getAllTemplates(): Promise<Record<string, any>> {
+    const all = await this.templates.getAll() as DatabaseItem[];
+    const result: Record<string, any> = {};
+    for (const item of all) {
+      const { id, ...data } = item;
+      result[id as string] = data;
+    }
+    return result;
+  },
+
   /**
     * Get database statistics
     */
@@ -302,9 +546,15 @@ export const dbManager = {
     * @param profileId - Optional profile ID to export only that profile's data
     */
   async exportData(profileId?: string): Promise<Record<string, any>> {
-    const overlays = profileId 
-      ? await this.getOverlaysByProfile(profileId)
-      : await this.getAllOverlays();
+    const boxes = profileId 
+      ? await this.getBoxesByProfile(profileId)
+      : await this.getAllBoxes();
+    const variants = profileId 
+      ? await this.getVariantsByProfile(profileId)
+      : await this.getAllVariants();
+    const templates = profileId 
+      ? await this.getTemplatesByProfile(profileId)
+      : await this.getAllTemplates();
     const settings = await this.settings.getAll() as DatabaseItem[];
     const settingsRecord: Record<string, any> = {};
     for (const item of settings) {
@@ -318,7 +568,9 @@ export const dbManager = {
       timestamp: new Date().toISOString(),
       profileId,
       data: {
-        overlays,
+        boxes,
+        variants,
+        templates,
         settings: settingsRecord
       }
     };
@@ -327,30 +579,58 @@ export const dbManager = {
   /**
     * Import data (for restore)
     * @param backup - The backup data to import
-    * @param profileId - Optional profile ID to assign to imported overlays (for profile-specific imports)
-    * @param clearExisting - If true, clears all existing overlays before import (for full replace)
+    * @param profileId - Optional profile ID to assign to imported items (for profile-specific imports)
+    * @param clearExisting - If true, clears all existing data before import (for full replace)
     */
   async importData(backup: Record<string, any>, profileId?: string, clearExisting: boolean = false): Promise<boolean> {
     try {
-      // Only clear if explicitly requested and no profileId specified (global clear)
-      // or if profileId is provided, only clear that profile's data
+      // Clear existing data if requested
       if (clearExisting) {
         if (profileId) {
-          await this.deleteOverlaysByProfile(profileId);
+          // Clear only this profile's data from each store
+          const boxesToDelete = Object.keys(await this.getBoxesByProfile(profileId));
+          const variantsToDelete = Object.keys(await this.getVariantsByProfile(profileId));
+          const templatesToDelete = Object.keys(await this.getTemplatesByProfile(profileId));
+          if (boxesToDelete.length) await this.boxes.deleteMany(boxesToDelete);
+          if (variantsToDelete.length) await this.variants.deleteMany(variantsToDelete);
+          if (templatesToDelete.length) await this.templates.deleteMany(templatesToDelete);
         } else {
-          await this.overlays.clear();
+          // Clear all data
+          await this.boxes.clear();
+          await this.variants.clear();
+          await this.templates.clear();
           await this.settings.clear();
         }
       }
       
-      // Import overlays with profileId assignment
-      if (backup.data?.overlays) {
-        const overlayItems = Object.entries(backup.data.overlays).map(([id, data]) => ({
+      // Import boxes
+      if (backup.data?.boxes) {
+        const boxItems = Object.entries(backup.data.boxes).map(([id, data]) => ({
           id,
           profileId,
           ...(data as object)
         }));
-        await this.overlays.addMany(overlayItems);
+        await this.boxes.addMany(boxItems);
+      }
+      
+      // Import variants
+      if (backup.data?.variants) {
+        const variantItems = Object.entries(backup.data.variants).map(([id, data]) => ({
+          id,
+          profileId,
+          ...(data as object)
+        }));
+        await this.variants.addMany(variantItems);
+      }
+      
+      // Import templates
+      if (backup.data?.templates) {
+        const templateItems = Object.entries(backup.data.templates).map(([id, data]) => ({
+          id,
+          profileId,
+          ...(data as object)
+        }));
+        await this.templates.addMany(templateItems);
       }
       
       // Import settings (global, not profile-specific)

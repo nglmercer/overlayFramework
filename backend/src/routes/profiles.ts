@@ -250,43 +250,26 @@ export function registerProfileRoutes(router: Router): void {
       return json({ error: 'Profile not found', id }, HttpStatus.NOT_FOUND);
     }
 
-    // Export only the overlays belonging to this profile from the backend DB
-    const backendBackup = await dbManager.exportData(id);
-    
-    // Convert backend overlays to frontend format (boxes, variants, templates)
-    const overlays = backendBackup.data?.overlays ?? {};
-    const boxes: Record<string, any> = {};
-    const variants: Record<string, any> = {};
-    const templates: Record<string, any> = {};
-    
-    for (const [key, data] of Object.entries(overlays)) {
-      const overlayData = data as Record<string, any>;
-      const type = overlayData.type || key.split(':')[0];
-      
-      if (key.startsWith('box:') || type === 'box') {
-        const boxId = key.startsWith('box:') ? key.slice(4) : key;
-        boxes[boxId] = overlayData;
-      } else if (key.startsWith('variant:') || type === 'variant') {
-        const variantId = key.startsWith('variant:') ? key.slice(8) : key;
-        variants[variantId] = overlayData;
-      } else if (key.startsWith('template:') || type === 'template') {
-        const templateId = key.startsWith('template:') ? key.slice(9) : key;
-        templates[templateId] = overlayData;
-      } else {
-        // Legacy format - treat as box
-        boxes[key] = overlayData;
-      }
+    // Export data from separate stores (boxes, variants, templates)
+    const boxes = await dbManager.getBoxesByProfile(id);
+    const variants = await dbManager.getVariantsByProfile(id);
+    const templates = await dbManager.getTemplatesByProfile(id);
+    const settings = await dbManager.settings.getAll() as any[];
+    const settingsRecord: Record<string, any> = {};
+    for (const item of settings) {
+      const { id: settingId, ...data } = item;
+      settingsRecord[settingId as string] = data;
     }
 
     // Build the backup in frontend-compatible format
     const backup = {
-      version: backendBackup.version,
-      timestamp: backendBackup.timestamp,
+      version: 1,
+      timestamp: new Date().toISOString(),
       data: {
         boxes,
         variants,
         templates,
-        settings: backendBackup.data?.settings ?? {},
+        settings: settingsRecord,
       }
     };
 
@@ -326,52 +309,68 @@ export function registerProfileRoutes(router: Router): void {
         // Full replace: wipe existing profile data and import fresh
         await dbManager.importData(backup as Record<string, any>, id, true);
       } else {
-        // Merge: import boxes/variants/templates (frontend format) or overlays/settings (backend format)
-        // Each imported item is associated with this profile
+        // Merge: import boxes, variants, templates to separate stores
         
-        // Handle frontend boxes format with validation and transformation
+        // Import boxes
         const incomingBoxes = Object.entries(backup?.data?.boxes ?? {});
         let boxesImported = 0;
         for (const [boxId, data] of incomingBoxes) {
-          const validated = validateAndTransformBox(boxId, data);
+          const boxData = data as Record<string, any>;
+          const validated = validateAndTransformBox(boxId, boxData);
           if (validated.success) {
-            await dbManager.saveOverlay(`box:${boxId}`, validated.data, id);
+            await dbManager.saveBox(boxId, validated.data, id);
             boxesImported++;
+            
+            // Extract and save nested variants from legacy format
+            if (boxData.variants && Array.isArray(boxData.variants)) {
+              for (const variant of boxData.variants) {
+                if (variant && variant.id) {
+                  const variantWithBoxId = { ...variant, boxId: boxId };
+                  const validatedVariant = validateAndTransformVariant(variant.id, variantWithBoxId);
+                  if (validatedVariant.success) {
+                    await dbManager.saveVariant(variant.id, validatedVariant.data, id);
+                  }
+                }
+              }
+            }
+            
+            // Also handle single variant field (legacy format)
+            if (boxData.variant && boxData.variant.id) {
+              const variantWithBoxId = { ...boxData.variant, boxId: boxId };
+              const validatedVariant = validateAndTransformVariant(boxData.variant.id, variantWithBoxId);
+              if (validatedVariant.success) {
+                await dbManager.saveVariant(boxData.variant.id, validatedVariant.data, id);
+              }
+            }
           } else {
             console.warn(`[Import] Invalid box ${boxId}: ${validated.error}`);
           }
         }
         
-        // Handle frontend variants format with validation and transformation
+        // Import standalone variants
         const incomingVariants = Object.entries(backup?.data?.variants ?? {});
         let variantsImported = 0;
         for (const [variantId, data] of incomingVariants) {
           const validated = validateAndTransformVariant(variantId, data);
           if (validated.success) {
-            await dbManager.saveOverlay(`variant:${variantId}`, validated.data, id);
+            await dbManager.saveVariant(variantId, validated.data, id);
             variantsImported++;
           } else {
             console.warn(`[Import] Invalid variant ${variantId}: ${validated.error}`);
           }
         }
         
-        // Handle frontend templates format with validation and transformation
+        // Import templates
         const incomingTemplates = Object.entries(backup?.data?.templates ?? {});
         let templatesImported = 0;
         for (const [templateId, data] of incomingTemplates) {
           const validated = validateAndTransformTemplate(templateId, data);
           if (validated.success) {
-            await dbManager.saveOverlay(`template:${templateId}`, validated.data, id);
+            await dbManager.saveTemplate(templateId, validated.data, id);
             templatesImported++;
           } else {
             console.warn(`[Import] Invalid template ${templateId}: ${validated.error}`);
           }
-        }
-        
-        // Handle legacy backend overlays format
-        const incomingOverlays = Object.entries(backup?.data?.overlays ?? {});
-        for (const [overlayId, data] of incomingOverlays) {
-          await dbManager.saveOverlay(overlayId, data, id);
         }
         
         // Merge settings (global, not profile-specific)
@@ -393,7 +392,6 @@ export function registerProfileRoutes(router: Router): void {
         boxesImported: Object.keys(backup?.data?.boxes ?? {}).length,
         variantsImported: Object.keys(backup?.data?.variants ?? {}).length,
         templatesImported: Object.keys(backup?.data?.templates ?? {}).length,
-        overlaysImported: Object.keys(backup?.data?.overlays ?? {}).length,
         settingsImported: Object.keys(backup?.data?.settings ?? {}).length,
       });
     },
@@ -454,17 +452,27 @@ export function registerProfileRoutes(router: Router): void {
             } else {
               validatedData = item;
             }
-            await dbManager.saveOverlay(keyWithPrefix, validatedData, id);
+            // Save to appropriate store based on item type
+            if (itemType === 'box') {
+              await dbManager.saveBox(item.id, validatedData, id);
+            } else if (itemType === 'variant') {
+              await dbManager.saveVariant(item.id, validatedData, id);
+            } else if (itemType === 'template') {
+              await dbManager.saveTemplate(item.id, validatedData, id);
+            }
             break;
             
           case 'delete':
             if (!item?.id) {
               return json({ error: 'Item ID is required for delete' }, HttpStatus.BAD_REQUEST);
             }
-            // Try deleting with prefix first, then without prefix (for backward compatibility with legacy data)
-            let deleted = await dbManager.deleteOverlay(keyWithPrefix);
-            if (!deleted) {
-              deleted = await dbManager.deleteOverlay(keyWithoutPrefix) || deleted;
+            // Delete from appropriate store based on item type
+            if (itemType === 'box') {
+              await dbManager.deleteBox(item.id);
+            } else if (itemType === 'variant') {
+              await dbManager.deleteVariant(item.id);
+            } else if (itemType === 'template') {
+              await dbManager.deleteTemplate(item.id);
             }
             break;
             
