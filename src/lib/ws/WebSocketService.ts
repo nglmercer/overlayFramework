@@ -93,9 +93,31 @@ export interface WsServiceConfig {
   debug?: boolean;
 }
 
+/**
+ * Get the WebSocket URL based on environment
+ * In production, uses relative URL (same origin)
+ */
+function getDefaultWsUrl(): string {
+  // Check if running in production by examining window.location
+  // This is more reliable than NODE_ENV which may not be set correctly at runtime
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // In production, the app is served from the same origin as the backend
+    // If we're not on localhost or file://, use relative URL
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
+      return '/ws'; // Use relative WebSocket URL in production
+    }
+  }
+  
+  // Default to localhost:3001/ws for development
+  return 'ws://localhost:3001/ws';
+}
+
 /** Default configuration values */
 const DEFAULT_CONFIG: Required<WsServiceConfig> = {
-  url: 'ws://localhost:3001/ws',
+  url: getDefaultWsUrl(),
   autoReconnect: true,
   maxReconnectAttempts: Infinity,
   reconnectBaseDelay: 1000,

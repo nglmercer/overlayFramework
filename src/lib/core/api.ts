@@ -65,12 +65,35 @@ export class ApiError extends Error {
 
 /**
  * Default API configuration
+ * Uses relative URL in production, localhost:3001 for development
  */
 const DEFAULT_CONFIG = {
-  baseUrl: 'http://localhost:3001',
+  baseUrl: getApiBaseUrl(),
   timeout: 30000,
   credentials: 'same-origin' as RequestCredentials,
 };
+
+/**
+ * Get the API base URL based on environment
+ * In production, uses relative URL (same origin)
+ */
+function getApiBaseUrl(): string {
+  // Check if running in production by examining window.location
+  // This is more reliable than NODE_ENV which may not be set correctly at runtime
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // In production, the app is served from the same origin as the backend
+    // If we're not on localhost or file://, use relative URL
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
+      return ''; // Use relative URL in production
+    }
+  }
+  
+  // Default to localhost:3001 for development
+  return 'http://localhost:3001';
+}
 
 // =============================================================================
 // API Client
@@ -125,7 +148,22 @@ class CoreApi {
    * Build full URL from path
    */
   private buildUrl(path: string, queryParams?: Record<string, string>): string {
-    const url = path.startsWith('http') ? path : `${this.baseUrl}${path}`;
+    // If path is absolute URL, use it directly
+    if (path.startsWith('http')) {
+      return path;
+    }
+    
+    // If baseUrl is empty (production with same origin), use relative path
+    if (!this.baseUrl) {
+      const url = path.startsWith('/') ? path : '/' + path;
+      if (queryParams) {
+        const params = new URLSearchParams(queryParams);
+        return `${url}?${params.toString()}`;
+      }
+      return url;
+    }
+    
+    const url = `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
     
     if (queryParams) {
       const params = new URLSearchParams(queryParams);

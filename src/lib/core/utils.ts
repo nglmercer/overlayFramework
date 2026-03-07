@@ -48,7 +48,7 @@ export type Environment = z.infer<typeof EnvironmentSchema>;
  * - environment: Current runtime environment
  */
 export const AppConfigSchema = z.object({
-  mediaUrl: z.string().url().default('http://localhost:3000/media'),
+  mediaUrl: z.string().default('/uploads'),  // Relative path for production
   baseMediaUrl: z.string().url().default('https://cdn.example.com'),
   environment: EnvironmentSchema.default('development'),
 });

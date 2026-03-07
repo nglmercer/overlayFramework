@@ -171,7 +171,8 @@ export function resolveServiceUrl(name: string, fallback?: string): string {
  * Get the backend HTTP URL
  * 
  * Resolves the backend server URL with proper fallback:
- * - Falls back to http://localhost:3001
+ * - In production: uses relative URL (same origin)
+ * - In development: defaults to http://localhost:3001
  * 
  * @returns The backend HTTP URL
  */
@@ -180,7 +181,20 @@ export function getBackendUrl(): string {
   let url = getEnvValue('VITE_BACKEND_URL', '');
   if (url) return url;
   
-  // Default to localhost:3001
+  // Check if running in production by examining window.location
+  // This is more reliable than NODE_ENV which may not be set correctly at runtime
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // In production, the app is served from the same origin as the backend
+    // If we're not on localhost or file://, use relative URL
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
+      return ''; // Use relative URL in production
+    }
+  }
+  
+  // Default to localhost:3001 for development
   return `http://localhost:${DEFAULT_BACKEND_PORT}`;
 }
 
@@ -191,11 +205,17 @@ export function getBackendUrl(): string {
  * @example
  * ```typescript
  * // For local development: ws://localhost:3001/ws
- * // For production: wss://your-backend.com/ws
+ * // For production: wss://your-backend.com/ws (or relative /ws)
  * ```
  */
 export function getWebSocketUrl(): string {
   const backendUrl = getBackendUrl();
+  
+  // If in production (empty base), use relative WebSocket path
+  if (!backendUrl) {
+    return '/ws';
+  }
+  
   // Convert http/https to ws/wss
   return backendUrl.replace(/^http/, 'ws') + '/ws';
 }
@@ -209,6 +229,12 @@ export function getWebSocketUrl(): string {
 export function getBackendEndpoint(path: string): string {
   const base = getBackendUrl();
   const cleanPath = path.startsWith('/') ? path : '/' + path;
+  
+  // If base is empty (production with same origin), use relative URL
+  if (!base) {
+    return cleanPath;
+  }
+  
   return `${base}${cleanPath}`;
 }
 
@@ -306,7 +332,15 @@ export function getMediaUrl(path: string): string {
   }
   // Remove leading slash if present
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  return `${appConfig.mediaUrl}/${cleanPath}`;
+  
+  const mediaUrl = appConfig.mediaUrl;
+  
+  // If mediaUrl is empty (production), use uploads path relative
+  if (!mediaUrl || mediaUrl === '') {
+    return `/uploads/${cleanPath}`;
+  }
+  
+  return `${mediaUrl}/${cleanPath}`;
 }
 
 /**

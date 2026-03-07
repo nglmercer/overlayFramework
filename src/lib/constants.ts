@@ -183,9 +183,9 @@ export const ENVIRONMENT = {
   /** Supported locales */
   SUPPORTED_LOCALES: ['es', 'en'] as const,
   
-  /** Default media URLs */
+  /** Default media URLs - use relative path in production */
   MEDIA_URL: {
-    DEFAULT: 'http://localhost:3001/uploads',
+    DEFAULT: '/uploads',  // Relative URL for production (same origin)
     CDN: 'https://cdn.example.com',
   },
 } as const;
