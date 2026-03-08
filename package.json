@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:prod": "npm run clean && npm run build",
     "build:standalone": "bun run scripts/build.ts",
-    "start": "cd backend && bun run src/server.ts",
+    "start": "bun run build && cd backend && bun run src/server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -25,15 +25,14 @@
     "idb-manager": "^1.2.2",
     "lit": "^3.3.2",
     "motion": "^12.23.24",
-    "vite": "^6.2.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "vite": "^6.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript": "~5.8.2"
   }
 }

@@ -6,6 +6,7 @@ import { LocalizeController, getLocale, setLocale } from '../../locales/localiza
 import { alert, confirm, prompt } from '../../lib/dialog';
 import { CONFIG } from '../../lib/constants';
 import { getInstanceId, getOverlayPreviewUrl } from '../../lib/config';
+import { generateUUID } from '../../lib/core/factories';
 
 // Import external styles
 import styles from './Dashboard.css?inline';
@@ -46,7 +47,7 @@ export class AppDashboard extends LitElement {
   async handleCreateBox() {
     if (this.alertBoxes.length >= CONFIG.MAX_BOXES) return;
     const newBox = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: `Alerts Box ${this.alertBoxes.length + 1}`,
       enabled: true
     };
@@ -92,7 +93,7 @@ export class AppDashboard extends LitElement {
       }
       const newBox = {
         ...box,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: `${box.name} (Copy)`,
         enabled: box.enabled
       };

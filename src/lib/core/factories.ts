@@ -44,6 +44,29 @@ import { PLATFORM_EVENTS } from './platform-events';
 // Import constants
 import { ALERT_DEFAULTS, ENVIRONMENT } from '../constants';
 
+// ============================================================================
+// CRYPTO UUID HELPER - Cross-browser compatible
+// ============================================================================
+
+/**
+ * Generate a UUID v4
+ * Uses crypto.randomUUID() when available, falls back to a manual implementation
+ */
+export function generateUUID(): string {
+  // Use native API if available
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    console.log(crypto)
+    return crypto.randomUUID();
+  }
+  
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 /**
  * ============================================
  * FACTORY CONFIGURATION
@@ -195,7 +218,7 @@ export function createAlertVariant(options: VariantFactoryOptions): AlertVariant
   const mergedData = {
     ...eventDefaults,
     ...data,
-    id: data.id || crypto.randomUUID(),
+    id: data.id || generateUUID(),
     boxId: data.boxId || boxId,
   };
   
@@ -206,7 +229,7 @@ export function createAlertVariant(options: VariantFactoryOptions): AlertVariant
       throw new Error(`Invalid AlertVariant${context ? ` in ${context}` : ''}: ${errors.join(', ')}`);
     }
     console.warn(`Invalid AlertVariant, using defaults: ${errors.join(', ')}`);
-    return AlertVariantSchema.parse({ id: crypto.randomUUID(), boxId });
+    return AlertVariantSchema.parse({ id: generateUUID(), boxId });
   }
   
   return result.data;
@@ -235,7 +258,7 @@ export function duplicateAlertVariant(
     data: {
       ...variant,
       ...overrides,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
     },
   });
 }
@@ -340,7 +363,7 @@ export { validateTemplate } from './utils';
 export function createTemplate(options: FactoryOptions<TemplateDB> & { data: Partial<TemplateDB> }): TemplateDB {
   const data = {
     ...options.data,
-    id: options.data.id || crypto.randomUUID(),
+    id: options.data.id || generateUUID(),
     updatedAt: options.data.updatedAt || Date.now(),
   };
   
@@ -352,7 +375,7 @@ export function createTemplate(options: FactoryOptions<TemplateDB> & { data: Par
     }
     console.warn(`Invalid TemplateDB, using defaults: ${errors.join(', ')}`);
     return TemplateDBSchema.parse({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: 'Untitled',
       data: {},
       updatedAt: Date.now(),

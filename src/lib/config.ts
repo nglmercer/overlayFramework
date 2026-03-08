@@ -27,30 +27,7 @@ import {
 
 // Import constants
 import { ENVIRONMENT, CONFIG } from './constants';
-
-/**
- * ============================================
- * DEFAULT BACKEND CONFIGURATION
- * ============================================
- * 
- * The backend server runs on port 3001 by default.
- * All frontend requests should go through these URLs.
- * 
- * IMPORTANT: For local development, the backend is always at localhost:3001.
- * for production deployments where the backend is on a different host.
- */
-
-const DEFAULT_BACKEND_HOST = 'localhost';
 const DEFAULT_BACKEND_PORT = '3001';
-
-/**
- * ============================================
- * ENVIRONMENT RESOLUTION
- * ============================================
- * 
- * Handles fallback when Vite env is unavailable, resolving 
- * TypeScript import.meta.env issues and allowing alternative configurations.
- */
 
 /**
  * Attempts to get an environment variable value with fallback support
@@ -78,15 +55,6 @@ function getEnvValue(key: string, fallback: string): string {
 
   return fallback;
 }
-
-/**
- * ============================================
- * CONFIGURATION BUILDING
- * ============================================
- */
-
-// Use pre-built validator from core
-const validateConfig = validateAppConfig;
 
 /**
  * Application configuration object
@@ -181,24 +149,22 @@ export function getBackendUrl(): string {
   let url = getEnvValue('VITE_BACKEND_URL', '');
   if (url) return url;
   
-  // Check if running in production by examining window.location
-  // This is more reliable than NODE_ENV which may not be set correctly at runtime
-  if (typeof window !== 'undefined') {
+  // Check if running in browser
+  if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     const port = window.location.port;
     
-    // In production, the app is served from the same origin as the backend
-    // If we're not on localhost or file://, use relative URL
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
-      return ''; // Use relative URL in production
-    }
-    
-    // In development, use the same port as the current window
-    // This handles cases where the backend runs on a random port (e.g., Vite dev server)
+    // Use the same host and port as the current window
+    // This properly handles IP addresses, localhost, and custom ports
+    let portPart = '';
     if (port && port !== '80' && port !== '443') {
-      return `http://localhost:${port}`;
+      portPart = `:${port}`;
+    } else if (!port) {
+      // For default ports, add the default backend port
+      portPart = `:${DEFAULT_BACKEND_PORT}`;
     }
+    return `${protocol}//${hostname}${portPart}`;
   }
   
   // Default to localhost:3001 for development

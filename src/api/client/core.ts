@@ -117,7 +117,13 @@ export class CoreClient {
   public config: Required<ClientConfig>;
 
   constructor(config: ClientConfig) {
-    if (!config.baseUrl) {
+    // Provide a default baseUrl to prevent ValidationError
+    const configWithDefaults = {
+      baseUrl: 'http://localhost:3001', // Default fallback
+      ...config,
+    };
+    
+    if (!configWithDefaults.baseUrl) {
       throw new ValidationError('baseUrl is required');
     }
 
@@ -127,7 +133,7 @@ export class CoreClient {
       retryDelay: 1000,
       onRequest: undefined,
       onResponse: undefined,
-      ...config,
+      ...configWithDefaults,
     } as Required<ClientConfig>;
   }
 
