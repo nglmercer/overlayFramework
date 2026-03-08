@@ -55,7 +55,6 @@ import { ALERT_DEFAULTS, ENVIRONMENT } from '../constants';
 export function generateUUID(): string {
   // Use native API if available
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    console.log(crypto)
     return crypto.randomUUID();
   }
   
