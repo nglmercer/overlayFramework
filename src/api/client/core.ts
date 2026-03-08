@@ -18,10 +18,33 @@ import {
 
 // Environment detection
 function detectEnvironment(): Environment {
-  if (typeof window !== 'undefined') return 'browser';
-  //@ts-ignore
-  if (typeof Bun !== 'undefined') return 'bun';
-  if (typeof process !== 'undefined' && process.versions?.node) return 'node';
+  // Check for browser first (most common case)
+  if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+    return 'browser';
+  }
+  
+  // Check for Bun
+  //@ts-ignore - Bun global may not be recognized
+  if (typeof Bun !== 'undefined') {
+    return 'bun';
+  }
+  
+  // Check for Node.js - use try-catch to handle cases where process is undefined
+  try {
+    if (
+      typeof process !== 'undefined' &&
+      process !== null &&
+      typeof process.versions === 'object' &&
+      process.versions !== null &&
+      typeof process.versions.node === 'string'
+    ) {
+      return 'node';
+    }
+  } catch {
+    // process is not available in this environment
+  }
+  
+  // Default to browser
   return 'browser';
 }
 
