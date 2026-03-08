@@ -16,35 +16,40 @@ import {
   ValidationError 
 } from './errors';
 
-// Environment detection
+// Environment detection - always defaults to 'browser' for safety
 function detectEnvironment(): Environment {
-  // Check for browser first (most common case)
-  if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
-    return 'browser';
-  }
+  // Default to browser for safety
+  let detectedEnv: Environment = 'browser';
   
-  // Check for Bun
-  //@ts-ignore - Bun global may not be recognized
-  if (typeof Bun !== 'undefined') {
-    return 'bun';
-  }
-  
-  // Check for Node.js - use try-catch to handle cases where process is undefined
   try {
+    // Check for browser first (most common case)
+    if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+      return 'browser';
+    }
+    
+    // Check for Bun
+    //@ts-ignore - Bun global may not be recognized
+    if (typeof Bun !== 'undefined') {
+      return 'bun';
+    }
+    
+    // Check for Node.js - be very explicit about the check
     if (
       typeof process !== 'undefined' &&
       process !== null &&
       typeof process.versions === 'object' &&
       process.versions !== null &&
-      typeof process.versions.node === 'string'
+      typeof process.versions.node === 'string' &&
+      process.versions.node.length > 0
     ) {
       return 'node';
     }
   } catch {
-    // process is not available in this environment
+    // Any error during detection, default to browser
+    return 'browser';
   }
   
-  // Default to browser
+  // Default to browser for any unexpected case
   return 'browser';
 }
 
