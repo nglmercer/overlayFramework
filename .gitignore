@@ -9,3 +9,4 @@ coverage/
 **/data/**.json
 overlay-server
 config.json
+backend/uploads/**

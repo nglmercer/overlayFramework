@@ -42,6 +42,8 @@ export class MediaLibrary extends LitElement {
   @state() private error: string | null = null;
   @state() private quotaUsed = 0;
   @state() private quotaMax = 0;
+  @state() private isDragging = false;
+  @state() private uploadQueue: { file: File; progress: number; error?: string; completed: boolean }[] = [];
   private apiClient!: MediaUploadClient;
 
   /**
@@ -134,26 +136,99 @@ export class MediaLibrary extends LitElement {
   }
 
   // ── Event handlers ──────────────────────────────────────────────────────
+  private handleDragEnter(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.isDragging = true;
+  }
+
+  private handleDragLeave(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if we're leaving the modal entirely
+    const rect = this.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      this.isDragging = false;
+    }
+  }
+
+  private handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  private handleDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.isDragging = false;
+
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+
+    this.processFiles(Array.from(files));
+  }
+
+  private async processFiles(files: File[]) {
+    if (!files.length) return;
+
+    // Initialize upload queue with all files
+    this.uploadQueue = files.map(file => ({
+      file,
+      progress: 0,
+      completed: false
+    }));
+
+    this.uploading = true;
+    this.error = null;
+
+    // Upload files in parallel with progress tracking
+    const uploadPromises = files.map(async (file, index) => {
+      try {
+        let category: FileTypes = FileCategory.OTHER;
+        if (file.type.startsWith('image/')) category = FileCategory.IMAGE;
+        else if (file.type.startsWith('video/')) category = FileCategory.VIDEO;
+        else if (file.type.startsWith('audio/')) category = FileCategory.AUDIO;
+
+        // Simulate progress updates (the actual API might handle this differently)
+        this.uploadQueue = this.uploadQueue.map((item, i) =>
+          i === index ? { ...item, progress: 50 } : item
+        );
+
+        await this.apiClient.files.upload(file, { category });
+
+        this.uploadQueue = this.uploadQueue.map((item, i) =>
+          i === index ? { ...item, progress: 100, completed: true } : item
+        );
+      } catch (err: any) {
+        this.uploadQueue = this.uploadQueue.map((item, i) =>
+          i === index ? { ...item, error: err.message || 'Upload failed', progress: 0 } : item
+        );
+      }
+    });
+
+    try {
+      await Promise.all(uploadPromises);
+      await Promise.all([this.fetchFiles(), this.fetchQuota()]);
+    } catch (err: any) {
+      this.error = err.message ?? 'Error uploading files';
+    } finally {
+      // Clear queue after a short delay to show completion
+      setTimeout(() => {
+        this.uploadQueue = [];
+        this.uploading = false;
+      }, 1500);
+    }
+  }
+
   private async handleUpload(e: Event) {
     const input = e.target as HTMLInputElement;
     if (!input.files?.length) return;
 
-    const file = input.files[0];
-    this.uploading = true;
-    try {
-      let category: FileTypes = FileCategory.OTHER;
-      if (file.type.startsWith('image/')) category = FileCategory.IMAGE;
-      else if (file.type.startsWith('video/')) category = FileCategory.VIDEO;
-      else if (file.type.startsWith('audio/')) category = FileCategory.AUDIO;
-
-      await this.apiClient.files.upload(file, { category });
-      await Promise.all([this.fetchFiles(), this.fetchQuota()]);
-    } catch (err: any) {
-      alert('Error uploading: ' + err.message);
-    } finally {
-      this.uploading = false;
-      input.value = '';
-    }
+    const files = Array.from(input.files);
+    this.processFiles(files);
+    input.value = ''; // Reset input to allow re-uploading same file
   }
 
   private async handleDelete(e: CustomEvent<{ id: string }>) {
@@ -252,6 +327,21 @@ export class MediaLibrary extends LitElement {
   }
 
   // ── Render helpers ──────────────────────────────────────────────────────
+  private renderDropOverlay() {
+    return html`
+      <div class="drop-overlay">
+        <div class="drop-overlay-content">
+          <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <h3>Drop files here</h3>
+          <p>Release to upload multiple files</p>
+        </div>
+      </div>
+    `;
+  }
+
   private renderHeader() {
     return html`
       <div class="header">
@@ -305,6 +395,10 @@ export class MediaLibrary extends LitElement {
   }
 
   private renderStatsBar() {
+    const hasUploads = this.uploadQueue.length > 0;
+    const completedCount = this.uploadQueue.filter(u => u.completed).length;
+    const errorCount = this.uploadQueue.filter(u => u.error).length;
+
     return html`
       <div class="stats-bar">
         <div class="storage-info">
@@ -323,7 +417,7 @@ export class MediaLibrary extends LitElement {
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           ${this.uploading
-            ? (this._localize.t('media.uploading') || 'Uploading…')
+            ? (this._localize.t('media.uploading') || `Uploading ${completedCount}/${this.uploadQueue.length}...`)
             : this._localize.t('media.uploadFile')}
           <input
             type="file"
@@ -331,8 +425,62 @@ export class MediaLibrary extends LitElement {
             @change="${this.handleUpload}"
             accept="${this.type === 'sound' ? 'audio/*,.ogg,.wav,.mp3,video/*' : 'image/*,video/*'}"
             ?disabled="${this.uploading}"
+            multiple
           />
         </label>
+      </div>
+      ${hasUploads ? this.renderUploadProgress() : ''}
+    `;
+  }
+
+  private renderUploadProgress() {
+    return html`
+      <div class="upload-progress">
+        <div class="upload-progress-header">
+          <span class="upload-progress-title">
+            ${this.uploadQueue.some(u => u.completed) 
+              ? `Uploaded ${this.uploadQueue.filter(u => u.completed).length} of ${this.uploadQueue.length} files`
+              : `Uploading ${this.uploadQueue.length} file(s)...`}
+          </span>
+          ${this.uploadQueue.some(u => u.error) 
+            ? html`<span class="upload-progress-error">${this.uploadQueue.filter(u => u.error).length} failed</span>`
+            : ''}
+        </div>
+        <div class="upload-progress-list">
+          ${this.uploadQueue.map((item, index) => html`
+            <div class="upload-item ${item.completed ? 'completed' : ''} ${item.error ? 'error' : ''}">
+              <div class="upload-item-icon">
+                ${item.completed ? html`
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                ` : item.error ? html`
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                ` : html`
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                  </svg>
+                `}
+              </div>
+              <div class="upload-item-info">
+                <span class="upload-item-name">${item.file.name}</span>
+                ${item.error 
+                  ? html`<span class="upload-item-error">${item.error}</span>`
+                  : item.completed
+                    ? html`<span class="upload-item-size">${this.formatBytes(item.file.size)}</span>`
+                    : html`<span class="upload-item-size">${this.formatBytes(item.file.size)}</span>`
+                }
+              </div>
+              ${!item.completed && !item.error ? html`
+                <div class="upload-item-progress">
+                  <div class="upload-item-progress-fill" style="width: ${item.progress}%"></div>
+                </div>
+              ` : ''}
+            </div>
+          `)}
+        </div>
       </div>
     `;
   }
@@ -420,7 +568,14 @@ export class MediaLibrary extends LitElement {
     const pageItems  = allItems.slice(start, start + this.ITEMS_PER_PAGE);
 
     return html`
-      <div class="modal">
+      <div 
+        class="modal ${this.isDragging ? 'dragging' : ''}"
+        @dragenter="${this.handleDragEnter}"
+        @dragleave="${this.handleDragLeave}"
+        @dragover="${this.handleDragOver}"
+        @drop="${this.handleDrop}"
+      >
+        ${this.isDragging ? this.renderDropOverlay() : ''}
         ${this.renderHeader()}
         ${this.renderToolbar()}
         ${this.renderStatsBar()}
