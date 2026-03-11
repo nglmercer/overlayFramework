@@ -99,7 +99,33 @@ export async function discoverServices(): Promise<Record<string, string>> {
     const response = await fetch(`${backendUrl}/webhook/discovery`);
     if (response.ok) {
       const data = await response.json();
-      discoveredServicesCache = data.services || {};
+      let services = data.services || {};
+      
+      // If we are NOT in dev, strip common ports from discovered services
+      // This ensures that if the backend reports "localhost:3001" internally,
+      // the client sees it as "origin/path"
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      const isLocal = resolveBackendUrl().includes('localhost'); 
+
+      if (!isLocal) {
+        for (const key in services) {
+          if (typeof services[key] === 'string') {
+            const val = services[key];
+            if (val.includes(':3001') || val.includes(':3000') || val.includes(':5173')) {
+              try {
+                const url = new URL(val);
+                if (url.hostname === hostname || url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+                   // Clean up internal URLs reported by backend
+                   services[key] = val.replace(':3001', '').replace(':3000', '').replace(':5173', '');
+                }
+              } catch { /* ... */ }
+            }
+          }
+        }
+      }
+
+      discoveredServicesCache = services;
       return discoveredServicesCache;
     }
   } catch (err) {

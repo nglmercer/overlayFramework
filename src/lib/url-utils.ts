@@ -13,32 +13,13 @@ const DEFAULT_BACKEND_PORT = '3001';
 export function isLocalHostname(hostname: string): boolean {
   if (!hostname) return false;
   
+  // Only the most common local dev hostnames
   return (
     hostname === 'localhost' || 
     hostname === '127.0.0.1' || 
     hostname === '0.0.0.0' ||
     hostname === '::1' ||
-    hostname.startsWith('192.168.') || 
-    hostname.startsWith('10.') || 
-    hostname.startsWith('172.16.') ||
-    hostname.startsWith('172.17.') ||
-    hostname.startsWith('172.18.') ||
-    hostname.startsWith('172.19.') ||
-    hostname.startsWith('172.20.') ||
-    hostname.startsWith('172.21.') ||
-    hostname.startsWith('172.22.') ||
-    hostname.startsWith('172.23.') ||
-    hostname.startsWith('172.24.') ||
-    hostname.startsWith('172.25.') ||
-    hostname.startsWith('172.26.') ||
-    hostname.startsWith('172.27.') ||
-    hostname.startsWith('172.28.') ||
-    hostname.startsWith('172.29.') ||
-    hostname.startsWith('172.30.') ||
-    hostname.startsWith('172.31.') ||
-    hostname.endsWith('.local') ||
-    hostname.endsWith('.test') ||
-    hostname.endsWith('.example')
+    hostname.endsWith('.local')
   );
 }
 
@@ -46,8 +27,8 @@ export function isLocalHostname(hostname: string): boolean {
  * Resolves the backend base URL dynamically based on the current environment
  */
 export function resolveBackendUrl(envUrl?: string): string {
-  // If we have an explicit URL from environment
-  let url = envUrl || '';
+  const urlParam = envUrl || '';
+  let url = urlParam;
   
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
@@ -55,36 +36,25 @@ export function resolveBackendUrl(envUrl?: string): string {
     const port = window.location.port;
     const isLocal = isLocalHostname(hostname);
 
-    // Hardening: If we are on a production domain, aggressively strip development ports
+    // Hardening: Aggressively strip development ports if on a production domain
     if (!isLocal) {
       if (url) {
-        // Strip common dev ports from any explicit URL
         url = url.replace(':3001', '').replace(':3000', '').replace(':5173', '');
       }
       
-      // If the URL is already absolute, validate its hostname
       if (url && url.startsWith('http')) {
         try {
           const parsedUrl = new URL(url);
-          // If the hostname matches (ignore www prefix difference if any)
-          const cleanParsedHost = parsedUrl.hostname.replace('www.', '');
-          const cleanCurrentHost = hostname.replace('www.', '');
-          
-          if (cleanParsedHost === cleanCurrentHost) {
-            // Force same-origin behavior: use current protocol and host WITHOUT port
-            // (since port would be 3001 if leaked, and 443/80 are empty in window.location.port)
+          if (parsedUrl.hostname.replace('www.', '') === hostname.replace('www.', '')) {
             return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
           }
-        } catch { /* parse fail, use as is */ }
+        } catch { /* ... */ }
       }
     }
 
-    // If we have a valid explicit URL after hardening, use it
-    if (url) {
-      return url;
-    }
+    if (url) return url;
 
-    // Otherwise, build from current window location
+    // Default to current origin (safe for production and local dev)
     let portPart = '';
     if (port && port !== '80' && port !== '443') {
       portPart = `:${port}`;
@@ -95,15 +65,10 @@ export function resolveBackendUrl(envUrl?: string): string {
     return `${protocol}//${hostname}${portPart}`;
   }
 
-  // Fallback for non-browser environments (SSR, Tests)
-  if (url && url.includes('localhost') && url.includes(':3001')) {
-     // Keep it as is if it's explicitly localhost:3001 in SSR
-  } else if (url && !url.includes('localhost')) {
-     url = url.replace(':3001', '');
-  }
-
   return url || `http://localhost:${DEFAULT_BACKEND_PORT}`;
 }
+
+let isNetworkPatched = false;
 
 /**
  * Global Network Patch
@@ -113,30 +78,39 @@ export function resolveBackendUrl(envUrl?: string): string {
  * This satisfies the "safety net" requirement for cloud deployments (Railway, etc).
  */
 export function patchGlobalNetwork(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || isNetworkPatched) return;
 
   const hostname = window.location.hostname;
   const isLocal = isLocalHostname(hostname);
-  if (isLocal) return;
+  
+  // LOG FOR DIAGNOSIS - User will see this in console
+  console.log(`[URL-Utils] Initializing network patch. Hostname: ${hostname}, isLocal: ${isLocal}`);
+  
+  // If we are on a real domain (not localhost), we MUST patch to be safe
+  if (isLocal) {
+    isNetworkPatched = true;
+    return;
+  }
 
   const devPorts = [':3001', ':3000', ':5173'];
   const cleanHost = hostname.replace('www.', '');
 
   const shouldStrip = (url: string | URL | Request): boolean => {
     let urlStr = '';
-    if (typeof url === 'string') urlStr = url;
-    else if (url instanceof URL) urlStr = url.toString();
-    else if (url instanceof Request) urlStr = url.url;
+    try {
+      if (typeof url === 'string') urlStr = url;
+      else if (url instanceof URL) urlStr = url.toString();
+      else if (url instanceof Request) urlStr = url.url;
+    } catch { return false; }
 
-    if (!urlStr) return false;
+    if (!urlStr || !urlStr.startsWith('http') && !urlStr.startsWith('ws')) return false;
     
-    // Check if it contains any dev port
+    // Quick check for any port pattern
     const hasPort = devPorts.some(p => urlStr.includes(p));
     if (!hasPort) return false;
 
     try {
       const u = new URL(urlStr);
-      // Only strip if it matches OUR hostname
       return u.hostname.replace('www.', '') === cleanHost;
     } catch {
       return false;
@@ -145,40 +119,43 @@ export function patchGlobalNetwork(): void {
 
   const stripPort = (url: any): any => {
     let urlStr = typeof url === 'string' ? url : (url instanceof URL ? url.toString() : url.url);
+    const originalUrl = urlStr;
+    
     devPorts.forEach(p => { urlStr = urlStr.replace(p, ''); });
     
+    if (originalUrl !== urlStr) {
+      console.warn(`[URL-Utils] STRIPPED DEV PORT from URL: ${originalUrl} -> ${urlStr}`);
+    }
+
     if (url instanceof URL) return new URL(urlStr);
-    if (url instanceof Request) return new Request(urlStr, url);
+    if (url instanceof Request) return new Request(urlStr, url as Request);
     return urlStr;
   };
 
   // 1. Patch Fetch
-  if (window.fetch) {
-    const originalFetch = window.fetch;
-    const patchedFetch = function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const originalFetch = window.fetch;
+  if (originalFetch) {
+    window.fetch = function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       if (shouldStrip(input)) {
         input = stripPort(input);
       }
       return originalFetch.call(this, input, init);
-    };
-    Object.assign(patchedFetch, originalFetch);
-    window.fetch = patchedFetch as typeof fetch;
+    } as typeof fetch;
+    Object.assign(window.fetch, originalFetch);
   }
 
   // 2. Patch XMLHttpRequest
-  if (window.XMLHttpRequest) {
-    const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(this: any, method: string, url: string | URL, ...args: any[]): void {
-      if (shouldStrip(url)) {
-        url = stripPort(url);
-      }
-      return originalOpen.apply(this, [method, url, ...args] as any);
-    };
-  }
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(this: any, method: string, url: string | URL, ...args: any[]): void {
+    if (shouldStrip(url)) {
+      url = stripPort(url);
+    }
+    return originalOpen.apply(this, [method, url, ...args] as any);
+  };
 
   // 3. Patch WebSocket
-  if (window.WebSocket) {
-    const OriginalWS = window.WebSocket;
+  const OriginalWS = window.WebSocket;
+  if (OriginalWS) {
     const PatchedWS = function(this: any, url: string | URL, protocols?: string | string[]): WebSocket {
       if (shouldStrip(url)) {
         url = stripPort(url);
@@ -186,12 +163,17 @@ export function patchGlobalNetwork(): void {
       return new OriginalWS(url, protocols);
     };
     PatchedWS.prototype = OriginalWS.prototype;
-    // Copy static properties (CONNECTING, OPEN, etc)
     Object.assign(PatchedWS, OriginalWS);
     window.WebSocket = PatchedWS as any;
   }
 
-  console.log('[URL-Utils] Global network patched (Fetch, XHR, WS) for production safety');
+  isNetworkPatched = true;
+  console.log('[URL-Utils] Global network patched successfully');
+}
+
+// AUTO-EXECUTE on load if in browser
+if (typeof window !== 'undefined') {
+  patchGlobalNetwork();
 }
 
 /**

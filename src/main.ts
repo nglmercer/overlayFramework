@@ -1,4 +1,9 @@
 import './index.css';
+import { patchGlobalNetwork } from './lib/url-utils';
+
+// Patch network as soon as possible to prevent dev ports in production
+patchGlobalNetwork();
+
 import { html, LitElement } from 'lit';
 import { Component, state } from './litcomponents';
 import { provide } from '@lit/context';
