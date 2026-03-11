@@ -24,8 +24,7 @@ export function isLocalHostname(hostname: string): boolean {
  * Resolves the backend base URL dynamically based on the current environment
  */
 export function resolveBackendUrl(envUrl?: string): string {
-  // If we have an explicit URL from environment but we are on a production domain,
-  // and the env URL incorrectly includes port 8080, we strip it.
+  // If we have an explicit URL from environment
   let url = envUrl || '';
   
   if (typeof window !== 'undefined' && window.location) {
@@ -34,13 +33,26 @@ export function resolveBackendUrl(envUrl?: string): string {
     const port = window.location.port;
     const isLocal = isLocalHostname(hostname);
 
-    // Hardening: Strip :8080 from production URLs if it leaked into the environment
-    if (url && !isLocal && url.includes(':8080')) {
-      url = url.replace(':8080', '');
+    // Hardening: Strip common development ports if we are on a production domain
+    // even if they came from the environment variable.
+    if (url && !isLocal) {
+      url = url.replace(':3001', '').replace(':8080', '');
     }
 
-    // If we have a valid explicit URL, use it
-    if (url) return url;
+    // If we have a valid explicit URL after hardening
+    if (url) {
+      // If the URL hostname matches current hostname but has a different port, 
+      // and we are NOT in local dev, just use the current origin to ensure "Same IP" behavior.
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.hostname === hostname && !isLocal) {
+          return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+        }
+      } catch {
+        // Fallback to hardened url string
+      }
+      return url;
+    }
 
     // Otherwise, build from current window location
     let portPart = '';
