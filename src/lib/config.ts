@@ -63,7 +63,7 @@ function getEnvValue(key: string, fallback: string): string {
  * @example
  * ```typescript
  * // Access config values
- * console.log(appConfig.mediaUrl); // 'http://localhost:3000/media'
+ * console.log(appConfig.mediaUrl); // 'http://localhost:3001/media'
  * console.log(appConfig.environment); // 'development'
  * 
  * // Check environment
@@ -161,8 +161,18 @@ export function getBackendUrl(): string {
     if (port && port !== '80' && port !== '443') {
       portPart = `:${port}`;
     } else if (!port) {
-      // For default ports, add the default backend port
-      portPart = `:${DEFAULT_BACKEND_PORT}`;
+      // Only add the default backend port if we are on a known local development hostname.
+      // In production/cloud environments (like Railway), if port is empty, 
+      // we must use the standard port (80/443) that the user is currently using.
+      const isLocal = hostname === 'localhost' || 
+                      hostname === '127.0.0.1' || 
+                      hostname.startsWith('192.168.') || 
+                      hostname.startsWith('10.') ||
+                      hostname.endsWith('.local');
+      
+      if (isLocal) {
+        portPart = `:${DEFAULT_BACKEND_PORT}`;
+      }
     }
     return `${protocol}//${hostname}${portPart}`;
   }
