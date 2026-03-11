@@ -13,7 +13,7 @@
  *   bun run --watch src/server.ts  (dev mode with hot reload)
  * 
  * Environment:
- *   PORT            - Server port (default: 8080)
+ *   PORT            - Server port (default: 3001)
  *   WEBHOOK_SECRET  - Optional auth secret for webhook endpoints
  *   HEARTBEAT_MS    - Heartbeat interval in ms (default: 30000)
  *   CORS_ALLOWED_ORIGINS - Comma-separated list of allowed origins (default: *)

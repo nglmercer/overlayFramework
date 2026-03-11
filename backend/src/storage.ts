@@ -19,7 +19,7 @@ import { dirname } from 'path';
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? './data';
 const STORAGE_FILE = process.env.STORAGE_FILE ?? './data/storage.json';
-const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:8080/preview.html';
+const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL ?? 'http://localhost:3001/preview.html';
 
 // ============================================================================
 // STORAGE MANAGER (Legacy Support)

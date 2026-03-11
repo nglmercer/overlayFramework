@@ -65,7 +65,7 @@ export class ApiError extends Error {
 
 /**
  * Default API configuration
- * Uses relative URL in production, localhost:8080 for development
+ * Uses relative URL in production, localhost:3001 for development
  */
 const DEFAULT_CONFIG = {
   baseUrl: getApiBaseUrl(),

@@ -28,7 +28,7 @@ import {
 // Import constants
 import { ENVIRONMENT, CONFIG, ServiceName } from './constants';
 import { resolveBackendUrl, resolveWebSocketUrl } from './url-utils';
-const DEFAULT_BACKEND_PORT = '8080';
+const DEFAULT_BACKEND_PORT = '3001';
 
 /**
  * Attempts to get an environment variable value with fallback support
@@ -64,7 +64,7 @@ function getEnvValue(key: string, fallback: string): string {
  * @example
  * ```typescript
  * // Access config values
- * console.log(appConfig.mediaUrl); // 'http://localhost:8080/media'
+ * console.log(appConfig.mediaUrl); // 'http://localhost:3001/media'
  * console.log(appConfig.environment); // 'development'
  * 
  * // Check environment
@@ -148,7 +148,7 @@ export function resolveServiceUrl(name: string, fallback?: string): string {
  * 
  * Resolves the backend server URL with proper fallback:
  * - In production: uses relative URL (same origin)
- * - In development: defaults to http://localhost:8080
+ * - In development: defaults to http://localhost:3001
  * 
  * @returns The backend HTTP URL
  */
@@ -163,7 +163,7 @@ export function getBackendUrl(): string {
  * @returns The WebSocket URL (ws:// or wss://)
  * @example
  * ```typescript
- * // For local development: ws://localhost:8080/ws
+ * // For local development: ws://localhost:3001/ws
  * // For production: wss://your-backend.com/ws (or relative /ws)
  * ```
  */
@@ -313,7 +313,7 @@ export function getCdnUrl(path?: string): string {
  * @param url - The URL to normalize
  * @returns The normalized relative path, or the original URL if not internal
  * @example 
- * normalizeMediaUrl('http://localhost:8080/uploads/image.png') -> '/uploads/image.png'
+ * normalizeMediaUrl('http://localhost:3001/uploads/image.png') -> '/uploads/image.png'
  */
 export function normalizeMediaUrl(url: string | undefined): string | undefined {
   if (!url || typeof url !== 'string' || url === '') return url;

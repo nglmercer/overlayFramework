@@ -5,7 +5,7 @@
  * across different environments (local, production, cloud).
  */
 
-const DEFAULT_BACKEND_PORT = '8080';
+const DEFAULT_BACKEND_PORT = '3001';
 
 /**
  * Checks if a hostname is a local/development environment
@@ -36,7 +36,7 @@ export function resolveBackendUrl(envUrl?: string): string {
     // Hardening: Strip common development ports if we are on a production domain
     // even if they came from the environment variable.
     if (url && !isLocal) {
-      url = url.replace(':3001', '').replace(':8080', '');
+      url = url.replace(':3001', '').replace(':3001', '');
     }
 
     // If we have a valid explicit URL after hardening
