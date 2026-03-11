@@ -152,6 +152,7 @@ export class WebSocketService {
 
   constructor(config: Partial<WsServiceConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    console.log("WebSocketService",this.config);
     if (!this.config.clientId) {
       // Try to get existing clientId from localStorage, or generate new one
       const storedId = localStorage.getItem('overlay-instance-id');

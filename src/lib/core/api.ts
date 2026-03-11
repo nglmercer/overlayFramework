@@ -111,6 +111,7 @@ class CoreApi {
     this.baseUrl = config?.baseUrl ?? DEFAULT_CONFIG.baseUrl;
     this.timeout = config?.timeout ?? DEFAULT_CONFIG.timeout;
     this.credentials = config?.credentials ?? DEFAULT_CONFIG.credentials;
+    console.log("CoreApi",config,this.baseUrl);
   }
 
   /**
