@@ -5,7 +5,7 @@
  * across different environments (local, production, cloud).
  */
 
-const DEFAULT_BACKEND_PORT = '3001';
+const DEFAULT_BACKEND_PORT = '8080';
 
 /**
  * Checks if a hostname is a local/development environment
@@ -25,7 +25,7 @@ export function isLocalHostname(hostname: string): boolean {
  */
 export function resolveBackendUrl(envUrl?: string): string {
   // If we have an explicit URL from environment but we are on a production domain,
-  // and the env URL incorrectly includes port 3001, we strip it.
+  // and the env URL incorrectly includes port 8080, we strip it.
   let url = envUrl || '';
   
   if (typeof window !== 'undefined' && window.location) {
@@ -34,9 +34,9 @@ export function resolveBackendUrl(envUrl?: string): string {
     const port = window.location.port;
     const isLocal = isLocalHostname(hostname);
 
-    // Hardening: Strip :3001 from production URLs if it leaked into the environment
-    if (url && !isLocal && url.includes(':3001')) {
-      url = url.replace(':3001', '');
+    // Hardening: Strip :8080 from production URLs if it leaked into the environment
+    if (url && !isLocal && url.includes(':8080')) {
+      url = url.replace(':8080', '');
     }
 
     // If we have a valid explicit URL, use it

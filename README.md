@@ -23,10 +23,10 @@ A modern, high-performance OBS/Streaming Overlay framework built with **Bun**, *
 # Install dependencies
 bun install
 
-# Run Frontend (Vite) on port 3001
+# Run Frontend (Vite) on port 8080
 bun run dev
 
-# Run Backend Server on port 3001
+# Run Backend Server on port 8080
 bun run start
 ```
 

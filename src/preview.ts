@@ -102,7 +102,7 @@ if (root) {
           payload: { state: 'disconnected', type: 'websocket' } 
         }, '*');
         // Auto-reconnect after 3 seconds
-        wsReconnectTimeout = setTimeout(connectWebSocket, 3001);
+        wsReconnectTimeout = setTimeout(connectWebSocket, 8080);
       };
 
       ws.onerror = (error) => {

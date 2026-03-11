@@ -26,7 +26,7 @@ export const Env = {
 // ============================================================================
 
 export const ServerConfig = {
-  DEFAULT_PORT: 3001,
+  DEFAULT_PORT: 8080,
   DEFAULT_HEARTBEAT_MS: 30000,
   WS_MAX_PAYLOAD_LENGTH: 1024 * 1024, // 1MB
   WS_IDLE_TIMEOUT: 60, // seconds
