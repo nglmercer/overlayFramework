@@ -255,6 +255,34 @@ export function getClientIp(req: Request): string | null {
 }
 
 /**
+ * Get normalized origin for production/local environments.
+ * Strips internal development ports (like :3001) from production origins
+ * while preserving them for local discovery.
+ */
+export function getCleanOrigin(req: Request): string {
+  const url = new URL(req.url);
+  const hostname = url.hostname;
+  let origin = url.origin;
+
+  // Detection list: Add common local environments
+  const isLocal = 
+    hostname === 'localhost' || 
+    hostname === '127.0.0.1' || 
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.');
+
+  // If not local, aggressively strip the development port 3001
+  // This is crucial for Railway/Heroku where internal port is 3001 
+  // but public access is via 443 (standard HTTPS).
+  if (!isLocal && origin.includes(':3001')) {
+    origin = origin.replace(':3001', '');
+  }
+
+  return origin;
+}
+
+/**
  * Check if request accepts HTML
  */
 export function acceptsHtml(req: Request): boolean {

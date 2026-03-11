@@ -32,7 +32,7 @@ import {
   loadOverlayData, 
   generatePreviewUrl 
 } from '../storage';
-import { generateId, checkRequestSecret } from '../utils';
+import { generateId, checkRequestSecret, getCleanOrigin } from '../utils';
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? '';
 
@@ -90,7 +90,7 @@ export function registerWebhookRoutes(router: Router): void {
     if (!data) {
       return json({ error: 'Not found' }, HttpStatus.NOT_FOUND);
     }
-    const origin = new URL(ctx.req.url).origin;
+    const origin = getCleanOrigin(ctx.req);
     return json({ key, data, previewUrl: generatePreviewUrl(key, false, origin) });
   });
 
@@ -185,7 +185,7 @@ export function registerWebhookRoutes(router: Router): void {
       if (!isAuthenticated(ctx.req)) return json({ error: 'Unauthorized' }, 401);
       
       const { key, data } = ctx.body;
-      const origin = new URL(ctx.req.url).origin;
+      const origin = getCleanOrigin(ctx.req);
       const result = await saveOverlayData(key, data, origin);
       
       return json({
