@@ -113,15 +113,14 @@ async function executeRequest<T>(
 }
 
 // Core client class
+import { resolveBackendUrl } from '../../lib/url-utils';
+
 export class CoreClient {
   public config: Required<ClientConfig>;
 
   constructor(config: ClientConfig) {
     // Provide a dynamic fallback for browser environments
-    let defaultBaseUrl = 'http://localhost:3001';
-    if (typeof window !== 'undefined' && window.location) {
-      defaultBaseUrl = `${window.location.protocol}//${window.location.host}`;
-    }
+    const defaultBaseUrl = resolveBackendUrl();
 
     const configWithDefaults = {
       baseUrl: defaultBaseUrl,

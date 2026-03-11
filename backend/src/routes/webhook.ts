@@ -90,7 +90,8 @@ export function registerWebhookRoutes(router: Router): void {
     if (!data) {
       return json({ error: 'Not found' }, HttpStatus.NOT_FOUND);
     }
-    return json({ key, data, previewUrl: generatePreviewUrl(key) });
+    const origin = new URL(ctx.req.url).origin;
+    return json({ key, data, previewUrl: generatePreviewUrl(key, false, origin) });
   });
 
   // Trigger alert webhook
@@ -184,7 +185,8 @@ export function registerWebhookRoutes(router: Router): void {
       if (!isAuthenticated(ctx.req)) return json({ error: 'Unauthorized' }, 401);
       
       const { key, data } = ctx.body;
-      const result = await saveOverlayData(key, data);
+      const origin = new URL(ctx.req.url).origin;
+      const result = await saveOverlayData(key, data, origin);
       
       return json({
         ok: true,

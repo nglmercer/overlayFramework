@@ -27,6 +27,7 @@ import {
 
 // Import constants
 import { ENVIRONMENT, CONFIG } from './constants';
+import { resolveBackendUrl, resolveWebSocketUrl } from './url-utils';
 const DEFAULT_BACKEND_PORT = '3001';
 
 /**
@@ -145,44 +146,8 @@ export function resolveServiceUrl(name: string, fallback?: string): string {
  * @returns The backend HTTP URL
  */
 export function getBackendUrl(): string {
-  // Try VITE_BACKEND_URL first (preferred)
-  let url = getEnvValue('VITE_BACKEND_URL', '');
-  
-  // Check if running in browser
-  if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const port = window.location.port;
-
-    const isLocal = hostname === 'localhost' || 
-                    hostname === '127.0.0.1' || 
-                    hostname.startsWith('192.168.') || 
-                    hostname.startsWith('10.') ||
-                    hostname.endsWith('.local');
-
-    // If we have an env var but we are on a production domain, 
-    // and the env var has :3001, it's likely a misconfiguration we should fix.
-    if (url && !isLocal && url.includes(':3001')) {
-      url = url.replace(':3001', '');
-    }
-    
-    // If we have an explicit URL from env (and it's not broken for production), use it
-    if (url) return url;
-    
-    // Use the same host and port as the current window
-    // This properly handles IP addresses, localhost, and custom ports
-    let portPart = '';
-    if (port && port !== '80' && port !== '443') {
-      portPart = `:${port}`;
-    } else if (!port && isLocal) {
-      portPart = `:${DEFAULT_BACKEND_PORT}`;
-    }
-    
-    return `${protocol}//${hostname}${portPart}`;
-  }
-  
-  // Default fallback
-  return url || `http://localhost:${DEFAULT_BACKEND_PORT}`;
+  const envUrl = getEnvValue('VITE_BACKEND_URL', '');
+  return resolveBackendUrl(envUrl);
 }
 
 /**
@@ -197,26 +162,7 @@ export function getBackendUrl(): string {
  */
 export function getWebSocketUrl(): string {
   const backendUrl = getBackendUrl();
-  
-  try {
-    // Attempt to build it from backendUrl
-    const url = new URL(backendUrl);
-    url.protocol = url.protocol.replace('http', 'ws');
-    
-    // Normalize path to /ws
-    url.pathname = '/ws';
-    
-    return url.toString();
-  } catch (e) {
-    // Fallback: use current location origin if backendUrl is relative or invalid
-    if (typeof window !== 'undefined') {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      return `${protocol}//${window.location.host}/ws`;
-    }
-    
-    // Extreme fallback (likely wont work in browser but avoids crash)
-    return `ws://localhost:${DEFAULT_BACKEND_PORT}/ws`;
-  }
+  return resolveWebSocketUrl(backendUrl);
 }
 
 /**

@@ -73,33 +73,23 @@ const DEFAULT_CONFIG = {
   credentials: 'same-origin' as RequestCredentials,
 };
 
+import { resolveBackendUrl } from '../url-utils';
+
 /**
  * Get the API base URL based on environment
  * In production, uses relative URL (same origin)
  */
 function getApiBaseUrl(): string {
-  // Check if running in production by examining window.location
-  // This is more reliable than NODE_ENV which may not be set correctly at runtime
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const port = window.location.port;
-    
-    // In production, the app is served from the same origin as the backend
-    // If we're not on localhost or file://, use relative URL
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && protocol !== 'file:') {
-      return ''; // Use relative URL in production
-    }
-    
-    // In development, use the same port as the current window
-    // This handles cases where the backend runs on a random port (e.g., Vite dev server)
-    if (port && port !== '80' && port !== '443') {
-      return `http://localhost:${port}`;
-    }
+  // Use centralized resolution logic
+  const url = resolveBackendUrl();
+  
+  // If we are on the same host as the backend, return empty string for relative URLs
+  // This is better for same-origin production environments
+  if (typeof window !== 'undefined' && url.includes(window.location.host)) {
+    return '';
   }
   
-  // Default to localhost:3001 for development
-  return 'http://localhost:3001';
+  return url;
 }
 
 // =============================================================================

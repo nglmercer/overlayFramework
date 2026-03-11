@@ -64,8 +64,14 @@ function generatePreviewId(): string {
  * Generate a preview URL for saved overlay data.
  * Standardized format used across the application.
  */
-export function generatePreviewUrl(overlayId: string, preview: boolean = false): string {
-  const url = new URL(PREVIEW_BASE_URL);
+export function generatePreviewUrl(overlayId: string, preview: boolean = false, baseHost?: string): string {
+  let baseUrlStr = PREVIEW_BASE_URL;
+  
+  if (baseHost) {
+    baseUrlStr = `${baseHost.endsWith('/') ? baseHost : baseHost + '/' }preview.html`;
+  }
+
+  const url = new URL(baseUrlStr);
   url.searchParams.set('id', overlayId);
   
   if (preview) {
@@ -104,13 +110,14 @@ export function generatePreviewUrlWithParams(
  */
 export async function saveOverlayData(
   key: string, 
-  data: unknown
+  data: unknown,
+  baseHost?: string
 ): Promise<{ key: string; previewUrl: string }> {
   // Save the data using dbManager
   await dbManager.saveOverlay(key, data);
   
-  // Generate preview URL
-  const previewUrl = generatePreviewUrl(key);
+  // Generate preview URL with optional dynamic host
+  const previewUrl = generatePreviewUrl(key, false, baseHost);
   
   return { key, previewUrl };
 }
