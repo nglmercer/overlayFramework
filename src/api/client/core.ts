@@ -117,9 +117,14 @@ export class CoreClient {
   public config: Required<ClientConfig>;
 
   constructor(config: ClientConfig) {
-    // Provide a default baseUrl to prevent ValidationError
+    // Provide a dynamic fallback for browser environments
+    let defaultBaseUrl = 'http://localhost:3001';
+    if (typeof window !== 'undefined' && window.location) {
+      defaultBaseUrl = `${window.location.protocol}//${window.location.host}`;
+    }
+
     const configWithDefaults = {
-      baseUrl: 'http://localhost:3001', // Default fallback
+      baseUrl: defaultBaseUrl,
       ...config,
     };
     
