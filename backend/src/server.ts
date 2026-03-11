@@ -1,27 +1,3 @@
-/**
- * Overlay Backend Server
- * 
- * Bun-native server combining:
- * - WebSocket server for real-time overlay communication
- * - HTTP webhook endpoints for receiving external events
- * - Heartbeat system for connection health monitoring
- * - CORS support for cross-origin requests
- * - Offline-first sync API with Git-like operations
- * 
- * Usage:
- *   bun run src/server.ts
- *   bun run --watch src/server.ts  (dev mode with hot reload)
- * 
- * Environment:
- *   PORT            - Server port (default: 3001)
- *   WEBHOOK_SECRET  - Optional auth secret for webhook endpoints
- *   HEARTBEAT_MS    - Heartbeat interval in ms (default: 30000)
- *   CORS_ALLOWED_ORIGINS - Comma-separated list of allowed origins (default: *)
- * 
- * @module backend/server
- * @version 2.0.0
- */
-
 import { parseClientMessage } from './schemas';
 import { wsManager, type WsClientData } from './ws-manager';
 import { initializeStorage } from './storage';
@@ -49,7 +25,7 @@ const HEARTBEAT_MS = getEnvInt(Env.HEARTBEAT_MS, ServerConfig.DEFAULT_HEARTBEAT_
 const DIST_PATH = join(import.meta.dir, '../../dist');
 
 // Initialize Discovery
-const discovery = await initDiscovery(PORT);
+const discovery = await initDiscovery(0);
 const discoveryShutdown = createDiscoveryShutdownHandler(discovery);
 
 registerRoutes();

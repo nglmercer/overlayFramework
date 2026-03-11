@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import { HttpStatus, ContentType, HttpHeader, ClientId, Env, ServerConfig } from './constants';
+import { HttpStatus, ContentType, HttpHeader, ClientId } from './constants';
 import type { ServerWebSocket } from 'bun';
 
 // ============================================================================
