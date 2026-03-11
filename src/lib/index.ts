@@ -326,6 +326,10 @@ export async function initializeFramework(config: Partial<FrameworkConfig> = {})
     await loadSchemas();
   }
   
+  // Patch global fetch to prevent dev-mode leaks in production
+  const { patchGlobalFetch } = await import('./url-utils');
+  patchGlobalFetch();
+  
   // Run Autofix/Migration tool
   // This automatically cleans up stale absolute URLs in IndexedDB without data loss
   const { dbManager } = await import('./db');
