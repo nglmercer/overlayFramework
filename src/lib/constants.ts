@@ -358,6 +358,17 @@ export const EVENTS = {
 
 /**
  * ============================================
+ * SERVICE NAMES
+ * ============================================
+ */
+
+export const ServiceName = {
+  MEDIA_UPLOAD_API: 'media-upload-api',
+  OVERLAY_SERVICE: 'overlay-service',
+} as const;
+
+/**
+ * ============================================
  * EXPORTS
  * ============================================
  */

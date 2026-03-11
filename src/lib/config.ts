@@ -26,7 +26,7 @@ import {
 } from './core';
 
 // Import constants
-import { ENVIRONMENT, CONFIG } from './constants';
+import { ENVIRONMENT, CONFIG, ServiceName } from './constants';
 import { resolveBackendUrl, resolveWebSocketUrl } from './url-utils';
 const DEFAULT_BACKEND_PORT = '3001';
 
@@ -112,8 +112,9 @@ export async function discoverServices(): Promise<Record<string, string>> {
  * Resolves a service URL by name
  * Priority: 
  * 1. Matching VITE_{NAME}_URL env var
- * 2. Discovered service from backend
- * 3. Default fallback (current backend)
+ * 2. Gateway Proxy (for known services like media-upload-api)
+ * 3. Discovered service from backend
+ * 4. Default fallback (current backend)
  */
 export function resolveServiceUrl(name: string, fallback?: string): string {
   // Try environment variable first (e.g., VITE_MEDIA_SERVICE_URL)
@@ -121,7 +122,13 @@ export function resolveServiceUrl(name: string, fallback?: string): string {
   const envValue = getEnvValue(envKey, '');
   if (envValue) return envValue;
 
-  // Try discovered services
+  // For known proxied services, ALWAYS use the gateway to maintain "Same IP" behavior
+  // and avoid CORS issues with different ports.
+  if (name === ServiceName.MEDIA_UPLOAD_API || name === 'media-upload-api') {
+    return getBackendUrl();
+  }
+
+  // Try discovered services for other external services
   if (discoveredServicesCache[name]) {
     return discoveredServicesCache[name];
   }
