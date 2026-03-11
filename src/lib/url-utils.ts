@@ -56,25 +56,26 @@ export function resolveBackendUrl(envUrl?: string): string {
     const isLocal = isLocalHostname(hostname);
 
     // Hardening: If we are on a production domain, aggressively strip development ports
-    // even if they came from an environment variable or are hardcoded.
     if (!isLocal) {
-      // Remove common dev ports if they appear in any URL when not in local dev
       if (url) {
+        // Strip common dev ports from any explicit URL
         url = url.replace(':3001', '').replace(':3000', '').replace(':5173', '');
       }
       
-      // If the URL hostname matches current hostname (production), use current origin
-      // This ensures "Same IP" behavior and bypasses CORS/Port issues on cloud platforms.
-      if (url) {
+      // If the URL is already absolute, validate its hostname
+      if (url && url.startsWith('http')) {
         try {
           const parsedUrl = new URL(url);
-          if (parsedUrl.hostname === hostname) {
-            // Use current window origin instead of the hardcoded URL with port
+          // If the hostname matches (ignore www prefix difference if any)
+          const cleanParsedHost = parsedUrl.hostname.replace('www.', '');
+          const cleanCurrentHost = hostname.replace('www.', '');
+          
+          if (cleanParsedHost === cleanCurrentHost) {
+            // Force same-origin behavior: use current protocol and host WITHOUT port
+            // (since port would be 3001 if leaked, and 443/80 are empty in window.location.port)
             return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
           }
-        } catch {
-          // Fallback to hardened url string
-        }
+        } catch { /* parse fail, use as is */ }
       }
     }
 
@@ -88,7 +89,6 @@ export function resolveBackendUrl(envUrl?: string): string {
     if (port && port !== '80' && port !== '443') {
       portPart = `:${port}`;
     } else if (!port && isLocal) {
-      // Only append default port in local development if no port is present
       portPart = `:${DEFAULT_BACKEND_PORT}`;
     }
 
@@ -99,7 +99,6 @@ export function resolveBackendUrl(envUrl?: string): string {
   if (url && url.includes('localhost') && url.includes(':3001')) {
      // Keep it as is if it's explicitly localhost:3001 in SSR
   } else if (url && !url.includes('localhost')) {
-     // Strip 3001 from production URLs even in SSR if they contain it
      url = url.replace(':3001', '');
   }
 
@@ -107,61 +106,92 @@ export function resolveBackendUrl(envUrl?: string): string {
 }
 
 /**
- * Global Fetch Patch
+ * Global Network Patch
  * 
- * Safely wraps window.fetch to ensure that any request going to a production
- * domain does NOT include common development ports like :3001.
- * This is a safety net for cases where URLs might be hardcoded or 
- * incorrectly generated in third-party libraries.
+ * Safely wraps window.fetch, XMLHttpRequest, and WebSocket to ensure that any request 
+ * going to a production domain does NOT include common development ports like :3001.
+ * This satisfies the "safety net" requirement for cloud deployments (Railway, etc).
  */
-export function patchGlobalFetch(): void {
-  if (typeof window === 'undefined' || !window.fetch) return;
+export function patchGlobalNetwork(): void {
+  if (typeof window === 'undefined') return;
 
-  const originalFetch = window.fetch;
   const hostname = window.location.hostname;
   const isLocal = isLocalHostname(hostname);
-
-  // We only patch if we are clearly NOT in a local environment
   if (isLocal) return;
 
-  const patchedFetch = function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    let url: string = '';
+  const devPorts = [':3001', ':3000', ':5173'];
+  const cleanHost = hostname.replace('www.', '');
 
-    if (typeof input === 'string') {
-      url = input;
-    } else if (input instanceof URL) {
-      url = input.toString();
-    } else if (input instanceof Request) {
-      url = input.url;
+  const shouldStrip = (url: string | URL | Request): boolean => {
+    let urlStr = '';
+    if (typeof url === 'string') urlStr = url;
+    else if (url instanceof URL) urlStr = url.toString();
+    else if (url instanceof Request) urlStr = url.url;
+
+    if (!urlStr) return false;
+    
+    // Check if it contains any dev port
+    const hasPort = devPorts.some(p => urlStr.includes(p));
+    if (!hasPort) return false;
+
+    try {
+      const u = new URL(urlStr);
+      // Only strip if it matches OUR hostname
+      return u.hostname.replace('www.', '') === cleanHost;
+    } catch {
+      return false;
     }
-
-    // If the URL contains a development port and matches our production domain
-    if (url && (url.includes(':3001') || url.includes(':3000') || url.includes(':5173'))) {
-      try {
-        const urlObj = new URL(url);
-        // If it's the same domain as our app (production)
-        if (urlObj.hostname === hostname) {
-          const newUrl = url.replace(':3001', '').replace(':3000', '').replace(':5173', '');
-          
-          if (input instanceof Request) {
-            return originalFetch.call(this, new Request(newUrl, input), init);
-          }
-          
-          return originalFetch.call(this, newUrl, init);
-        }
-      } catch {
-        // Fallback to original if URL parsing fails
-      }
-    }
-
-    return originalFetch.call(this, input, init);
   };
 
-  // Copy properties like .close etc or whatever the environment adds
-  Object.assign(patchedFetch, originalFetch);
-  window.fetch = patchedFetch as typeof fetch;
+  const stripPort = (url: any): any => {
+    let urlStr = typeof url === 'string' ? url : (url instanceof URL ? url.toString() : url.url);
+    devPorts.forEach(p => { urlStr = urlStr.replace(p, ''); });
+    
+    if (url instanceof URL) return new URL(urlStr);
+    if (url instanceof Request) return new Request(urlStr, url);
+    return urlStr;
+  };
 
-  console.log('[URL-Utils] Global fetch patched for production safety');
+  // 1. Patch Fetch
+  if (window.fetch) {
+    const originalFetch = window.fetch;
+    const patchedFetch = function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      if (shouldStrip(input)) {
+        input = stripPort(input);
+      }
+      return originalFetch.call(this, input, init);
+    };
+    Object.assign(patchedFetch, originalFetch);
+    window.fetch = patchedFetch as typeof fetch;
+  }
+
+  // 2. Patch XMLHttpRequest
+  if (window.XMLHttpRequest) {
+    const originalOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(this: any, method: string, url: string | URL, ...args: any[]): void {
+      if (shouldStrip(url)) {
+        url = stripPort(url);
+      }
+      return originalOpen.apply(this, [method, url, ...args] as any);
+    };
+  }
+
+  // 3. Patch WebSocket
+  if (window.WebSocket) {
+    const OriginalWS = window.WebSocket;
+    const PatchedWS = function(this: any, url: string | URL, protocols?: string | string[]): WebSocket {
+      if (shouldStrip(url)) {
+        url = stripPort(url);
+      }
+      return new OriginalWS(url, protocols);
+    };
+    PatchedWS.prototype = OriginalWS.prototype;
+    // Copy static properties (CONNECTING, OPEN, etc)
+    Object.assign(PatchedWS, OriginalWS);
+    window.WebSocket = PatchedWS as any;
+  }
+
+  console.log('[URL-Utils] Global network patched (Fetch, XHR, WS) for production safety');
 }
 
 /**

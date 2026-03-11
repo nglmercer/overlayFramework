@@ -6,7 +6,11 @@ import {
   createAlertConfig,
 } from './core/alertRenderer';
 import { getWebSocketUrl, getBackendUrl } from './lib/config';
+import { patchGlobalNetwork } from './lib/url-utils';
 import { CONFIG, EVENTS } from './lib/constants';
+
+// Patch network immediately to handle production URLs
+patchGlobalNetwork();
 
 // Types for messages
 interface AlertMessage {
