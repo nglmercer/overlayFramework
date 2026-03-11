@@ -1,7 +1,3 @@
-import { patchGlobalNetwork } from './lib/url-utils';
-
-patchGlobalNetwork();
-
 import { 
   AlertRenderer, 
   AlertConfig, 
