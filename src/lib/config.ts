@@ -180,7 +180,9 @@ export function resolveServiceUrl(name: string, fallback?: string): string {
  */
 export function getBackendUrl(): string {
   const envUrl = getEnvValue('VITE_BACKEND_URL', '');
-  return resolveBackendUrl(envUrl);
+  const resolvedUrl = resolveBackendUrl(envUrl);
+  console.log("getBackendUrl",{envUrl, resolvedUrl});
+  return resolvedUrl;
 }
 
 /**
