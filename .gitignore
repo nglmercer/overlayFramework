@@ -7,6 +7,6 @@ coverage/
 .env*
 !.env.example
 **/data/**.json
-overlay-server
+overlay-server**
 config.json
 backend/uploads/**

@@ -47,6 +47,7 @@
   "dashboard.instanceIdHelp": "Use this ID in webhooks to target this specific instance:",
   "dashboard.copy": "Copy",
 
+  "sidebar.global": "GLOBAL",
   "sidebar.variants": "VARIANTS",
   "sidebar.settings": "SETTINGS",
   "sidebar.design": "DESIGN",

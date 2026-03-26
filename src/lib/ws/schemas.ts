@@ -295,7 +295,8 @@ export function isKnownEventType(eventName: string): boolean {
  */
 export function getRequiredFields(eventName: string): string[] {
   const schema = schemaLoader.getSchema(eventName as EventType);
-  return schema?.requiredFields ?? [];
+  if (!schema) return [];
+  return (schema as any)?.requiredFields ?? [];
 }
 
 /**
@@ -306,5 +307,6 @@ export function getRequiredFields(eventName: string): string[] {
  */
 export function getDefaultMessage(eventName: string): string {
   const schema = schemaLoader.getSchema(eventName as EventType);
-  return schema?.defaultMessage ?? '';
+  if (!schema) return '';
+  return (schema as any)?.defaultMessage ?? '';
 }

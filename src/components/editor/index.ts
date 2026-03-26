@@ -1,6 +1,5 @@
 // Editor sub-components
 export { EditorTopbar } from './EditorTopbar';
-export { EditorLeftSidebar } from './EditorLeftSidebar';
 export { EditorPreview } from './EditorPreview';
 export { EditorRightSidebar } from './EditorRightSidebar';
 

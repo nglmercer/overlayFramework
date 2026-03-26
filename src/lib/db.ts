@@ -2,13 +2,12 @@
  * Database Module - IndexedDB Wrapper (Powered by idb-manager)
  * 
  * Provides a clean interface for managing alert data in IndexedDB.
- * Handles persistence for alert boxes, variants, and templates.
+ * Handles persistence for alert boxes and templates.
  * 
  * Features:
  * - Type-safe CRUD operations with Zod validation
  * - Automatic data validation before persistence
  * - Powered by idb-manager for robust performance
- * - Cascade delete support
  * 
  * @module lib/db
  * @version 3.0.0
@@ -50,14 +49,6 @@ const schema = {
     { 
       name: DB.STORES.BOXES, 
       keyPath: 'id' 
-    },
-    { 
-      name: DB.STORES.VARIANTS, 
-      keyPath: 'id',
-      indexes: [
-        { name: DB.VARIANT_INDEXES.BOX_ID, keyPath: DB.VARIANT_INDEXES.BOX_ID, unique: false },
-        { name: DB.VARIANT_INDEXES.TYPE, keyPath: DB.VARIANT_INDEXES.TYPE, unique: false }
-      ]
     },
     { 
       name: DB.STORES.TEMPLATES, 
@@ -151,7 +142,7 @@ async function normalizeStoreData() {
   if (!dbInstance) return;
   console.log('[dbManager] Starting NATIVE data normalization check...');
   
-  const stores = [DB.STORES.BOXES, DB.STORES.VARIANTS, DB.STORES.TEMPLATES];
+  const stores = [DB.STORES.BOXES, DB.STORES.TEMPLATES];
   for (const storeName of stores) {
     const items = await dbInstance.store(storeName).getAll();
     for (const item of items) {

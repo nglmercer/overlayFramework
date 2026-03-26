@@ -24,14 +24,13 @@ import './FormControls';
 import './MediaLibrary';
 import './ui/JsonCopyModal';
 
-import './editor';
+import './editor/index';
 
 // Import editor styles
 import './editor/Editor.css';
 
 // Import editor sub-components
 import { EditorTopbar } from './editor/EditorTopbar';
-import { EditorLeftSidebar } from './editor/EditorLeftSidebar';
 import { EditorPreview } from './editor/EditorPreview';
 import { EditorRightSidebar } from './editor/EditorRightSidebar';
 
@@ -102,9 +101,6 @@ export class AppEditor extends LitElement {
   
   /** Currently active panel in the right sidebar */
   @state() private rightExpandedSection: string | null = 'general';
-  
-  /** Whether random variant selection is enabled */
-  @state() private randomize = false;
   
   /** Which media library to show (if any) */
   @state() private showMediaLibrary: MediaLibraryType | null = null;
@@ -285,12 +281,28 @@ export class AppEditor extends LitElement {
   /**
    * Creates the data object for a new variant.
    */
-  private createNewVariantData(type: string, schemaDef: PlatformEventDefinition): AlertVariant {
+  private createNewVariantData(): AlertVariant {
+    const schemaDef = this.schema?.[0];
+    
+    if (!schemaDef) {
+      console.warn('[Editor] createNewVariantData: no schemaDef found');
+      return createAlertVariant({
+        boxId: this.boxId,
+        eventType: 'default',
+        data: {
+          type: 'default',
+          name: 'Nueva variante',
+          condition: '',
+          message: '',
+        },
+      });
+    }
+    
     return createAlertVariant({
       boxId: this.boxId,
-      eventType: type,
+      eventType: schemaDef.id,
       data: {
-        type,
+        type: schemaDef.id,
         name: schemaDef.label ? `${schemaDef.label} Variant` : 'Nueva variante',
         condition: schemaDef.conditionLabel,
         message: schemaDef.defaultMessage,
@@ -362,28 +374,6 @@ export class AppEditor extends LitElement {
       message: 'Test Alert!',
     };
 
-    if (eventType === 'kick_chat') {
-      testData = {
-        username: kickChatSample.sender?.username || 'KickUser',
-        message: kickChatSample.content || 'Hello Kick!'
-      };
-    } else if (eventType === 'tiktok_chat') {
-      testData = {
-        username: tiktokChatSample.uniqueId || 'TikTokUser',
-        message: tiktokChatSample.comment || 'Hi TikTok!'
-      };
-    } else if (eventType === 'tiktok_gift') {
-      testData = {
-        username: tiktokGiftSample.uniqueId || 'Gifter',
-        giftName: tiktokGiftSample.giftName || 'Rose',
-        amount: String(tiktokGiftSample.repeatCount || 1)
-      };
-    } else if (eventType === 'tiktok_social') {
-      testData = {
-        username: tiktokSocialSample.uniqueId || 'Follower',
-        nickname: tiktokSocialSample.nickname || 'FollowerNick'
-      };
-    }
 
     if (this.isWsConnected) {
       try {
@@ -440,17 +430,15 @@ export class AppEditor extends LitElement {
    * Creates a new variant and adds it to local state immediately (optimistic update).
    */
   handleCreateVariant = async (_e?: CustomEvent): Promise<void> => {
-    const type = this.expandedSection || 
-      (this.schema && this.schema.length > 0 ? this.schema[0].id : '');
-    const schemaDef = this.schema?.find(s => s.id === type) || this.schema?.[0];
+    const schemaDef = this.schema?.[0];
     
     if (!schemaDef) {
-      console.warn('[Editor] handleCreateVariant: no schemaDef found for type', type);
+      console.warn('[Editor] handleCreateVariant: no schemaDef found');
       return;
     }
     
     try {
-      const newVariant: AlertVariant = this.createNewVariantData(type, schemaDef);
+      const newVariant: AlertVariant = this.createNewVariantData();
       console.log('[Editor] handleCreateVariant - newVariant:', newVariant);
       await dbManager.saveVariant(newVariant);
       
@@ -458,11 +446,6 @@ export class AppEditor extends LitElement {
       const currentVariants = this.variants;
       this._localVariants = [...currentVariants, newVariant];
       this.selectedVariantId = newVariant.id;
-      
-      // Auto-expand the section so the new variant is visible
-      if (this.expandedSection !== type) {
-        this.expandedSection = type;
-      }
       
       // Refresh from DB in background
       this._variantsTask.run();
@@ -622,10 +605,6 @@ export class AppEditor extends LitElement {
     this.selectedVariantId = e.detail;
   }
 
-  private _handleRandomizeToggle = (): void => {
-    this.randomize = !this.randomize;
-  }
-
   private _handlePreviewWidthChange = (e: CustomEvent): void => {
     this.previewWidth = e.detail;
   }
@@ -725,22 +704,6 @@ export class AppEditor extends LitElement {
       ></editor-topbar>
 
       <div class="workspace custom-scrollbar">
-        <!-- Left Sidebar -->
-        <editor-left-sidebar
-          .schema="${this.schema}"
-          .variants="${variants}"
-          .selectedVariantId="${this.selectedVariantId}"
-          .expandedSection="${this.expandedSection}"
-          .randomize="${this.randomize}"
-          @section-change="${this._handleSectionChange}"
-          @variant-select="${this._handleVariantSelect}"
-          @create-variant="${(e: CustomEvent) => this.handleCreateVariant(e)}"
-          @duplicate-variant="${this.handleDuplicateVariant}"
-          @delete-variant="${this.handleDeleteVariant}"
-          @copy-variant-detailed="${(e: CustomEvent) => this.handleCopyVariantDetailed(e)}"
-          @randomize-toggle="${this._handleRandomizeToggle}"
-        ></editor-left-sidebar>
-
         <!-- Preview Area -->
         <editor-preview
           .variant="${this.getSelectedVariant(variants)}"

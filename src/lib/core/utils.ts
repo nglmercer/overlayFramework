@@ -117,8 +117,9 @@ export type PlatformEventDefinition = z.infer<typeof PlatformEventDefinitionSche
  * These are used to validate and manage alert event schemas.
  */
 
-// Supported event types in the system
+// Supported event types in the system - now we use a single 'alert' event
 export const EventTypeSchema = z.enum([
+  'alert',
   'kick_chat',
   'kick_reward_redeemed',
   'tiktok_chat',

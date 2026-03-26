@@ -13,7 +13,7 @@ import { discoverServices } from './lib/config';
 import { profileManager } from './lib/profile-manager';
 
 // ============================================================================
-// SCHEMA CONFIG
+// SCHEMA CONFIG - Simplified to single global "alert" event
 // ============================================================================
 
 const customSchemas: SchemaMap = new Map();

@@ -23,28 +23,19 @@ export const DB = {
   /** Object store names */
   STORES: {
     BOXES: 'boxes',
-    VARIANTS: 'variants',
     TEMPLATES: 'templates',
-  },
-  /** Index names for variants store */
-  VARIANT_INDEXES: {
-    BOX_ID: 'boxId',
-    TYPE: 'type',
   },
 } as const;
 
 /**
  * ============================================
- * ALERT VARIANT DEFAULTS
+ * ALERT DEFAULTS
  * ============================================
  * 
- * Default values for alert variants.
+ * Default values for alerts.
  */
 
 export const ALERT_DEFAULTS = {
-  /** Default variant name */
-  NAME: 'Nueva variante',
-  
   /** Default duration in seconds */
   DURATION: 10,
   
@@ -296,12 +287,6 @@ export const FILE_TYPES = {
 export const EVENTS = {
   /** Component Custom Events */
   COMPONENT: {
-    VARIANT_SELECT: 'variant-select',
-    CREATE_VARIANT: 'create-variant',
-    DELETE_VARIANT: 'delete-variant',
-    DUPLICATE_VARIANT: 'duplicate-variant',
-    COPY_VARIANT: 'copy-variant',
-    RANDOMIZE_TOGGLE: 'randomize-toggle',
     SECTION_CHANGE: 'section-change',
     PANEL_CHANGE: 'panel-change',
     PROPERTY_CHANGE: 'property-change',
@@ -345,7 +330,6 @@ export const EVENTS = {
   
   /** Window PostMessage Events */
   WINDOW: {
-    UPDATE_VARIANT: 'UPDATE_VARIANT',
     PLAY_PREVIEW: 'play-preview',
     CONNECT_WS: 'connect-ws',
     DISCONNECT_WS: 'disconnect-ws',
